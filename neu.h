@@ -1,6 +1,6 @@
 /******************************************************************************
 Author: Jihang Li (Jihang_DOT_Li_AT_outlook_DOT_com)
-Last update: 2021-07-07 18:41
+Last update: 2021-07-08 15:20
 ******************************************************************************/
 #ifndef NEU_H
 #define NEU_H
@@ -32,7 +32,7 @@ std::string NTimestamp();
 #define __FILENAME__ (strrchr(__FILE__, '/') ? strrchr(__FILE__, '/') + 1 : __FILE__)
 #endif
 
-#if defined(NDEBUG) || defined(NEU_DEBUG)
+#if defined(NEU_DEBUG)
 #define NInfo(fmt, ...) printf("\033[0;32m[%s] " fmt "\n\033[0m", NTimestamp().c_str(), ##__VA_ARGS__)
 #define NHint(fmt, ...) printf("\033[0;34m[%s] " fmt "\n\033[0m", __FILENAME__, ##__VA_ARGS__)
 #define NWarn(fmt, ...) printf("\033[0;33m[%s > %s] " fmt "\n\033[0m", __FILENAME__, __FUNCTION__, ##__VA_ARGS__)
