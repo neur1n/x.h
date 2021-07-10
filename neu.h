@@ -1,6 +1,6 @@
 /******************************************************************************
 Author: Jihang Li (Jihang_DOT_Li_AT_outlook_DOT_com)
-Last update: 2021-07-10 15:26
+Last update: 2021-07-10 15:39
 ******************************************************************************/
 #ifndef NEU_H
 #define NEU_H
@@ -25,7 +25,7 @@ std::string NTimestamp();
 #if defined(_MSC_VER)
 #define DLL_API __declspec(dllexport)
 #elif defined(__GNUC__) || defined(__GNUG__)
-#define DLL_API __attribute__ ((visibility("hidden")))
+#define DLL_API __attribute__ ((visibility("default")))
 #endif
 #endif
 
