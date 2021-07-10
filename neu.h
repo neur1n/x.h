@@ -1,6 +1,6 @@
 /******************************************************************************
 Author: Jihang Li (Jihang_DOT_Li_AT_outlook_DOT_com)
-Last update: 2021-07-10 13:35
+Last update: 2021-07-10 15:26
 ******************************************************************************/
 #ifndef NEU_H
 #define NEU_H
@@ -11,8 +11,12 @@ Last update: 2021-07-10 13:35
 #include <functional>
 #include <map>
 #include <mutex>
+#include <thread>
 #include <vector>
 
+#if defined(__GNUC__) || defined(__GNUG__)
+#include <linux/limits.h>
+#endif
 
 //******************************************************************** Handy{{{
 std::string NTimestamp();
@@ -131,14 +135,14 @@ std::string NTimestamp();
 
 inline std::string NAbsolutePath(const char *file)
 {
-  char abs_path[_MAX_PATH];
-
 #if defined(_MSC_VER)
+  char abs_path[_MAX_PATH];
   if (!_fullpath(abs_path, file, _MAX_PATH))
   {
     return nullptr;
   }
 #elif defined(__GNUC__)  || defined(__GNUG__)
+  char abs_path[PATH_MAX];
   if (!realpath(file, abs_path))
   {
     return nullptr;
@@ -183,7 +187,11 @@ inline std::string NTimestamp()
   struct tm timeinfo;
 
   time(&rawtime);
+#if defined(_MSC_VER)
   localtime_s(&timeinfo, &rawtime);
+#elif defined(__GNUC__) || defined(__GNUG__)
+  localtime_r(&rawtime, &timeinfo);
+#endif
 
   char buffer[50];
   strftime(buffer, sizeof(buffer), "%Y-%m-%d %H:%M:%S", &timeinfo);
