@@ -1,6 +1,6 @@
 /******************************************************************************
 Author: Jihang Li (Jihang_DOT_Li_AT_outlook_DOT_com)
-Last update: 2021-07-08 15:20
+Last update: 2021-07-10 13:35
 ******************************************************************************/
 #ifndef NEU_H
 #define NEU_H
@@ -32,18 +32,30 @@ std::string NTimestamp();
 #define __FILENAME__ (strrchr(__FILE__, '/') ? strrchr(__FILE__, '/') + 1 : __FILE__)
 #endif
 
-#if defined(NEU_DEBUG)
-#define NInfo(fmt, ...) printf("\033[0;32m[%s] " fmt "\n\033[0m", NTimestamp().c_str(), ##__VA_ARGS__)
-#define NHint(fmt, ...) printf("\033[0;34m[%s] " fmt "\n\033[0m", __FILENAME__, ##__VA_ARGS__)
-#define NWarn(fmt, ...) printf("\033[0;33m[%s > %s] " fmt "\n\033[0m", __FILENAME__, __FUNCTION__, ##__VA_ARGS__)
-#define NErr(fmt, ...) printf("\033[0;31m[%s > %s > %d] " fmt "\n\033[0m", __FILENAME__, __PRETTY_FUNCTION__, __LINE__, ##__VA_ARGS__)
+/* For debug build */
+#if NEU_LOG_LEVEL < 0
 #define NOneLine(fmt, ...) printf("\r[%s] " fmt, __FILENAME__, ##__VA_ARGS__); fflush(stdout); // Print on one line.
-#else  // For release build
-#define NInfo(fmt, ...) printf("\033[0;32m[INFO %s] " fmt "\n\033[0m", NTimestamp().c_str(), ##__VA_ARGS__)
-#define NHint(fmt, ...) printf("\033[0;34m[HINT %s] " fmt "\n\033[0m", NTimestamp().c_str(), ##__VA_ARGS__)
-#define NWarn(fmt, ...) printf("\033[0;33m[WARN %s] " fmt "\n\033[0m", NTimestamp().c_str(), ##__VA_ARGS__)
-#define NErr(fmt, ...) printf("\033[0;31m[ERROR %s] " fmt "\n\033[0m", NTimestamp().c_str(), ##__VA_ARGS__)
+#define NErr(fmt, ...) printf("\033[0;31m[%s > %s > %d] " fmt "\n\033[0m", __FILENAME__, __PRETTY_FUNCTION__, __LINE__, ##__VA_ARGS__)
+#define NWarn(fmt, ...) printf("\033[0;33m[%s > %s] " fmt "\n\033[0m", __FILENAME__, __FUNCTION__, ##__VA_ARGS__)
+#define NHint(fmt, ...) printf("\033[0;34m[%s] " fmt "\n\033[0m", __FILENAME__, ##__VA_ARGS__)
+#define NInfo(fmt, ...) printf("\033[0;32m[%s] " fmt "\n\033[0m", NTimestamp().c_str(), ##__VA_ARGS__)
+/* Undefine */
+#elif NEU_LOG_LEVEL == 0
+#define NOneLine(fmt, ...)
+#define NErr(fmt, ...)
+#define NWarn(fmt, ...)
+#define NHint(fmt, ...)
+#define NInfo(fmt, ...)
+/* For release build */
+#elif NEU_LOG_LEVEL >= 1
 #define NOneLine(fmt, ...) printf("\r[%s] " fmt, NTimestamp().c_str(), ##__VA_ARGS__); fflush(stdout); // Print on one line.
+#define NErr(fmt, ...) printf("\033[0;31m[ERROR %s] " fmt "\n\033[0m", NTimestamp().c_str(), ##__VA_ARGS__)
+#elif NEU_LOG_LEVEL >= 2
+#define NWarn(fmt, ...) printf("\033[0;33m[WARN %s] " fmt "\n\033[0m", NTimestamp().c_str(), ##__VA_ARGS__)
+#elif NEU_LOG_LEVEL >= 3
+#define NHint(fmt, ...) printf("\033[0;34m[HINT %s] " fmt "\n\033[0m", NTimestamp().c_str(), ##__VA_ARGS__)
+#elif NEU_LOG_LEVEL >= 4
+#define NInfo(fmt, ...) printf("\033[0;32m[INFO %s] " fmt "\n\033[0m", NTimestamp().c_str(), ##__VA_ARGS__)
 #endif
 
 #ifndef NArraySize
