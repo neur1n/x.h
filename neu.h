@@ -311,18 +311,18 @@ public:
     return N_OK;
   }
 
-  void Block(bool should_block)
+  void Notify()
   {
-    while (should_block)
+    this->m_controller.notify_one();
+  }
+
+  void Wait(bool should_wait)
+  {
+    while (should_wait)
     {
       this->m_controller.wait(this->m_lock);
       break;
     }
-  }
-
-  void Unblock()
-  {
-    this->m_controller.notify_one();
   }
 
 private:
