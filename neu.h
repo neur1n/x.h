@@ -1,6 +1,6 @@
 /******************************************************************************
-Author: Jihang Li (Jihang_DOT_Li_AT_outlook_DOT_com)
-Last update: 2021-07-10 15:39
+Author: Jihang Li (Jihang DOT Li AT outlook DOT com)
+Last update: 2021-07-14 15:35
 ******************************************************************************/
 #ifndef NEU_H
 #define NEU_H
@@ -50,15 +50,19 @@ std::string NTimestamp();
 #define NWarn(fmt, ...)
 #define NHint(fmt, ...)
 #define NInfo(fmt, ...)
+#endif
 /* For release build */
-#elif NEU_LOG_LEVEL >= 1
+#if NEU_LOG_LEVEL >= 1
 #define NOneLine(fmt, ...) printf("\r[%s] " fmt, NTimestamp().c_str(), ##__VA_ARGS__); fflush(stdout); // Print on one line.
 #define NErr(fmt, ...) printf("\033[0;31m[ERROR %s] " fmt "\n\033[0m", NTimestamp().c_str(), ##__VA_ARGS__)
-#elif NEU_LOG_LEVEL >= 2
+#endif
+#if NEU_LOG_LEVEL >= 2
 #define NWarn(fmt, ...) printf("\033[0;33m[WARN %s] " fmt "\n\033[0m", NTimestamp().c_str(), ##__VA_ARGS__)
-#elif NEU_LOG_LEVEL >= 3
+#endif
+#if NEU_LOG_LEVEL >= 3
 #define NHint(fmt, ...) printf("\033[0;34m[HINT %s] " fmt "\n\033[0m", NTimestamp().c_str(), ##__VA_ARGS__)
-#elif NEU_LOG_LEVEL >= 4
+#endif
+#if NEU_LOG_LEVEL >= 4
 #define NInfo(fmt, ...) printf("\033[0;32m[INFO %s] " fmt "\n\033[0m", NTimestamp().c_str(), ##__VA_ARGS__)
 #endif
 
