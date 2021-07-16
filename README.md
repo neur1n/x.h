@@ -32,6 +32,7 @@
       </ul>
     </li>
     <li><a href="#usage">Usage</a></li>
+    <li><a href="#documentation">Documentation</a></li>
     <li><a href="#license">License</a></li>
   </ol>
 </details>
@@ -43,47 +44,46 @@
 - CMake: >= 3.5
 
 ### Installation
-#### Manually
-1. Clone the repository
+This library contains only one header, `neu.h`. So you may download this single
+file and put it into your project, or the whole repository via Git:
 ```bash
 git clone https://github.com/Neur1n/neu.h.git
 ```
 
-2. Add the following contents to your project's `CMakeLists.txt`
-```cmake
-INCLUDE(${PATH_TO_NEU_H}/cmake/neu.h.cmake)  # this provides ${NEU_H_DIR}
-INCLUDE_DIRECTORIES(${NEU_H_DIR}/include)
-```
-
-#### Via CMake
-CMake's [FetchContent](https://cmake.org/cmake/help/latest/module/FetchContent.html)
-module can be used to automate the inclusion of neu.h by adding the following
-contents to your project's `CMakeLists.txt`:
-```cmake
-INCLUDE(FetchContent)
-
-FetchContent_Declare(neu_h
-  GIT_REPOSITORY https://github.com/Neur1n/neu.h.git
-  GIT_TAG origin/master
-  GIT_PROGRESS ON
-
-  FETCHCONTENT_BASE_DIR ${PROJECT_SOURCE_DIR}/build/neu.h
-  FETCHCONTENT_SOURCE_DIR_NEU_H ${PROJECT_SOURCE_DIR}/thirdparty/neu.h
-  FETCHCONTENT_QUIET OFF
-)
-FetchContent_MakeAvailable(neu_h)
-
-INCLUDE(${neu_h_SOURCE_DIR}/cmake/neu.h.cmake)
-```
-
 <!------------------------------------------------------------------- USAGE -->
 ## Usage
-Include the single header into a C++ file then it is good to go:
-```cpp
-#include "neu.h"
-
-// rest of your code
+### Single Header
+If you want to use only the single `neu.h` file, add the directory containing
+`neu.h` to `INCLUDE_DIRECTORIES()` in your project's main `CMakeLists.txt`:
+```cmake
+INCLUDE_DIRECTORIES(${PATH_TO_NEU_H_DIR})
 ```
+
+### Whole Repository
+If the whole repository is downloaded/included into your project, add the
+following snippet to your project's main `CMakeLists.txt`:
+```cmake
+ADD_SUBDIRECTORY(${PATH_TO_NEU_H_DIR})
+FIND_PACKAGE(NeuH REQUIRED)
+INCLUDE_DIRECTORIES(${NeuH_INCLUDE_DIRS})
+SET(NeuH_LOG_LEVEL 1)
+```
+Notice that when using the whole repository, this library can be found with
+`FIND_PACKAGE()` and additionally defined two variables to be used:
+- `NeuH_INCLUDE_DIRS`: the include directories of neu.h
+- `NeuH_LOG_LEVEL`: the log verbosity level of neu.h, of which the available
+values are:
+  - 4: enables all log printings (`NOneLine`, `NErr`, `NWarn`, `NHint`,
+  `NInfo`), recommended for **RELEASE** build
+  - 3: enables `NOneLine`, `NErr`, `NWarn`, `NHint`
+  - 2: enables `NOneLine`, `NErr`, `NWarn`
+  - 1: enables `NOneLine`, `NErr`
+  - 0: disable all log printings
+  - -1: enables all log printings, recommended for **DEBUG** build
+
+<!----------------------------------------------------------- DOCUMENTATION -->
+## Documentation
+TODO
 
 <!----------------------------------------------------------------- LICENSE -->
 ## License
