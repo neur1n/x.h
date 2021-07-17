@@ -1,0 +1,16 @@
+# It defines the following variables
+#  NeuH_INCLUDE_DIRS - include directories
+#  NeuH_LOG_LEVEL    - log verbosity level
+
+SET(NeuH_INCLUDE_DIRS ${CMAKE_CURRENT_LIST_DIR}/include)
+
+SET(NeuH_LOG_LEVEL 1 CACHE STRING "Log verbosity level")
+SET(LEVEL_LIST -1 0 1 2 3 4)
+SET_PROPERTY(CACHE NeuH_LOG_LEVEL PROPERTY STRINGS ${LEVEL_LIST})
+
+IF(${NeuH_LOG_LEVEL} IN_LIST LEVEL_LIST)
+  ADD_DEFINITIONS(-DNEU_LOG_LEVEL=${NeuH_LOG_LEVEL})
+  MESSAGE(STATUS "NeuH_LOG_LEVEL is set to ${NeuH_LOG_LEVEL}")
+ELSE()
+  MESSAGE(FATAL_ERROR "NeuH_LOG_LEVEL must be set to one of ${LEVEL_LIST}")
+ENDIF()

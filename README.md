@@ -63,7 +63,7 @@ INCLUDE_DIRECTORIES(${PATH_TO_NEU_H_DIR})
 If the whole repository is downloaded/included into your project, add the
 following snippet to your project's main `CMakeLists.txt`:
 ```cmake
-ADD_SUBDIRECTORY(${PATH_TO_NEU_H_DIR})
+SET(NeuH_DIR "path/to/NeuH")
 FIND_PACKAGE(NeuH REQUIRED)
 INCLUDE_DIRECTORIES(${NeuH_INCLUDE_DIRS})
 SET(NeuH_LOG_LEVEL 1)
