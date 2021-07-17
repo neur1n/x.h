@@ -56,7 +56,7 @@ git clone https://github.com/Neur1n/neu.h.git
 If you want to use only the single `neu.h` file, add the directory containing
 `neu.h` to `INCLUDE_DIRECTORIES()` in your project's main `CMakeLists.txt`:
 ```cmake
-INCLUDE_DIRECTORIES(${PATH_TO_NEU_H_DIR})
+INCLUDE_DIRECTORIES("path/to/neu.h")
 ```
 
 ### Whole Repository
