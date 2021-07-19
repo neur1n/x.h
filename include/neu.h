@@ -22,7 +22,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 
 
-Last update: 2021-07-16 19:03
+Last update: 2021-07-19 17:39
 ******************************************************************************/
 #ifndef NEU_H
 #define NEU_H
@@ -331,7 +331,7 @@ public:
   {
     if (this->m_thread.joinable())
     {
-      this->m_thread.join();
+      this->m_thread.detach();
     }
   }
 
