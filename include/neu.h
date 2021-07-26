@@ -22,13 +22,14 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 
 
-Last update: 2021-07-19 17:39
+Last update: 2021-07-26 17:35
 ******************************************************************************/
 #ifndef NEU_H
 #define NEU_H
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <cctype>
 #include <condition_variable>
 #include <functional>
 #include <map>
@@ -36,11 +37,59 @@ Last update: 2021-07-19 17:39
 #include <thread>
 #include <vector>
 
-#if defined(__GNUC__) || defined(__GNUG__)
+#if defined (_MSC_VER)
+#include <conio.h>
+#elif defined(__GNUC__) || defined(__GNUG__)
 #include <linux/limits.h>
+#include <termios.h>
+#include <unistd.h>
 #endif
 
-//******************************************************************** Handy{{{
+//******************************************************************** Macro{{{
+#define NK_ESC   0x1B
+#define NK_LEFT  0x25
+#define NK_UP    0x26
+#define NK_RIGHT 0x27
+#define NK_DOWN  0x28
+#define NK_Q     0x51
+//******************************************************************* Macro}}}
+
+//*************************************************************** Error Code{{{
+typedef enum
+{
+  N_OK                = 0,
+  N_FAIL              = -1,
+  N_DATA_INVALID      = -2,
+  N_INPUT_INVALID     = -3,
+  N_OPERATION_ABORTED = -4,
+} NRESULT;
+
+static const std::map<NRESULT, const char*> k_nr_msgs =
+{
+  {N_OK,                "Succeeded"},
+  {N_FAIL,              "Failed"},
+  {N_DATA_INVALID,      "Data are invalid"},
+  {N_INPUT_INVALID,     "Input is invalid"},
+  {N_OPERATION_ABORTED, "Operation aborted"},
+};
+
+inline const char *NRMsg(NRESULT nr)
+{
+  std::map<const NRESULT, const char*>::const_iterator it = k_nr_msgs.find(nr);
+
+  if (it != k_nr_msgs.end())
+  {
+    return it->second;
+  }
+
+  return "Unknown error";
+}
+
+#define NSucc(nr) (((NRESULT)(nr)) >= 0)
+#define NFail(nr) (((NRESULT)(nr)) < 0)
+//*************************************************************** Error Code}}}
+
+//***************************************************************** Function{{{
 std::string NTimestamp();
 
 #ifndef DLL_API
@@ -202,6 +251,73 @@ inline long long NDuration(
   }
 }
 
+inline bool NIsKeyPressed(const long long &delay, const int& key)
+{
+  if (delay <= 0 || key <= 0)
+  {
+    NErr("Input argument is invalid.");
+    abort();
+  }
+
+  std::chrono::system_clock::time_point start = std::chrono::system_clock::now();
+  int k = 0;
+
+  while (true)
+  {
+#if defined (_MSC_VER)
+    k = _getch();
+#elif defined(__GNUC__) || defined(__GNUG__)
+    struct termios old = {0};
+
+    fflush(stdout);
+
+    if(tcgetattr(0, &old) < 0)
+    {
+      perror("tcsetattr()");
+    }
+
+    old.c_lflag &= ~ICANON;
+    old.c_lflag &= ~ECHO;
+    old.c_cc[VMIN] = 1;
+    old.c_cc[VTIME] = 0;
+
+    if(tcsetattr(0, TCSANOW, &old) < 0)
+    {
+      perror("tcsetattr ICANON");
+    }
+
+    if(read(0, &k, 1) < 0)
+    {
+      perror("read()");
+    }
+
+    old.c_lflag |= ICANON;
+    old.c_lflag |= ECHO;
+
+    if(tcsetattr(0, TCSADRAIN, &old) < 0)
+    {
+      perror("tcsetattr ~ICANON");
+    }
+#endif
+
+    if (toupper(k) == key)
+    {
+      return true;
+    }
+    else
+    {
+      return false;
+    }
+
+    if (NDuration(start, std::chrono::system_clock::now()) >= delay)
+    {
+      return false;
+    }
+  }
+
+  return false;
+}
+
 inline bool NIsStringEmpty(const char *str)
 {
   return (str == nullptr || str[0] == '\0');
@@ -252,42 +368,7 @@ T NEnumSubtract(const T &x, const T &y)
 {
   return static_cast<T>(static_cast<int>(x) - static_cast<int>(y));
 }
-//******************************************************************** Handy}}}
-
-//*************************************************************** Error Code{{{
-typedef enum
-{
-  N_OK                = 0,
-  N_FAIL              = -1,
-  N_DATA_INVALID      = -2,
-  N_INPUT_INVALID     = -3,
-  N_OPERATION_ABORTED = -4,
-} NRESULT;
-
-static const std::map<NRESULT, const char*> k_nr_msgs =
-{
-  {N_OK,                "Succeeded"},
-  {N_FAIL,              "Failed"},
-  {N_DATA_INVALID,      "Data are invalid"},
-  {N_INPUT_INVALID,     "Input is invalid"},
-  {N_OPERATION_ABORTED, "Operation aborted"},
-};
-
-inline const char *NRMsg(NRESULT nr)
-{
-  std::map<const NRESULT, const char*>::const_iterator it = k_nr_msgs.find(nr);
-
-  if (it != k_nr_msgs.end())
-  {
-    return it->second;
-  }
-
-  return "Unknown error";
-}
-
-#define NSucc(nr) (((NRESULT)(nr)) >= 0)
-#define NFail(nr) (((NRESULT)(nr)) < 0)
-//*************************************************************** Error Code}}}
+//***************************************************************** Function}}}
 
 //*********************************************************** Class & Struct{{{
 template<class Ret, class ...Args>
@@ -423,14 +504,5 @@ private:
   T m_sum;
 };  // class NNVector
 //*********************************************************** Class & Struct}}}
-
-//********************************************************************* Keys{{{
-#define NK_ESC   0x1B
-#define NK_LEFT  0x25
-#define NK_UP    0x26
-#define NK_RIGHT 0x27
-#define NK_DOWN  0x28
-#define NK_Q     0x51
-//********************************************************************* Keys}}}
 
 #endif  // NEU_H
