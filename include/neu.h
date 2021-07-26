@@ -22,7 +22,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 
 
-Last update: 2021-07-26 17:35
+Last update: 2021-07-26 18:06
 ******************************************************************************/
 #ifndef NEU_H
 #define NEU_H
@@ -31,6 +31,7 @@ Last update: 2021-07-26 17:35
 #include <stdlib.h>
 #include <cctype>
 #include <condition_variable>
+#include <cstring>
 #include <functional>
 #include <map>
 #include <mutex>
