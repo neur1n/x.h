@@ -22,7 +22,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 
 
-Last update: 2021-07-26 18:06
+Last update: 2021-07-28 16:36
 ******************************************************************************/
 #ifndef NEU_H
 #define NEU_H
@@ -42,17 +42,31 @@ Last update: 2021-07-26 18:06
 #include <conio.h>
 #elif defined(__GNUC__) || defined(__GNUG__)
 #include <linux/limits.h>
+#include <sys/ioctl.h>
 #include <termios.h>
 #include <unistd.h>
+
+int _kbhit();
 #endif
 
 //******************************************************************** Macro{{{
 #define NK_ESC   0x1B
-#define NK_LEFT  0x25
-#define NK_UP    0x26
-#define NK_RIGHT 0x27
-#define NK_DOWN  0x28
+#define NK_A     0x41
+#define NK_B     0x42
+#define NK_C     0x43
+#define NK_D     0x44
 #define NK_Q     0x51
+#if defined (_MSC_VER)
+#define NK_LEFT  0x4B
+#define NK_UP    0x48
+#define NK_RIGHT 0x4D
+#define NK_DOWN  0x50
+#elif defined(__GNUC__) || defined(__GNUG__)
+#define NK_LEFT  (-1)
+#define NK_UP    (-2)
+#define NK_RIGHT (-3)
+#define NK_DOWN  (-4)
+#endif
 //******************************************************************* Macro}}}
 
 //*************************************************************** Error Code{{{
@@ -252,71 +266,92 @@ inline long long NDuration(
   }
 }
 
-inline bool NIsKeyPressed(const long long &delay, const int& key)
+inline int NGetPressedKey()
 {
-  if (delay <= 0 || key <= 0)
+  int key = 0;
+
+#if defined (_MSC_VER)
+  if (_kbhit())
   {
-    NErr("Input argument is invalid.");
-    abort();
+    key = toupper(_getch());
+  }
+  return key;
+#elif defined(__GNUC__) || defined(__GNUG__)
+  int bytes_waiting = _kbhit();
+  if (bytes_waiting <= 0) { return 0; }
+
+  struct termios old_settings = {0};
+  struct termios new_settings = {0};
+  union
+  {
+    int in;
+    char ch[4];
+  } buffer{0};
+  int err = 0;
+  ssize_t bytes_read = 0;
+
+
+  err = tcgetattr(0, &old_settings);
+  if (err) { return 0; }
+
+  new_settings = old_settings;
+  new_settings.c_lflag &= ~ICANON;
+  new_settings.c_lflag &= ~ECHO;
+
+  err = tcsetattr(0, TCSANOW, &new_settings);
+  if (err)
+  {
+    tcsetattr(0, TCSANOW, &old_settings);
+    return 0;
   }
 
-  std::chrono::system_clock::time_point start = std::chrono::system_clock::now();
-  int k = 0;
-
-  while (true)
+  bytes_read = read(STDIN_FILENO, &buffer.in, bytes_waiting);
+  if (bytes_read <= 0)
   {
-#if defined (_MSC_VER)
-    k = _getch();
-#elif defined(__GNUC__) || defined(__GNUG__)
-    struct termios old = {0};
-
-    fflush(stdout);
-
-    if(tcgetattr(0, &old) < 0)
+    tcsetattr(0, TCSANOW, &old_settings);
+    return 0;
+  }
+  else if (bytes_read == 3)
+  {
+    if (buffer.ch[0] == 0x1B && buffer.ch[1] == 0x5B)
     {
-      perror("tcsetattr()");
-    }
-
-    old.c_lflag &= ~ICANON;
-    old.c_lflag &= ~ECHO;
-    old.c_cc[VMIN] = 1;
-    old.c_cc[VTIME] = 0;
-
-    if(tcsetattr(0, TCSANOW, &old) < 0)
-    {
-      perror("tcsetattr ICANON");
-    }
-
-    if(read(0, &k, 1) < 0)
-    {
-      perror("read()");
-    }
-
-    old.c_lflag |= ICANON;
-    old.c_lflag |= ECHO;
-
-    if(tcsetattr(0, TCSADRAIN, &old) < 0)
-    {
-      perror("tcsetattr ~ICANON");
-    }
-#endif
-
-    if (toupper(k) == key)
-    {
-      return true;
+      switch (buffer.ch[2])
+      {
+        case NK_A:
+          key = NK_UP;
+          break;
+        case NK_B:
+          key = NK_DOWN;
+          break;
+        case NK_C:
+          key = NK_RIGHT;
+          break;
+        case NK_D:
+          key = NK_LEFT;
+          break;
+      }
     }
     else
     {
-      return false;
-    }
-
-    if (NDuration(start, std::chrono::system_clock::now()) >= delay)
-    {
-      return false;
+      key = buffer.ch[0];
     }
   }
+  else
+  {
+    key = buffer.ch[0];
+  }
 
-  return false;
+  tcsetattr(0, TCSADRAIN, &old_settings);
+
+  if (isalpha(key))
+  {
+    return toupper(key);
+  }
+  else
+  {
+    return key;
+  }
+#endif
 }
 
 inline bool NIsStringEmpty(const char *str)
@@ -505,5 +540,28 @@ private:
   T m_sum;
 };  // class NNVector
 //*********************************************************** Class & Struct}}}
+
+//************************************************************** OS Specific{{{
+#if defined (_MSC_VER)
+#elif defined(__GNUC__) || defined(__GNUG__)
+inline int _kbhit()
+{
+  static bool initialized = false;
+  if (!initialized)
+  {
+    struct termios settings;
+    tcgetattr(STDIN_FILENO, &settings);
+    settings.c_lflag &= ~ICANON;
+    tcsetattr(STDIN_FILENO, TCSANOW, &settings);
+    setbuf(stdin, NULL);
+    initialized = true;
+  }
+
+  int bytes = 0;
+  ioctl(STDIN_FILENO, FIONREAD, &bytes);
+  return bytes;
+}
+#endif
+//************************************************************** OS Specific}}}
 
 #endif  // NEU_H
