@@ -22,7 +22,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 
 
-Last update: 2021-07-28 16:36
+Last update: 2021-08-05 16:00
 ******************************************************************************/
 #ifndef NEU_H
 #define NEU_H
@@ -70,14 +70,14 @@ int _kbhit();
 //******************************************************************* Macro}}}
 
 //*************************************************************** Error Code{{{
-typedef enum
+enum NRESULT
 {
   N_OK                = 0,
   N_FAIL              = -1,
   N_DATA_INVALID      = -2,
   N_INPUT_INVALID     = -3,
   N_OPERATION_ABORTED = -4,
-} NRESULT;
+};
 
 static const std::map<NRESULT, const char*> k_nr_msgs =
 {
