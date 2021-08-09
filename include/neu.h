@@ -22,7 +22,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 
 
-Last update: 2021-08-05 16:00
+Last update: 2021-08-09 15:03
 ******************************************************************************/
 #ifndef NEU_H
 #define NEU_H
@@ -37,10 +37,11 @@ Last update: 2021-08-05 16:00
 #include <mutex>
 #include <thread>
 #include <vector>
+#include <sys/stat.h>
 
-#if defined (_MSC_VER)
+#if defined(_WIN32)
 #include <conio.h>
-#elif defined(__GNUC__) || defined(__GNUG__)
+#elif defined(__linux__)
 #include <linux/limits.h>
 #include <sys/ioctl.h>
 #include <termios.h>
@@ -56,12 +57,12 @@ int _kbhit();
 #define NK_C     0x43
 #define NK_D     0x44
 #define NK_Q     0x51
-#if defined (_MSC_VER)
+#if defined(_WIN32)
 #define NK_LEFT  0x4B
 #define NK_UP    0x48
 #define NK_RIGHT 0x4D
 #define NK_DOWN  0x50
-#elif defined(__GNUC__) || defined(__GNUG__)
+#elif defined(__linux__)
 #define NK_LEFT  (-1)
 #define NK_UP    (-2)
 #define NK_RIGHT (-3)
@@ -108,14 +109,14 @@ inline const char *NRMsg(NRESULT nr)
 std::string NTimestamp();
 
 #ifndef DLL_API
-#if defined(_MSC_VER)
+#if defined(_WIN32)
 #define DLL_API __declspec(dllexport)
-#elif defined(__GNUC__) || defined(__GNUG__)
+#elif defined(__linux__)
 #define DLL_API __attribute__ ((visibility("default")))
 #endif
 #endif
 
-#if defined(_MSC_VER)
+#if defined(_WIN32)
 #define __FILENAME__ (strrchr(__FILE__, '\\') ? strrchr(__FILE__, '\\') + 1 : __FILE__)
 #define __PRETTY_FUNCTION__ __FUNCSIG__
 #else
@@ -166,7 +167,7 @@ std::string NTimestamp();
 #endif
 
 #ifndef NClamp
-#if defined(_MSC_VER)
+#if defined(_WIN32)
 #define NClamp(x, l, u) \
   [&](){ \
     decltype(x) _x = (x); \
@@ -174,7 +175,7 @@ std::string NTimestamp();
     decltype(u) _u = (u); \
     return _x <= _l ? _l : (_x <= _u ? _x : _u); \
   }()
-#elif defined(__GNUC__) || defined(__GNUG__)
+#elif defined(__linux__)
 #define NClamp(x, l, u) \
   ({ \
     __typeof__(x) _x = (x); \
@@ -186,14 +187,14 @@ std::string NTimestamp();
 #endif
 
 #ifndef NMax
-#if defined(_MSC_VER)
+#if defined(_WIN32)
 #define NMax(x, y) \
   [&](){ \
     decltype(x) _x = (x); \
     decltype(y) _y = (y); \
     return _x >= _y ? _x : _y; \
   }()
-#elif defined(__GNUC__) || defined(__GNUG__)
+#elif defined(__linux__)
 #define NMax(x, y) \
   ({ \
     __typeof__(x) _x = (x); \
@@ -204,14 +205,14 @@ std::string NTimestamp();
 #endif
 
 #ifndef NMin
-#if defined(_MSC_VER)
+#if defined(_WIN32)
 #define NMin(x, y) \
   [&](){ \
     decltype(x) _x = (x); \
     decltype(y) _y = (y); \
     return _x <= _y ? _x : _y; \
   }()
-#elif defined(__GNUC__)  || defined(__GNUG__)
+#elif defined(__linux__)
 #define NMin(x, y) \
   ({ \
     __typeof__(x) _x = (x); \
@@ -230,13 +231,13 @@ std::string NTimestamp();
 
 inline std::string NAbsolutePath(const char *file)
 {
-#if defined(_MSC_VER)
+#if defined(_WIN32)
   char abs_path[_MAX_PATH];
   if (!_fullpath(abs_path, file, _MAX_PATH))
   {
     return nullptr;
   }
-#elif defined(__GNUC__)  || defined(__GNUG__)
+#elif defined(__linux__)
   char abs_path[PATH_MAX];
   if (!realpath(file, abs_path))
   {
@@ -266,17 +267,32 @@ inline long long NDuration(
   }
 }
 
+inline bool NFileExists(const char *file_name)
+{
+  int result = -1;
+
+#if defined(_WIN32)
+  struct _stat buffer;
+  result = _stat(file_name, &buffer);
+#elif defined(__linux__)
+  struct stat buffer;
+  result = stat(file_name, &buffer);
+#endif
+
+  return (result == 0);
+}
+
 inline int NGetPressedKey()
 {
   int key = 0;
 
-#if defined (_MSC_VER)
+#if defined(_WIN32)
   if (_kbhit())
   {
     key = toupper(_getch());
   }
   return key;
-#elif defined(__GNUC__) || defined(__GNUG__)
+#elif defined(__linux__)
   int bytes_waiting = _kbhit();
   if (bytes_waiting <= 0) { return 0; }
 
@@ -354,7 +370,7 @@ inline int NGetPressedKey()
 #endif
 }
 
-inline bool NIsStringEmpty(const char *str)
+inline bool NStringEmpty(const char *str)
 {
   return (str == nullptr || str[0] == '\0');
 }
@@ -370,9 +386,9 @@ inline std::string NTimestamp()
   struct tm timeinfo;
 
   time(&rawtime);
-#if defined(_MSC_VER)
+#if defined(_WIN32)
   localtime_s(&timeinfo, &rawtime);
-#elif defined(__GNUC__) || defined(__GNUG__)
+#elif defined(__linux__)
   localtime_r(&rawtime, &timeinfo);
 #endif
 
@@ -542,8 +558,8 @@ private:
 //*********************************************************** Class & Struct}}}
 
 //************************************************************** OS Specific{{{
-#if defined (_MSC_VER)
-#elif defined(__GNUC__) || defined(__GNUG__)
+#if defined(_WIN32)
+#elif defined(__linux__)
 inline int _kbhit()
 {
   static bool initialized = false;
