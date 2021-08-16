@@ -22,7 +22,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 
 
-Last update: 2021-08-09 15:03
+Last update: 2021-08-16 15:52
 ******************************************************************************/
 #ifndef NEU_H
 #define NEU_H
@@ -127,11 +127,11 @@ std::string NTimestamp();
 #if NEU_LOG_LEVEL < 0
 #define NOneLine(fmt, ...) printf("\r[%s] " fmt, __FILENAME__, ##__VA_ARGS__); fflush(stdout); // Print on one line.
 #define NErr(fmt, ...) printf("\033[0;31m[%s > %s > %d] " fmt "\n\033[0m", __FILENAME__, __PRETTY_FUNCTION__, __LINE__, ##__VA_ARGS__)
-#define NWarn(fmt, ...) printf("\033[0;33m[%s > %s] " fmt "\n\033[0m", __FILENAME__, __FUNCTION__, ##__VA_ARGS__)
-#define NHint(fmt, ...) printf("\033[0;34m[%s] " fmt "\n\033[0m", __FILENAME__, ##__VA_ARGS__)
-#define NInfo(fmt, ...) printf("\033[0;32m[%s] " fmt "\n\033[0m", NTimestamp().c_str(), ##__VA_ARGS__)
+#define NWarn(fmt, ...) printf("\033[0;33m[%s > %s > %d] " fmt "\n\033[0m", __FILENAME__, __FUNCTION__, __LINE__, ##__VA_ARGS__)
+#define NHint(fmt, ...) printf("\033[0;34m[%s > %s > %d] " fmt "\n\033[0m", __FILENAME__, __FUNCTION__, __LINE__, ##__VA_ARGS__)
+#define NInfo(fmt, ...) printf("\033[0;32m[%s > %s > %d] " fmt "\n\033[0m", __FILENAME__, __FUNCTION__, __LINE__, ##__VA_ARGS__)
 /* Undefine */
-#elif NEU_LOG_LEVEL >= 0
+#elif NEU_LOG_LEVEL == 0
 #define NOneLine(fmt, ...)
 #define NErr(fmt, ...)
 #define NWarn(fmt, ...)
@@ -226,6 +226,13 @@ std::string NTimestamp();
   if ((o) != nullptr) \
   { \
     delete (o); \
+    (o) = nullptr; \
+  }
+
+#define NReleaseArray(o) \
+  if ((o) != nullptr) \
+  { \
+    delete[] (o); \
     (o) = nullptr; \
   }
 
