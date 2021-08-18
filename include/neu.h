@@ -22,7 +22,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 
 
-Last update: 2021-08-16 15:52
+Last update: 2021-08-18 13:03
 ******************************************************************************/
 #ifndef NEU_H
 #define NEU_H
@@ -131,7 +131,7 @@ std::string NTimestamp();
 #define NHint(fmt, ...) printf("\033[0;34m[%s > %s > %d] " fmt "\n\033[0m", __FILENAME__, __FUNCTION__, __LINE__, ##__VA_ARGS__)
 #define NInfo(fmt, ...) printf("\033[0;32m[%s > %s > %d] " fmt "\n\033[0m", __FILENAME__, __FUNCTION__, __LINE__, ##__VA_ARGS__)
 /* Undefine */
-#elif NEU_LOG_LEVEL == 0
+#elif NEU_LOG_LEVEL >= 0
 #define NOneLine(fmt, ...)
 #define NErr(fmt, ...)
 #define NWarn(fmt, ...)
