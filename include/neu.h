@@ -22,7 +22,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 
 
-Last update: 2021-08-19 11:22
+Last update: 2021-08-19 14:25
 ******************************************************************************/
 #ifndef NEU_H
 #define NEU_H
@@ -469,6 +469,7 @@ public:
 
   ~NMutexThread()
   {
+    this->Stop();
     if (this->m_thread.joinable())
     {
       this->m_thread.join();
