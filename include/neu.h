@@ -22,7 +22,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 
 
-Last update: 2021-08-18 13:03
+Last update: 2021-08-19 11:22
 ******************************************************************************/
 #ifndef NEU_H
 #define NEU_H
@@ -471,7 +471,7 @@ public:
   {
     if (this->m_thread.joinable())
     {
-      this->m_thread.detach();
+      this->m_thread.join();
     }
   }
 
@@ -493,6 +493,11 @@ public:
   void Notify()
   {
     this->m_controller.notify_one();
+  }
+
+  void Stop()
+  {
+    this->m_lock.unlock();
   }
 
   void Wait(bool should_wait)
