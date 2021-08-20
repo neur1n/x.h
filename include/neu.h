@@ -22,7 +22,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 
 
-Last update: 2021-08-19 14:25
+Last update: 2021-08-20 17:01
 ******************************************************************************/
 #ifndef NEU_H
 #define NEU_H
@@ -493,7 +493,7 @@ public:
 
   void Notify()
   {
-    this->m_controller.notify_one();
+    this->m_cv.notify_one();
   }
 
   void Stop()
@@ -505,13 +505,13 @@ public:
   {
     while (should_wait)
     {
-      this->m_controller.wait(this->m_lock);
+      this->m_cv.wait(this->m_lock);
       break;
     }
   }
 
 private:
-  std::condition_variable_any m_controller;
+  std::condition_variable m_cv;
   std::unique_lock<std::mutex> m_lock;
   std::mutex m_mutex;
   std::thread m_thread;
