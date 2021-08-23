@@ -63,23 +63,25 @@ INCLUDE_DIRECTORIES("path/to/neu.h")
 If the whole repository is downloaded/included into your project, add the
 following snippet to your project's main `CMakeLists.txt`:
 ```cmake
-SET(NeuH_DIR "path/to/NeuH")
-FIND_PACKAGE(NeuH REQUIRED)
-INCLUDE_DIRECTORIES(${NeuH_INCLUDE_DIRS})
-SET(NeuH_LOG_LEVEL 1)
+SET(NeuH_DIR "path/to/neu.h")              # Not the neu.h file, but the repository
+FIND_PACKAGE(NeuH REQUIRED)                # Notice that the package name is not "neu.h"
+INCLUDE_DIRECTORIES(${NeuH_INCLUDE_DIRS})  # Add to inclusion
+SET(NeuH_LOG_LEVEL 1)                      # If not specified, 5 will be used by default
 ```
 Notice that when using the whole repository, this library can be found with
 `FIND_PACKAGE()` and additionally defined two variables to be used:
 - `NeuH_INCLUDE_DIRS`: the include directories of neu.h
 - `NeuH_LOG_LEVEL`: the log verbosity level of neu.h, of which the available
 values are:
-  - 4: enables all log printings (`NOneLine`, `NErr`, `NWarn`, `NHint`,
-  `NInfo`), recommended for **RELEASE** build
-  - 3: enables `NOneLine`, `NErr`, `NWarn`, `NHint`
-  - 2: enables `NOneLine`, `NErr`, `NWarn`
-  - 1: enables `NOneLine`, `NErr`
-  - 0: disable all log printings
-  - -1: enables all log printings, recommended for **DEBUG** build
+  - \>= 5: enables `NLogF`, `NLogE`, `NLogW`, `NLogI`, `NLogD` (all log printings) 
+  - 4: enables `NLogF`, `NLogE`, `NLogW`, `NLogI`
+  - 3: enables `NLogF`, `NLogE`, `NLogW`
+  - 2: enables `NLogF`, `NLogE`
+  - 1: enables `NLogF`
+  - \<= 0: disables all log printings
+
+  where `F`, `E`, `W`, `I`, `D` are short for `FATAL`, `ERROR`, `WARNING`,
+`INFO`, `DEBUG` respectively.
 
 <!----------------------------------------------------------- DOCUMENTATION -->
 ## Documentation
