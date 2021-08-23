@@ -22,284 +22,333 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 
 
-Last update: 2021-08-20 17:01
+Last update: 2021-08-23 18:08
 ******************************************************************************/
 #ifndef NEU_H
 #define NEU_H
 
-#include <stdio.h>
-#include <stdlib.h>
+#include <algorithm>
 #include <cctype>
+#include <cmath>
 #include <condition_variable>
+#include <cstdarg>
+#include <cstdio>
+#include <cstdlib>
 #include <cstring>
 #include <functional>
 #include <map>
 #include <mutex>
+#include <queue>
+#include <stdarg.h>
+#include <system_error>
 #include <thread>
 #include <vector>
 #include <sys/stat.h>
 
-#if defined(_WIN32)
+#if defined(_MSC_VER)
 #include <conio.h>
-#elif defined(__linux__)
+#else
 #include <linux/limits.h>
 #include <sys/ioctl.h>
 #include <termios.h>
 #include <unistd.h>
-
-int _kbhit();
 #endif
 
 //******************************************************************** Macro{{{
-#define NK_ESC   0x1B
-#define NK_A     0x41
-#define NK_B     0x42
-#define NK_C     0x43
-#define NK_D     0x44
-#define NK_Q     0x51
-#if defined(_WIN32)
-#define NK_LEFT  0x4B
-#define NK_UP    0x48
-#define NK_RIGHT 0x4D
-#define NK_DOWN  0x50
-#elif defined(__linux__)
-#define NK_LEFT  (-1)
-#define NK_UP    (-2)
-#define NK_RIGHT (-3)
-#define NK_DOWN  (-4)
-#endif
-//******************************************************************* Macro}}}
-
-//*************************************************************** Error Code{{{
-enum NRESULT
-{
-  N_OK                = 0,
-  N_FAIL              = -1,
-  N_DATA_INVALID      = -2,
-  N_INPUT_INVALID     = -3,
-  N_OPERATION_ABORTED = -4,
-};
-
-static const std::map<NRESULT, const char*> k_nr_msgs =
-{
-  {N_OK,                "Succeeded"},
-  {N_FAIL,              "Failed"},
-  {N_DATA_INVALID,      "Data are invalid"},
-  {N_INPUT_INVALID,     "Input is invalid"},
-  {N_OPERATION_ABORTED, "Operation aborted"},
-};
-
-inline const char *NRMsg(NRESULT nr)
-{
-  std::map<const NRESULT, const char*>::const_iterator it = k_nr_msgs.find(nr);
-
-  if (it != k_nr_msgs.end())
-  {
-    return it->second;
-  }
-
-  return "Unknown error";
-}
-
-#define NSucc(nr) (((NRESULT)(nr)) >= 0)
-#define NFail(nr) (((NRESULT)(nr)) < 0)
-//*************************************************************** Error Code}}}
-
-//***************************************************************** Function{{{
-std::string NTimestamp();
-
 #ifndef DLL_API
-#if defined(_WIN32)
+#if defined(_MSC_VER)
 #define DLL_API __declspec(dllexport)
-#elif defined(__linux__)
+#else
 #define DLL_API __attribute__ ((visibility("default")))
 #endif
 #endif
 
-#if defined(_WIN32)
+#if defined(_MSC_VER)
 #define __FILENAME__ (strrchr(__FILE__, '\\') ? strrchr(__FILE__, '\\') + 1 : __FILE__)
 #define __PRETTY_FUNCTION__ __FUNCSIG__
 #else
 #define __FILENAME__ (strrchr(__FILE__, '/') ? strrchr(__FILE__, '/') + 1 : __FILE__)
 #endif
 
-/* For debug build */
-#if NEU_LOG_LEVEL < 0
-#define NOneLine(fmt, ...) printf("\r[%s] " fmt, __FILENAME__, ##__VA_ARGS__); fflush(stdout); // Print on one line.
-#define NErr(fmt, ...) printf("\033[0;31m[%s > %s > %d] " fmt "\n\033[0m", __FILENAME__, __PRETTY_FUNCTION__, __LINE__, ##__VA_ARGS__)
-#define NWarn(fmt, ...) printf("\033[0;33m[%s > %s > %d] " fmt "\n\033[0m", __FILENAME__, __FUNCTION__, __LINE__, ##__VA_ARGS__)
-#define NHint(fmt, ...) printf("\033[0;34m[%s > %s > %d] " fmt "\n\033[0m", __FILENAME__, __FUNCTION__, __LINE__, ##__VA_ARGS__)
-#define NInfo(fmt, ...) printf("\033[0;32m[%s > %s > %d] " fmt "\n\033[0m", __FILENAME__, __FUNCTION__, __LINE__, ##__VA_ARGS__)
-/* Undefine */
-#elif NEU_LOG_LEVEL >= 0
-#define NOneLine(fmt, ...)
-#define NErr(fmt, ...)
-#define NWarn(fmt, ...)
-#define NHint(fmt, ...)
-#define NInfo(fmt, ...)
-#endif
-/* For release build */
-#if NEU_LOG_LEVEL >= 1
-#undef NOneLine
-#undef NErr
-#define NOneLine(fmt, ...) printf("\r[%s] " fmt, NTimestamp().c_str(), ##__VA_ARGS__); fflush(stdout); // Print on one line.
-#define NErr(fmt, ...) printf("\033[0;31m[ERROR %s] " fmt "\n\033[0m", NTimestamp().c_str(), ##__VA_ARGS__)
-#endif
-#if NEU_LOG_LEVEL >= 2
-#undef NWarn
-#define NWarn(fmt, ...) printf("\033[0;33m[WARN %s] " fmt "\n\033[0m", NTimestamp().c_str(), ##__VA_ARGS__)
-#endif
-#if NEU_LOG_LEVEL >= 3
-#undef NHint
-#define NHint(fmt, ...) printf("\033[0;34m[HINT %s] " fmt "\n\033[0m", NTimestamp().c_str(), ##__VA_ARGS__)
-#endif
-#if NEU_LOG_LEVEL >= 4
-#undef NInfo
-#define NInfo(fmt, ...) printf("\033[0;32m[INFO %s] " fmt "\n\033[0m", NTimestamp().c_str(), ##__VA_ARGS__)
+#define NKEY_ESC   0x1B
+#define NKEY_A     0x41
+#define NKEY_B     0x42
+#define NKEY_C     0x43
+#define NKEY_D     0x44
+#define NKEY_Q     0x51
+#if defined(_MSC_VER)
+#define NKEY_LEFT  0x4B
+#define NKEY_UP    0x48
+#define NKEY_RIGHT 0x4D
+#define NKEY_DOWN  0x50
+#else
+#define NKEY_LEFT  (-1)
+#define NKEY_UP    (-2)
+#define NKEY_RIGHT (-3)
+#define NKEY_DOWN  (-4)
 #endif
 
-#ifndef NArraySize
-#define NArraySize(a) ((sizeof(a) / sizeof(*(a))) / static_cast<size_t>(!(sizeof(a) % sizeof(*(a)))))
+#define NCOLOR_BLACK(bold)   "\033[" #bold ";30m"
+#define NCOLOR_RED(bold)     "\033[" #bold ";31m"
+#define NCOLOR_GREEN(bold)   "\033[" #bold ";32m"
+#define NCOLOR_YELLOW(bold)  "\033[" #bold ";33m"
+#define NCOLOR_BLUE(bold)    "\033[" #bold ";34m"
+#define NCOLOR_MAGENTA(bold) "\033[" #bold ";35m"
+#define NCOLOR_CYAN(bold)    "\033[" #bold ";36m"
+#define NCOLOR_WHITE(bold)   "\033[" #bold ";37m"
+#define NCOLOR_RESET         "\033[0m"
+
+#define NLOG_COLOR_F NCOLOR_MAGENTA(1)
+#define NLOG_COLOR_E NCOLOR_RED(1)
+#define NLOG_COLOR_W NCOLOR_YELLOW(1)
+#define NLOG_COLOR_I NCOLOR_BLUE(1)
+#define NLOG_COLOR_D NCOLOR_GREEN(1)
+
+#ifdef NDEBUG
+#define NLOG_FORMAT(level, format) "[" level " %s %s] " format "\n" NCOLOR_RESET, __DATE__, __TIME__
+#else
+#define NLOG_FORMAT(level, format) "[" level " %s %s %s > %s > %d] " format "\n" NCOLOR_RESET, __DATE__, __TIME__, __FILENAME__, __FUNCTION__, __LINE__
 #endif
 
-#ifndef NBit
-#define NBit(b) (1 << b)
+#ifndef NLOG_LEVEL
+#define NLOG_LEVEL 5
 #endif
 
-#ifndef NClamp
-#if defined(_WIN32)
-#define NClamp(x, l, u) \
-  [&](){ \
-    decltype(x) _x = (x); \
-    decltype(l) _l = (l); \
-    decltype(u) _u = (u); \
-    return _x <= _l ? _l : (_x <= _u ? _x : _u); \
-  }()
-#elif defined(__linux__)
-#define NClamp(x, l, u) \
-  ({ \
-    __typeof__(x) _x = (x); \
-    __typeof__(l) _l = (l); \
-    __typeof__(u) _u = (u); \
-    _x <= _l ? _l : (_x <= _u ? _x : _u); \
-  })
-#endif
+#if NLOG_LEVEL >= 1
+#define NLogF(format, ...) printf(NLOG_COLOR_F NLOG_FORMAT("F", format), ##__VA_ARGS__)
+#else
+#define NLogF(format, ...)
 #endif
 
-#ifndef NMax
-#if defined(_WIN32)
-#define NMax(x, y) \
-  [&](){ \
-    decltype(x) _x = (x); \
-    decltype(y) _y = (y); \
-    return _x >= _y ? _x : _y; \
-  }()
-#elif defined(__linux__)
-#define NMax(x, y) \
-  ({ \
-    __typeof__(x) _x = (x); \
-    __typeof__(y) _y = (y); \
-    _x >= _y ? _x : _y; \
-  })
-#endif
+#if NLOG_LEVEL >= 2
+#define NLogE(format, ...) printf(NLOG_COLOR_E NLOG_FORMAT("E", format), ##__VA_ARGS__)
+#else
+#define NLogE(format, ...)
 #endif
 
-#ifndef NMin
-#if defined(_WIN32)
-#define NMin(x, y) \
-  [&](){ \
-    decltype(x) _x = (x); \
-    decltype(y) _y = (y); \
-    return _x <= _y ? _x : _y; \
-  }()
-#elif defined(__linux__)
-#define NMin(x, y) \
-  ({ \
-    __typeof__(x) _x = (x); \
-    __typeof__(y) _y = (y); \
-    _x <= _y ? _x : _y; \
-  })
-#endif
+#if NLOG_LEVEL >= 3
+#define NLogW(format, ...) printf(NLOG_COLOR_W NLOG_FORMAT("W", format), ##__VA_ARGS__)
+#else
+#define NLogW(format, ...)
 #endif
 
-#define NRelease(o) \
-  if ((o) != nullptr) \
-  { \
-    delete (o); \
-    (o) = nullptr; \
-  }
-
-#define NReleaseArray(o) \
-  if ((o) != nullptr) \
-  { \
-    delete[] (o); \
-    (o) = nullptr; \
-  }
-
-inline std::string NAbsolutePath(const char *file)
-{
-#if defined(_WIN32)
-  char abs_path[_MAX_PATH];
-  if (!_fullpath(abs_path, file, _MAX_PATH))
-  {
-    return nullptr;
-  }
-#elif defined(__linux__)
-  char abs_path[PATH_MAX];
-  if (!realpath(file, abs_path))
-  {
-    return nullptr;
-  }
+#if NLOG_LEVEL >= 4
+#define NLogI(format, ...) printf(NLOG_COLOR_I NLOG_FORMAT("I", format), ##__VA_ARGS__)
+#else
+#define NLogI(format, ...)
 #endif
 
-  return std::string(abs_path);
-}
+#if NLOG_LEVEL >= 5
+#define NLogD(format, ...) printf(NLOG_COLOR_D NLOG_FORMAT("D", format), ##__VA_ARGS__)
+#else
+#define NLogD(format, ...)
+#endif
+//******************************************************************** Macro}}}
 
-inline long long NDuration(
+//********************************************************************* Enum{{{
+//********************************************************************* Enum}}}
+
+//************************************************************* Declarations{{{
+//Function{{{
+/* The followings are in Marco section.
+  NLogF(const char *format, ...);
+  NLogE(const char *format, ...);
+  NLogW(const char *format, ...);
+  NLogI(const char *format, ...);
+  NLogD(const char *format, ...);
+*/
+
+#if defined(_MSC_VER)
+#else
+int _kbhit();
+#endif
+
+bool NSucc(const std::error_code &error);
+
+bool NFail(const std::error_code &error);
+
+bool NPathExists(const char *path);
+
+bool NStringEmpty(const char *string);
+
+int NPressedKey();
+
+long long NDuration(
     const std::chrono::system_clock::time_point &start,
     const std::chrono::system_clock::time_point &end,
-    const std::string &unit = "ms")
+    const std::string &unit = "ms");
+
+void NSleep(const unsigned long long &ms);
+
+std::string NFullPath(const char *path);
+
+std::string NTimestamp(const char *format = "%Y-%m-%d %H:%M:%S");
+
+template<class T, size_t N>
+size_t NArraySize(const T (&array)[N]);
+
+template<class T>
+const T &NClamp(const T &x, const T &low, const T &high);
+
+template<class T>
+void NRelease(const T &&pointer);
+
+template<class T>
+void NReleaseArray(const T &&pointer);
+//Function}}}
+
+//Class{{{
+template<class Ret, class ...Args>
+class NCallback
 {
-  if (unit.compare("s") == 0)
+public:
+  template<class Fn>
+  NCallback(Fn &&function);
+
+  ~NCallback();
+
+  Ret operator()(Args ...arguments);
+
+private:
+  std::function<Ret(Args...)> m_function;
+};  // NCallback
+
+template<class T>
+class NQueue
+{
+public:
+  NQueue() = default;
+  NQueue(const NQueue<T> &) = delete;
+  NQueue& operator=(const NQueue<T> &) = delete;
+
+  NQueue(NQueue<T> &&other);
+
+  ~NQueue();
+
+  const T &Back(const bool &wait = true);
+
+  void Clear();
+
+  bool Empty();
+
+  const T &Front();
+
+  void Pop();
+
+  void Push(const T &item);
+
+  size_t Size();
+
+private:
+  std::condition_variable m_cv;
+  std::deque<T> m_queue;
+  std::mutex m_mutex;
+};  // class NQueue
+
+class NThread
+{
+public:
+  template<class Fn, class ...Args>
+  NThread(Fn&& function, Args&&... arguments);
+
+  ~NThread();
+
+  std::error_code Start();
+
+  void Notify();
+
+  void Stop();
+
+  void Wait(bool should_wait);
+
+private:
+  std::condition_variable m_cv;
+  std::unique_lock<std::mutex> m_lock;
+  std::mutex m_mutex;
+  std::thread m_thread;
+};  // class NThread
+
+class NTimer
+{
+public:
+  NTimer();
+
+  ~NTimer();
+
+  void Tic(const bool &echo = false);
+
+  long long Toc(const char *unit = "ms", const bool &echo = false);
+
+private:
+  std::chrono::system_clock::time_point m_tic;
+  long long m_elapsed;
+};  // class NTimer
+//Class}}}
+//************************************************************* Declarations}}}
+
+//***************************************************************** Function{{{
+#if defined(_MSC_VER)
+#else
+int _kbhit()
+{
+  static bool initialized = false;
+  if (!initialized)
   {
-    return std::chrono::duration_cast<std::chrono::seconds>(end - start).count();
+    struct termios settings;
+    tcgetattr(STDIN_FILENO, &settings);
+    settings.c_lflag &= ~ICANON;
+    tcsetattr(STDIN_FILENO, TCSANOW, &settings);
+    setbuf(stdin, NULL);
+    initialized = true;
   }
-  else if (unit.compare("us") == 0)
-  {
-    return std::chrono::duration_cast<std::chrono::microseconds>(end - start).count();
-  }
-  else //  if (unit.compare("ms") == 0)  // Milliseconds by default
-  {
-    return std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count();
-  }
+
+  int bytes = 0;
+  ioctl(STDIN_FILENO, FIONREAD, &bytes);
+  return bytes;
+}
+#endif
+
+inline bool NSucc(const std::error_code &error)
+{
+  return !error ? true : false;
 }
 
-inline bool NFileExists(const char *file_name)
+inline bool NFail(const std::error_code &error)
+{
+  return error ? true : false;
+}
+
+inline bool NPathExists(const char *path)
 {
   int result = -1;
 
-#if defined(_WIN32)
+#if defined(_MSC_VER)
   struct _stat buffer;
-  result = _stat(file_name, &buffer);
-#elif defined(__linux__)
+  result = _stat(path, &buffer);
+#else
   struct stat buffer;
-  result = stat(file_name, &buffer);
+  result = stat(path, &buffer);
 #endif
 
   return (result == 0);
 }
 
-inline int NGetPressedKey()
+inline bool NStringEmpty(const char *string)
+{
+  return (string == nullptr || string[0] == '\0');
+}
+
+inline int NPressedKey()
 {
   int key = 0;
 
-#if defined(_WIN32)
+#if defined(_MSC_VER)
   if (_kbhit())
   {
     key = toupper(_getch());
   }
   return key;
-#elif defined(__linux__)
+#else
   int bytes_waiting = _kbhit();
   if (bytes_waiting <= 0) { return 0; }
 
@@ -312,7 +361,6 @@ inline int NGetPressedKey()
   } buffer{0};
   int err = 0;
   ssize_t bytes_read = 0;
-
 
   err = tcgetattr(0, &old_settings);
   if (err) { return 0; }
@@ -340,16 +388,16 @@ inline int NGetPressedKey()
     {
       switch (buffer.ch[2])
       {
-        case NK_A:
+        case NKEY_A:
           key = NK_UP;
           break;
-        case NK_B:
+        case NKEY_B:
           key = NK_DOWN;
           break;
-        case NK_C:
+        case NKEY_C:
           key = NK_RIGHT;
           break;
-        case NK_D:
+        case NKEY_D:
           key = NK_LEFT;
           break;
       }
@@ -377,220 +425,313 @@ inline int NGetPressedKey()
 #endif
 }
 
-inline bool NStringEmpty(const char *str)
+inline long long NDuration(
+    const std::chrono::system_clock::time_point &start,
+    const std::chrono::system_clock::time_point &end,
+    const std::string &unit)
 {
-  return (str == nullptr || str[0] == '\0');
+  if (unit.compare("s") == 0)
+  {
+    return std::chrono::duration_cast<std::chrono::seconds>(end - start).count();
+  }
+  else if (unit.compare("us") == 0)
+  {
+    return std::chrono::duration_cast<std::chrono::microseconds>(end - start).count();
+  }
+  else //  if (unit.compare("ms") == 0)
+  {
+    return std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count();
+  }
 }
 
-inline void NSleep(const int &ms)
+inline void NSleep(const unsigned long long &ms)
 {
   std::this_thread::sleep_for(std::chrono::milliseconds(ms));
 }
 
-inline std::string NTimestamp()
+inline std::string NFullPath(const char *file)
+{
+#if defined(_MSC_VER)
+  char abs_path[_MAX_PATH];
+  if (!_fullpath(abs_path, file, _MAX_PATH))
+  {
+    return nullptr;
+  }
+#else
+  char abs_path[PATH_MAX];
+  if (!realpath(file, abs_path))
+  {
+    return nullptr;
+  }
+#endif
+
+  return std::string(abs_path);
+}
+
+inline std::string NTimestamp(const char *format)
 {
   time_t rawtime(0);
   struct tm timeinfo;
 
   time(&rawtime);
-#if defined(_WIN32)
+#if defined(_MSC_VER)
   localtime_s(&timeinfo, &rawtime);
-#elif defined(__linux__)
+#else
   localtime_r(&rawtime, &timeinfo);
 #endif
 
   char buffer[50];
-  strftime(buffer, sizeof(buffer), "%Y-%m-%d %H:%M:%S", &timeinfo);
+
+  if (NStringEmpty(format))
+  {
+    strftime(buffer, sizeof(buffer), "%Y-%m-%d %H:%M:%S", &timeinfo);
+  }
+  else
+  {
+    strftime(buffer, sizeof(buffer), format, &timeinfo);
+  }
   return std::string(buffer);
 }
 
-template<class T>
-T NEnumAnd(const T &x, const T &y)
+template<class T, size_t N>
+size_t NArraySize(const T (&array)[N])
 {
-  return static_cast<T>(static_cast<int>(x) & static_cast<int>(y));
+  return N;
 }
 
 template<class T>
-T NEnumNot(T x)
+const T &NClamp(const T &x, const T &low, const T &high)
 {
-  return static_cast<T>(~static_cast<int>(x));
+#if (defined(_MSVC_LANG) && _MSVC_LANG >= 201703L) || __cplusplus >= 201703L
+  return std::clamp(x, low, high);
+#else
+  return x < low ? low : (x > high ? high : x);
+#endif
 }
 
 template<class T>
-T NEnumOr(const T &x, const T &y)
+void NRelease(const T &&pointer)
 {
-  return static_cast<T>(static_cast<int>(x) | static_cast<int>(y));
+  if (pointer != nullptr)
+  {
+    delete pointer;
+    pointer = nullptr;
+  }
 }
 
 template<class T>
-T NEnumSubtract(const T &x, const T &y)
+void NReleaseArray(const T &&pointer)
 {
-  return static_cast<T>(static_cast<int>(x) - static_cast<int>(y));
+  if (pointer != nullptr)
+  {
+    delete[] pointer;
+    pointer = nullptr;
+  }
 }
 //***************************************************************** Function}}}
 
-//*********************************************************** Class & Struct{{{
+//******************************************************************** Class{{{
+//NCallback{{{
 template<class Ret, class ...Args>
-class NCallback
+template<class Fn>
+NCallback<Ret, Args...>::NCallback(Fn &&function)
 {
-public:
-  template<class Obj, class Fn>
-  NCallback(Fn &&function, Obj &&obj)
-  {
-    this->m_function = std::bind(function, obj, std::placeholders::_1);
-  }
-
-  template<class Fn>
-  NCallback(Fn &&function)
-  {
-    this->m_function = std::function<Ret(Args...)>(function);
-  }
-
-  ~NCallback() {}
-
-  Ret operator()(Args ...arguments)
-  {
-    return this->m_function(arguments...);
-  }
-
-private:
-  std::function<Ret(Args...)> m_function;
-};  // NCallback
-
-class NMutexThread
-{
-public:
-  template<class Fn, class ...Args>
-  NMutexThread(Fn&& function, Args&&... arguments)
-  {
-    this->m_lock = std::unique_lock<std::mutex>(this->m_mutex);
-    this->m_thread = std::thread(function, arguments...);
-  }
-
-  ~NMutexThread()
-  {
-    this->Stop();
-    if (this->m_thread.joinable())
-    {
-      this->m_thread.join();
-    }
-  }
-
-  NRESULT Start()
-  {
-    if (this->m_thread.joinable())
-    {
-      this->m_thread.join();
-    }
-    else
-    {
-      NErr("Failed to start thread, thread is not joinable.");
-      return N_OPERATION_ABORTED;
-    }
-
-    return N_OK;
-  }
-
-  void Notify()
-  {
-    this->m_cv.notify_one();
-  }
-
-  void Stop()
-  {
-    this->m_lock.unlock();
-  }
-
-  void Wait(bool should_wait)
-  {
-    while (should_wait)
-    {
-      this->m_cv.wait(this->m_lock);
-      break;
-    }
-  }
-
-private:
-  std::condition_variable m_cv;
-  std::unique_lock<std::mutex> m_lock;
-  std::mutex m_mutex;
-  std::thread m_thread;
-};  // class NMutexThread
-
-/* Numeric vector, only works with numeric data. */
-template<class T>
-class NNVector
-{
-public:
-  NNVector()
-  {
-    this->m_sum = (T)0;
-  }
-
-  ~NNVector() {}
-
-  void Erase(const int &index)
-  {
-    this->m_sum -= this->m_data[index];
-
-    if (index >= 0)
-    {
-      this->m_data.erase(this->m_data.begin() + index);
-    }
-    else
-    {
-      this->m_data.erase(this->m_data.end() + index);
-    }
-  }
-
-  T Mean()
-  {
-    if (this->m_data.size() <= 0)
-    {
-      return (T)0;
-    }
-
-    return this->m_sum / this->m_data.size();
-  }
-
-  void Push(const T &data)
-  {
-    this->m_data.push_back(data);
-    this->m_sum += data;
-  }
-
-  size_t Size()
-  {
-    return this->m_data.size();
-  }
-
-private:
-  std::vector<T> m_data;
-  T m_sum;
-};  // class NNVector
-//*********************************************************** Class & Struct}}}
-
-//************************************************************** OS Specific{{{
-#if defined(_WIN32)
-#elif defined(__linux__)
-inline int _kbhit()
-{
-  static bool initialized = false;
-  if (!initialized)
-  {
-    struct termios settings;
-    tcgetattr(STDIN_FILENO, &settings);
-    settings.c_lflag &= ~ICANON;
-    tcsetattr(STDIN_FILENO, TCSANOW, &settings);
-    setbuf(stdin, NULL);
-    initialized = true;
-  }
-
-  int bytes = 0;
-  ioctl(STDIN_FILENO, FIONREAD, &bytes);
-  return bytes;
+  this->m_function = std::function<Ret(Args...)>(function);
 }
-#endif
-//************************************************************** OS Specific}}}
 
+template<class Ret, class ...Args>
+NCallback<Ret, Args...>::~NCallback()
+{
+}
+
+template<class Ret, class ...Args>
+Ret NCallback<Ret, Args...>::operator()(Args ...arguments)
+{
+  return this->m_function(arguments...);
+}
+//NCallback}}}
+
+//NQueue{{{
+template<class T>
+NQueue<T>::NQueue(NQueue<T> &&other)
+{
+  this->m_queue.clear();
+  this->m_queue = std::move(other.m_queue);
+  other.m_queue.clear();
+}
+
+template<class T>
+NQueue<T>::~NQueue()
+{
+  this->m_queue.clear();
+}
+
+template<class T>
+const T &NQueue<T>::Back(const bool &wait)
+{
+  std::unique_lock<std::mutex> lock(this->m_mutex);
+
+  if (wait)
+  {
+    while (this->m_queue.empty())
+    {
+      this->m_cv.wait(lock);
+    }
+  }
+  else
+  {
+    if (this->m_queue.empty())
+    {
+      throw std::out_of_range("[ERROR] Queue is empty.");
+    }
+  }
+
+  return this->m_queue.back();
+}
+
+template<class T>
+void NQueue<T>::Clear()
+{
+  std::lock_guard<std::mutex> lock(this->m_mutex);
+  if (!this->m_queue.empty())
+  {
+    this->m_queue.clear();
+  }
+}
+
+template<class T>
+bool NQueue<T>::Empty()
+{
+  std::lock_guard<std::mutex> lock(this->m_mutex);
+  return this->m_queue.empty();
+}
+
+template<class T>
+const T &NQueue<T>::Front()
+{
+  std::unique_lock<std::mutex> lock(this->m_mutex);
+
+  while (this->m_queue.empty())
+  {
+    this->m_cv.wait(lock);
+  }
+
+  return this->m_queue.front();
+}
+
+template<class T>
+void NQueue<T>::Pop()
+{
+  std::unique_lock<std::mutex> lock(this->m_mutex);
+
+  while (this->m_queue.empty())
+  {
+    this->m_cv.wait(lock);
+  }
+
+  this->m_queue.pop_front();
+}
+
+template<class T>
+void NQueue<T>::Push(const T &item)
+{
+  std::lock_guard<std::mutex> lock(this->m_mutex);
+  this->m_queue.push_back(item);
+  this->m_cv.notify_all();
+}
+
+template<class T>
+size_t NQueue<T>::Size()
+{
+  std::lock_guard<std::mutex> lock(this->m_mutex);
+  return this->m_queue.size();
+}
+//NQueue}}}
+
+//NThread{{{
+template<class Fn, class ...Args>
+NThread::NThread(Fn&& function, Args&&... arguments)
+{
+  this->m_lock = std::unique_lock<std::mutex>(this->m_mutex);
+  this->m_thread = std::thread(function, arguments...);
+}
+
+inline NThread::~NThread()
+{
+  this->Stop();
+  if (this->m_thread.joinable())
+  {
+    this->m_thread.join();
+  }
+}
+
+inline std::error_code NThread::Start()
+{
+  if (this->m_thread.joinable())
+  {
+    this->m_thread.join();
+  }
+  else
+  {
+    NLogE("Failed to start thread, thread is not joinable.");
+    return std::make_error_code(std::errc::operation_canceled);
+  }
+
+  return std::error_code();
+}
+
+inline void NThread::Notify()
+{
+  this->m_cv.notify_one();
+}
+
+inline void NThread::Stop()
+{
+  this->m_lock.unlock();
+}
+
+inline void NThread::Wait(bool should_wait)
+{
+  while (should_wait)
+  {
+    this->m_cv.wait(this->m_lock);
+    break;
+  }
+}
+//NThread}}}
+
+//NTimer{{{
+inline NTimer::NTimer()
+  :m_tic(std::chrono::system_clock::now()), m_elapsed(0)
+{
+}
+
+inline NTimer::~NTimer()
+{
+}
+
+inline void NTimer::Tic(const bool &echo)
+{
+  this->m_tic = std::chrono::system_clock::now();
+
+  if (echo)
+  {
+    NLogI("Timing started.");
+  }
+}
+
+inline long long NTimer::Toc(const char *unit, const bool &echo)
+{
+  this->m_elapsed = NDuration(
+      this->m_tic, std::chrono::system_clock::now(), unit);
+
+  if (echo)
+  {
+    NLogI("Time elapsed: %lld (%s)", this->m_elapsed, unit);
+  }
+
+  return this->m_elapsed;
+}
+//NTimer}}}
+//******************************************************************** Class}}}
 #endif  // NEU_H
