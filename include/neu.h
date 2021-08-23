@@ -191,10 +191,10 @@ template<class T>
 const T &NClamp(const T &x, const T &low, const T &high);
 
 template<class T>
-void NRelease(const T &&pointer);
+void NRelease(T &&pointer);
 
 template<class T>
-void NReleaseArray(const T &&pointer);
+void NReleaseArray(T &&pointer);
 //Function}}}
 
 //Class{{{
@@ -510,7 +510,7 @@ const T &NClamp(const T &x, const T &low, const T &high)
 }
 
 template<class T>
-void NRelease(const T &&pointer)
+void NRelease(T &&pointer)
 {
   if (pointer != nullptr)
   {
@@ -520,7 +520,7 @@ void NRelease(const T &&pointer)
 }
 
 template<class T>
-void NReleaseArray(const T &&pointer)
+void NReleaseArray(T &&pointer)
 {
   if (pointer != nullptr)
   {
