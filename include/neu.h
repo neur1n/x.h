@@ -22,7 +22,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 
 
-Last update: 2021-08-23 18:08
+Last update: 2021-08-24 16:16
 ******************************************************************************/
 #ifndef NEU_H
 #define NEU_H
@@ -389,16 +389,16 @@ inline int NPressedKey()
       switch (buffer.ch[2])
       {
         case NKEY_A:
-          key = NK_UP;
+          key = NKEY_UP;
           break;
         case NKEY_B:
-          key = NK_DOWN;
+          key = NKEY_DOWN;
           break;
         case NKEY_C:
-          key = NK_RIGHT;
+          key = NKEY_RIGHT;
           break;
         case NKEY_D:
-          key = NK_LEFT;
+          key = NKEY_LEFT;
           break;
       }
     }
