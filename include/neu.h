@@ -289,7 +289,7 @@ private:
 //***************************************************************** Function{{{
 #if defined(_MSC_VER)
 #else
-int _kbhit()
+inline int _kbhit()
 {
   static bool initialized = false;
   if (!initialized)
