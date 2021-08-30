@@ -98,6 +98,7 @@ Last update: 2021-08-24 16:16
 #define NCOLOR_WHITE(bold)   "\033[" #bold ";37m"
 #define NCOLOR_RESET         "\033[0m"
 
+#define NLOG_COLOR_P NCOLOR_WHITE(1)
 #define NLOG_COLOR_F NCOLOR_MAGENTA(1)
 #define NLOG_COLOR_E NCOLOR_RED(1)
 #define NLOG_COLOR_W NCOLOR_YELLOW(1)
@@ -112,6 +113,12 @@ Last update: 2021-08-24 16:16
 
 #ifndef NLOG_LEVEL
 #define NLOG_LEVEL 5
+#endif
+
+#if NLOG_LEVEL >= 0
+#define NLogP(format, ...) printf(NLOG_COLOR_P NLOG_FORMAT("P", format), ##__VA_ARGS__)
+#else
+#define NLogP(format, ...)
 #endif
 
 #if NLOG_LEVEL >= 1

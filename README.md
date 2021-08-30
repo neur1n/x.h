@@ -73,15 +73,16 @@ Notice that when using the whole repository, this library can be found with
 - `NeuH_INCLUDE_DIRS`: the include directories of neu.h
 - `NeuH_LOG_LEVEL`: the log verbosity level of neu.h, of which the available
 values are:
-  - \>= 5: enables `NLogF`, `NLogE`, `NLogW`, `NLogI`, `NLogD` (all log printings) 
-  - 4: enables `NLogF`, `NLogE`, `NLogW`, `NLogI`
-  - 3: enables `NLogF`, `NLogE`, `NLogW`
-  - 2: enables `NLogF`, `NLogE`
-  - 1: enables `NLogF`
-  - \<= 0: disables all log printings
+  - \>= 5: enables `NLogP`, `NLogF`, `NLogE`, `NLogW`, `NLogI`, `NLogD` (all log printings) 
+  - 4: enables `NLogP`, `NLogF`, `NLogE`, `NLogW`, `NLogI`
+  - 3: enables `NLogP`, `NLogF`, `NLogE`, `NLogW`
+  - 2: enables `NLogP`, `NLogF`, `NLogE`
+  - 1: enables `NLogP`, `NLogF`
+  - 0: enables `NLogP`
+  - < 0: disables all log printings
 
-  where `F`, `E`, `W`, `I`, `D` are short for `FATAL`, `ERROR`, `WARNING`,
-`INFO`, `DEBUG` respectively.
+  where `P`, `F`, `E`, `W`, `I`, `D` are short for `PUBLIC`, `FATAL`, `ERROR`,
+  `WARNING`, `INFO`, `DEBUG` respectively.
 
 <!----------------------------------------------------------- DOCUMENTATION -->
 ## Documentation
