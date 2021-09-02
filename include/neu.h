@@ -22,7 +22,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 
 
-Last update: 2021-08-24 16:16
+Last update: 2021-09-02 16:09
 ******************************************************************************/
 #ifndef NEU_H
 #define NEU_H
@@ -53,6 +53,45 @@ Last update: 2021-08-24 16:16
 #include <termios.h>
 #include <unistd.h>
 #endif
+
+
+//****************************************************************** Special{{{
+#if (defined(_MSVC_LANG) && _MSVC_LANG < 201402L) || (!defined(_MSVC_LANG) && __cplusplus < 201402L)
+namespace std
+{
+template<class T, T... I>
+struct integer_sequence
+{
+  typedef T value_type;
+  static constexpr size_t size()
+  {
+    return sizeof...(I);
+  };
+};
+
+template<size_t... I>
+using index_sequence = integer_sequence<size_t, I...>;
+
+template<typename T, size_t N, T... I>
+struct make_integer_sequence :make_integer_sequence<T, N-1, N-1, I...> {};
+
+template<typename T, T... I>
+struct make_integer_sequence<T, 0, I...> :integer_sequence<T, I...> {};
+
+template<std::size_t N>
+using make_index_sequence = make_integer_sequence<std::size_t, N>;
+
+template<typename... T>
+using index_sequence_for = make_index_sequence<sizeof...(T)>;
+}  // namespace std
+#endif
+
+template<int>
+struct NVariadicPlaceholder {};
+
+template<int N>
+struct std::is_placeholder<NVariadicPlaceholder<N>> :std::integral_constant<int, N+1> {};
+//****************************************************************** Special}}}
 
 //******************************************************************** Macro{{{
 #ifndef DLL_API
@@ -152,9 +191,6 @@ Last update: 2021-08-24 16:16
 #endif
 //******************************************************************** Macro}}}
 
-//********************************************************************* Enum{{{
-//********************************************************************* Enum}}}
-
 //************************************************************* Declarations{{{
 //Function{{{
 /* The followings are in Marco section.
@@ -205,20 +241,26 @@ void NReleaseArray(T &&pointer);
 //Function}}}
 
 //Class{{{
-template<class Ret, class ...Args>
-class NCallback
+class NCallable
 {
 public:
-  template<class Fn>
-  NCallback(Fn &&function);
+  NCallable() = delete;
+  ~NCallable() = delete;
 
-  ~NCallback();
+  template<class R, class ...Args>
+  static auto Create(R (*function)(Args...));
 
-  Ret operator()(Args ...arguments);
+  template<class T, class R, class ...Args>
+  static auto Create(R (T::*function)(Args...), T *obj);
 
 private:
-  std::function<Ret(Args...)> m_function;
-};  // NCallback
+  template<class R, class T, class... Args1, class... Args2>
+  static auto Bind(R (T::*function)(Args1...), Args2&&... arguments);
+
+  template<class R, class T, class... Args1, class... Args2, size_t... I>
+  static auto InternalBind(
+      std::index_sequence<I...>, R (T::*function)(Args1...), Args2&&... arguments);
+};  // class NCallable
 
 template<class T>
 class NQueue
@@ -509,7 +551,7 @@ size_t NArraySize(const T (&array)[N])
 template<class T>
 const T &NClamp(const T &x, const T &low, const T &high)
 {
-#if (defined(_MSVC_LANG) && _MSVC_LANG >= 201703L) || __cplusplus >= 201703L
+#if (defined(_MSVC_LANG) && _MSVC_LANG >= 201703L) || (__cplusplus >= 201703L)
   return std::clamp(x, low, high);
 #else
   return x < low ? low : (x > high ? high : x);
@@ -538,25 +580,35 @@ void NReleaseArray(T &&pointer)
 //***************************************************************** Function}}}
 
 //******************************************************************** Class{{{
-//NCallback{{{
-template<class Ret, class ...Args>
-template<class Fn>
-NCallback<Ret, Args...>::NCallback(Fn &&function)
+//NCallable{{{
+template<class R, class ...Args>
+auto NCallable::Create(R (*function)(Args...))
 {
-  this->m_function = std::function<Ret(Args...)>(function);
+  return std::function<R(Args...)>(function);
 }
 
-template<class Ret, class ...Args>
-NCallback<Ret, Args...>::~NCallback()
+template<class T, class R, class ...Args>
+auto NCallable::Create(R (T::*function)(Args...), T *obj)
 {
+  return NCallable::Bind(function, obj);
 }
 
-template<class Ret, class ...Args>
-Ret NCallback<Ret, Args...>::operator()(Args ...arguments)
+template<class R, class T, class... Args1, class... Args2, size_t... I>
+auto NCallable::InternalBind(
+    std::index_sequence<I...>, R (T::*function)(Args1...), Args2&&... arguments)
 {
-  return this->m_function(arguments...);
+  return std::bind(
+      function, std::forward<Args2>(arguments)..., NVariadicPlaceholder<I>{}...);
 }
-//NCallback}}}
+
+template<class R, class T, class... Args1, class... Args2>
+auto NCallable::Bind(R (T::*function)(Args1...), Args2&&... arguments)
+{
+  return NCallable::InternalBind(
+      std::make_index_sequence<sizeof...(Args1) - sizeof...(Args2) + 1>{},
+      function, std::forward<Args2>(arguments)...);
+}
+//NCallable}}}
 
 //NQueue{{{
 template<class T>
