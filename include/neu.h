@@ -22,7 +22,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 
 
-Last update: 2021-09-02 16:09
+Last update: 2021-09-17 12:06
 ******************************************************************************/
 #ifndef NEU_H
 #define NEU_H
@@ -220,6 +220,8 @@ long long NDuration(
     const std::chrono::system_clock::time_point &start,
     const std::chrono::system_clock::time_point &end,
     const std::string &unit = "ms");
+
+unsigned long long NBit(const unsigned long long &bit);
 
 void NSleep(const unsigned long long &ms);
 
@@ -491,6 +493,11 @@ inline long long NDuration(
   {
     return std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count();
   }
+}
+
+inline unsigned long long NBit(const unsigned long long &bit)
+{
+  return (unsigned long long)(1L << bit);
 }
 
 inline void NSleep(const unsigned long long &ms)
