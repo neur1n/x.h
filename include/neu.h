@@ -22,7 +22,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 
 
-Last update: 2021-09-17 15:22
+Last update: 2021-09-17 17:02
 ******************************************************************************/
 #ifndef NEU_H
 #define NEU_H
@@ -313,13 +313,10 @@ public:
 
   void Notify();
 
-  void Stop();
-
-  void Wait(bool should_wait);
+  void WaitUtil(bool ready);
 
 private:
   std::condition_variable m_cv;
-  std::unique_lock<std::mutex> m_lock;
   std::mutex m_mutex;
   std::thread m_thread;
 };  // class NThread
@@ -727,13 +724,11 @@ size_t NQueue<T>::Size()
 template<class Fn, class ...Args>
 NThread::NThread(Fn&& function, Args&&... arguments)
 {
-  this->m_lock = std::unique_lock<std::mutex>(this->m_mutex);
   this->m_thread = std::thread(function, arguments...);
 }
 
 inline NThread::~NThread()
 {
-  this->Stop();
   if (this->m_thread.joinable())
   {
     this->m_thread.join();
@@ -757,20 +752,17 @@ inline std::error_code NThread::Start()
 
 inline void NThread::Notify()
 {
+  std::unique_lock<std::mutex> lock(this->m_mutex);
   this->m_cv.notify_one();
 }
 
-inline void NThread::Stop()
+inline void NThread::WaitUtil(bool ready)
 {
-  this->m_lock.unlock();
-}
-
-inline void NThread::Wait(bool should_wait)
-{
-  while (should_wait)
+  std::unique_lock<std::mutex> lock(this->m_mutex);
+  while (!ready)
   {
-    this->m_cv.wait(this->m_lock);
-    break;
+    this->m_cv.wait(lock);
+    return;
   }
 }
 //NThread}}}
