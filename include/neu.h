@@ -22,7 +22,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 
 
-Last update: 2021-09-17 12:06
+Last update: 2021-09-17 13:19
 ******************************************************************************/
 #ifndef NEU_H
 #define NEU_H
@@ -189,6 +189,8 @@ struct std::is_placeholder<NVariadicPlaceholder<N>> :std::integral_constant<int,
 #else
 #define NLogD(format, ...)
 #endif
+
+#define NBit(bit) (1 << bit)
 //******************************************************************** Macro}}}
 
 //************************************************************* Declarations{{{
@@ -199,6 +201,7 @@ struct std::is_placeholder<NVariadicPlaceholder<N>> :std::integral_constant<int,
   NLogW(const char *format, ...);
   NLogI(const char *format, ...);
   NLogD(const char *format, ...);
+  NBit(int bit);
 */
 
 #if defined(_MSC_VER)
@@ -220,8 +223,6 @@ long long NDuration(
     const std::chrono::system_clock::time_point &start,
     const std::chrono::system_clock::time_point &end,
     const std::string &unit = "ms");
-
-unsigned long long NBit(const unsigned long long &bit);
 
 void NSleep(const unsigned long long &ms);
 
@@ -493,11 +494,6 @@ inline long long NDuration(
   {
     return std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count();
   }
-}
-
-inline unsigned long long NBit(const unsigned long long &bit)
-{
-  return (unsigned long long)(1L << bit);
 }
 
 inline void NSleep(const unsigned long long &ms)
