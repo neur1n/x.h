@@ -22,7 +22,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 
 
-Last update: 2021-09-17 13:19
+Last update: 2021-09-17 15:22
 ******************************************************************************/
 #ifndef NEU_H
 #define NEU_H
@@ -244,25 +244,29 @@ void NReleaseArray(T &&pointer);
 //Function}}}
 
 //Class{{{
+template<class R, class ...Args>
 class NCallable
 {
 public:
   NCallable() = delete;
-  ~NCallable() = delete;
+  ~NCallable() = default;
 
-  template<class R, class ...Args>
-  static auto Create(R (*function)(Args...));
+  NCallable(R (*function)(Args...));
 
-  template<class T, class R, class ...Args>
-  static auto Create(R (T::*function)(Args...), T *obj);
+  template<class T>
+  NCallable(R (T::*function)(Args...), T *obj);
+
+  R operator()(Args ...arguments);
 
 private:
-  template<class R, class T, class... Args1, class... Args2>
-  static auto Bind(R (T::*function)(Args1...), Args2&&... arguments);
+  template<class T, class... Args1, class... Args2>
+  void Bind(R (T::*function)(Args1...), Args2&&... arguments);
 
-  template<class R, class T, class... Args1, class... Args2, size_t... I>
-  static auto InternalBind(
+  template<class T, class... Args1, class... Args2, size_t... I>
+  void InternalBind(
       std::index_sequence<I...>, R (T::*function)(Args1...), Args2&&... arguments);
+
+  std::function<R(Args...)> m_function;
 };  // class NCallable
 
 template<class T>
@@ -585,31 +589,40 @@ void NReleaseArray(T &&pointer)
 //******************************************************************** Class{{{
 //NCallable{{{
 template<class R, class ...Args>
-auto NCallable::Create(R (*function)(Args...))
+NCallable<R, Args...>::NCallable(R (*function)(Args...))
 {
-  return std::function<R(Args...)>(function);
+  this->m_function = std::function<R(Args...)>(function);
 }
 
-template<class T, class R, class ...Args>
-auto NCallable::Create(R (T::*function)(Args...), T *obj)
+template<class R, class ...Args>
+template<class T>
+NCallable<R, Args...>::NCallable(R (T::*function)(Args...), T *obj)
 {
-  return NCallable::Bind(function, obj);
+  this->Bind(function, obj);
 }
 
-template<class R, class T, class... Args1, class... Args2, size_t... I>
-auto NCallable::InternalBind(
-    std::index_sequence<I...>, R (T::*function)(Args1...), Args2&&... arguments)
+template<class R, class ...Args>
+R NCallable<R, Args...>::operator()(Args ...arguments)
 {
-  return std::bind(
-      function, std::forward<Args2>(arguments)..., NVariadicPlaceholder<I>{}...);
+  return this->m_function(arguments...);
 }
 
-template<class R, class T, class... Args1, class... Args2>
-auto NCallable::Bind(R (T::*function)(Args1...), Args2&&... arguments)
+template<class R, class ...Args>
+template<class T, class... Args1, class... Args2>
+void NCallable<R, Args...>::Bind(R (T::*function)(Args1...), Args2&&... arguments)
 {
-  return NCallable::InternalBind(
+  this->InternalBind(
       std::make_index_sequence<sizeof...(Args1) - sizeof...(Args2) + 1>{},
       function, std::forward<Args2>(arguments)...);
+}
+
+template<class R, class ...Args>
+template<class T, class... Args1, class... Args2, size_t... I>
+void NCallable<R, Args...>::InternalBind(
+    std::index_sequence<I...>, R (T::*function)(Args1...), Args2&&... arguments)
+{
+  this->m_function = std::bind(
+      function, std::forward<Args2>(arguments)..., NVariadicPlaceholder<I>{}...);
 }
 //NCallable}}}
 
