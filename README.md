@@ -1,11 +1,10 @@
 <!------------------------------------------------------------------ HEADER -->
 <pre align="center">
-  ██╗   ██╗ ████████╗ ██╗   ██╗     ██╗   ██╗
-  ████╗ ██║ ██╔═════╝ ██║   ██║     ██║   ██║
-  ██╔██╗██║ ██████╗   ██║   ██║     ████████║
-  ██║╚████║ ██╔═══╝   ██║   ██║     ██╔═══██║
-  ██║ ╚═██║ ████████╗ ╚██████╔╝ ██╗ ██║   ██║
-  ╚═╝   ╚═╝ ╚═══════╝  ╚═════╝  ╚═╝ ╚═╝   ╚═╝
+  ▄▀▀▀▀▄▀▀▄ █▀▀▀▀▀▀▀█ █▀▀▀█▀▀▀█    █▀▀▀█▀▀▀█
+  █    █  █ █   ▄▄▄▄█ █   █   █    █   █   █
+  █  █ █  █ █       █ █   █   █    █       █
+  █  █    █ █   ▀▀▀▀█ █   ▀   █    █   █   █
+  ▀▄▄▀▄▄▄▄▀ █▄▄▄▄▄▄▄█ ▀▄▄▄▄▄▄▄▀ ██ █▄▄▄█▄▄▄█
 </pre>
 
 <p align="center">
@@ -66,7 +65,7 @@ following snippet to your project's main `CMakeLists.txt`:
 SET(NeuH_DIR "path/to/neu.h")              # Not the neu.h file, but the repository
 FIND_PACKAGE(NeuH REQUIRED)                # Notice that the package name is not "neu.h"
 INCLUDE_DIRECTORIES(${NeuH_INCLUDE_DIRS})  # Add to inclusion
-SET(NeuH_LOG_LEVEL 1)                      # If not specified, 5 will be used by default
+SET(NeuH_LOG_LEVEL 0)                      # If not specified, 5 will be used by default
 ```
 Notice that when using the whole repository, this library can be found with
 `FIND_PACKAGE()` and additionally defined two variables to be used:

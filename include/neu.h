@@ -22,7 +22,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 
 
-Last update: 2021-09-17 17:02
+Last update: 2021-09-18 16:20
 ******************************************************************************/
 #ifndef NEU_H
 #define NEU_H
@@ -313,7 +313,7 @@ public:
 
   void Notify();
 
-  void WaitUtil(bool ready);
+  void WaitUntil(bool ready);
 
 private:
   std::condition_variable m_cv;
@@ -756,7 +756,7 @@ inline void NThread::Notify()
   this->m_cv.notify_one();
 }
 
-inline void NThread::WaitUtil(bool ready)
+inline void NThread::WaitUntil(bool ready)
 {
   std::unique_lock<std::mutex> lock(this->m_mutex);
   while (!ready)
