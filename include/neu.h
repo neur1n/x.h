@@ -22,7 +22,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 
 
-Last update: 2021-09-18 16:20
+Last update: 2021-09-24 14:23
 ******************************************************************************/
 #ifndef NEU_H
 #define NEU_H
@@ -141,8 +141,8 @@ struct std::is_placeholder<NVariadicPlaceholder<N>> :std::integral_constant<int,
 #define NLOG_COLOR_F NCOLOR_MAGENTA(1)
 #define NLOG_COLOR_E NCOLOR_RED(1)
 #define NLOG_COLOR_W NCOLOR_YELLOW(1)
-#define NLOG_COLOR_I NCOLOR_BLUE(1)
-#define NLOG_COLOR_D NCOLOR_GREEN(1)
+#define NLOG_COLOR_I NCOLOR_GREEN(1)
+#define NLOG_COLOR_D NCOLOR_BLUE(1)
 
 #ifdef NDEBUG
 #define NLOG_FORMAT(level, format) "[" level " %s %s] " format "\n" NCOLOR_RESET, __DATE__, __TIME__
