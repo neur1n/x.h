@@ -1,7 +1,7 @@
 /******************************************************************************
 MIT License
 
-Copyright (c) 2021 Jihang Li (Jihang DOT Li AT outlook DOT com)
+Copyright (c) 2021 Jihang Li (lijihang AT duck DOT com)
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -22,7 +22,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 
 
-Last update: 2021-10-27 17:25
+Last update: 2021-10-28 12:55
 ******************************************************************************/
 #ifndef NEU_H
 #define NEU_H
@@ -193,10 +193,7 @@ struct std::is_placeholder<NVariadicPlaceholder<N>> :std::integral_constant<int,
 #define NBit(bit) (1 << bit)
 
 template<class T>
-static constexpr T NPi = (T)3.141592653589793238462643383279502884197169399375\
-105820974944592307816406286208998628034825342117067982148086513282306647093844\
-609550582231725359408128481117450284102701938521105559644622948954930381964428\
-810975665933446128475648233786783165271201909145648566923460;
+static constexpr T NPi = (T)3.141592653589793238462643383279502884197169399375;
 //******************************************************************** Macro}}}
 
 //************************************************************* Declarations{{{
