@@ -22,7 +22,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 
 
-Last update: 2021-11-10 14:58
+Last update: 2021-11-10 15:40
 ******************************************************************************/
 #ifndef NEU_H
 #define NEU_H
@@ -161,7 +161,7 @@ struct std::is_placeholder<NVariadicPlaceholder<N>> :std::integral_constant<int,
 #endif
 
 #if NLOG_LEVEL >= 1
-#define NLogF(format, ...) printf(NLOG_COLOR_F NLOG_FORMAT("F", format), ##__VA_ARGS__)
+#define NLogF(format, ...) printf(NLOG_COLOR_F NLOG_FORMAT("F", format), ##__VA_ARGS__); exit(EXIT_FAILURE)
 #else
 #define NLogF(format, ...)
 #endif
