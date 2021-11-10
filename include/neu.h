@@ -1,7 +1,7 @@
 /******************************************************************************
 MIT License
 
-Copyright (c) 2021 Jihang Li (lijihang AT duck DOT com)
+Copyright (c) 2021 Jihang Li (jihangli AT duck DOT com)
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -22,7 +22,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 
 
-Last update: 2021-10-28 12:55
+Last update: 2021-11-10 14:58
 ******************************************************************************/
 #ifndef NEU_H
 #define NEU_H
@@ -192,6 +192,89 @@ struct std::is_placeholder<NVariadicPlaceholder<N>> :std::integral_constant<int,
 
 #define NBit(bit) (1 << bit)
 
+//{{{
+typedef std::error_code NCode;
+static const NCode NOK                         = std::error_code();
+static const NCode NAF_NOT_SUPPORT             = std::make_error_code(std::errc::address_family_not_supported);
+static const NCode NADDR_IN_USE                = std::make_error_code(std::errc::address_in_use);
+static const NCode NADDR_NOT_AVAIL             = std::make_error_code(std::errc::address_not_available);
+static const NCode NIS_CONN                    = std::make_error_code(std::errc::already_connected);
+static const NCode NARG_LIST_TOO_LONG          = std::make_error_code(std::errc::argument_list_too_long);
+static const NCode NARG_OUT_OF_DOM             = std::make_error_code(std::errc::argument_out_of_domain);
+static const NCode NBAD_ADDR                   = std::make_error_code(std::errc::bad_address);
+static const NCode NBAD_FD                     = std::make_error_code(std::errc::bad_file_descriptor);
+static const NCode NBAD_MSG                    = std::make_error_code(std::errc::bad_message);
+static const NCode NBAD_PIPE                   = std::make_error_code(std::errc::broken_pipe);
+static const NCode NCONN_ABORTED               = std::make_error_code(std::errc::connection_aborted);
+static const NCode NCONN_IN_PROGRESS           = std::make_error_code(std::errc::connection_already_in_progress);
+static const NCode NCONN_REFUSED               = std::make_error_code(std::errc::connection_refused);
+static const NCode NCONN_RESET                 = std::make_error_code(std::errc::connection_reset);
+static const NCode NCROSS_DEV_LINK             = std::make_error_code(std::errc::cross_device_link);
+static const NCode NDST_ADDR_REQ               = std::make_error_code(std::errc::destination_address_required);
+static const NCode NBUSY                       = std::make_error_code(std::errc::device_or_resource_busy);
+static const NCode NDIR_NOT_EMPTY              = std::make_error_code(std::errc::directory_not_empty);
+static const NCode NEXE_FMT_ERR                = std::make_error_code(std::errc::executable_format_error);
+static const NCode NFILE_EXISTS                = std::make_error_code(std::errc::file_exists);
+static const NCode NFILE_TOO_BIG               = std::make_error_code(std::errc::file_too_large);
+static const NCode NNAME_TOO_LONG              = std::make_error_code(std::errc::filename_too_long);
+static const NCode NFUNC_NOT_SUPPORT           = std::make_error_code(std::errc::function_not_supported);
+static const NCode NHOST_UNREACHABLE           = std::make_error_code(std::errc::host_unreachable);
+static const NCode NID_REMOVED                 = std::make_error_code(std::errc::identifier_removed);
+static const NCode NILLEGAL_BTYE_SEQ           = std::make_error_code(std::errc::illegal_byte_sequence);
+static const NCode NIVALID_IO_CTRL             = std::make_error_code(std::errc::inappropriate_io_control_operation);
+static const NCode NINTR                       = std::make_error_code(std::errc::interrupted);
+static const NCode NINVALID_ARG                = std::make_error_code(std::errc::invalid_argument);
+static const NCode NINVALID_SEEK               = std::make_error_code(std::errc::invalid_seek);
+static const NCode NIO_ERR                     = std::make_error_code(std::errc::io_error);
+static const NCode NIS_DIR                     = std::make_error_code(std::errc::is_a_directory);
+static const NCode NMSG_TOO_LONG               = std::make_error_code(std::errc::message_size);
+static const NCode NNET_DOWN                   = std::make_error_code(std::errc::network_down);
+static const NCode NNET_RESET                  = std::make_error_code(std::errc::network_reset);
+static const NCode NNET_UNREACHABLE            = std::make_error_code(std::errc::network_unreachable);
+static const NCode NNO_BUF_SPACE               = std::make_error_code(std::errc::no_buffer_space);
+static const NCode NNO_CHILD_PROCESS           = std::make_error_code(std::errc::no_child_process);
+static const NCode NNO_LINK                    = std::make_error_code(std::errc::no_link);
+static const NCode NNO_LOCK                    = std::make_error_code(std::errc::no_lock_available);
+static const NCode NNO_DATA                    = std::make_error_code(std::errc::no_message_available);
+static const NCode NNO_MSG                     = std::make_error_code(std::errc::no_message);
+static const NCode NNO_PROTO_OPT               = std::make_error_code(std::errc::no_protocol_option);
+static const NCode NNO_SPACE                   = std::make_error_code(std::errc::no_space_on_device);
+static const NCode NNO_STREAM_RES              = std::make_error_code(std::errc::no_stream_resources);
+static const NCode NNO_DEV                     = std::make_error_code(std::errc::no_such_device);
+static const NCode NNO_IO                      = std::make_error_code(std::errc::no_such_device_or_address);
+static const NCode NNO_ENTITY                  = std::make_error_code(std::errc::no_such_file_or_directory);
+static const NCode NNO_PROCESS                 = std::make_error_code(std::errc::no_such_process);
+static const NCode NNOT_DIR                    = std::make_error_code(std::errc::not_a_directory);
+static const NCode NNOT_SOCKET                 = std::make_error_code(std::errc::not_a_socket);
+static const NCode NNOT_STREAM                 = std::make_error_code(std::errc::not_a_stream);
+static const NCode NNOT_CONN                   = std::make_error_code(std::errc::not_connected);
+static const NCode NNO_MEM                     = std::make_error_code(std::errc::not_enough_memory);
+static const NCode NNOT_SUPPORT                = std::make_error_code(std::errc::not_supported);
+static const NCode NOP_CANCELED                = std::make_error_code(std::errc::operation_canceled);
+static const NCode NOP_IN_PROGRESS             = std::make_error_code(std::errc::operation_in_progress);
+static const NCode NOP_NOT_PERMIT              = std::make_error_code(std::errc::operation_not_permitted);
+static const NCode NOP_NOT_SUPPORT             = std::make_error_code(std::errc::operation_not_supported);
+static const NCode NOP_WOULD_BLOCK             = std::make_error_code(std::errc::operation_would_block);
+static const NCode NOWNER_DEAD                 = std::make_error_code(std::errc::owner_dead);
+static const NCode NPERMISSION_DENIED          = std::make_error_code(std::errc::permission_denied);
+static const NCode NPROTO_ERR                  = std::make_error_code(std::errc::protocol_error);
+static const NCode NPROTO_NOT_SUPPORT          = std::make_error_code(std::errc::protocol_not_supported);
+static const NCode NRO_FS                      = std::make_error_code(std::errc::read_only_file_system);
+static const NCode NDEAD_LOCK                  = std::make_error_code(std::errc::resource_deadlock_would_occur);
+static const NCode NTRY_AGAIN                  = std::make_error_code(std::errc::resource_unavailable_try_again);
+static const NCode NOUT_OF_RANGE               = std::make_error_code(std::errc::result_out_of_range);
+static const NCode NNOT_RECOVERABLE            = std::make_error_code(std::errc::state_not_recoverable);
+static const NCode NTIMER_EXPIRED              = std::make_error_code(std::errc::stream_timeout);
+static const NCode NTXT_BUSY                   = std::make_error_code(std::errc::text_file_busy);
+static const NCode NCONN_TIMED_OUT             = std::make_error_code(std::errc::timed_out);
+static const NCode NTOO_MANY_FILES_OPEN_IN_SYS = std::make_error_code(std::errc::too_many_files_open_in_system);
+static const NCode NTOO_MANY_FILES_OPEN        = std::make_error_code(std::errc::too_many_files_open);
+static const NCode NTOO_MANY_LINKS             = std::make_error_code(std::errc::too_many_links);
+static const NCode NTOO_MANY_SYMLINK_LEVELS    = std::make_error_code(std::errc::too_many_symbolic_link_levels);
+static const NCode NOVERFLOW                   = std::make_error_code(std::errc::value_too_large);
+static const NCode NWRONG_PROTO_TYPE           = std::make_error_code(std::errc::wrong_protocol_type);
+//}}}
+
 template<class T>
 static constexpr T NPi = (T)3.141592653589793238462643383279502884197169399375;
 //******************************************************************** Macro}}}
@@ -212,9 +295,9 @@ static constexpr T NPi = (T)3.141592653589793238462643383279502884197169399375;
 int _kbhit();
 #endif
 
-bool NSucc(const std::error_code &error);
+bool NSucc(const NCode &code);
 
-bool NFail(const std::error_code &error);
+bool NFail(const NCode &code);
 
 bool NPathExists(const char *path);
 
@@ -312,7 +395,7 @@ public:
 
   ~NThread();
 
-  std::error_code Start();
+  NCode Start();
 
   void Notify();
 
@@ -364,14 +447,14 @@ inline int _kbhit()
 }
 #endif
 
-inline bool NSucc(const std::error_code &error)
+inline bool NSucc(const NCode &code)
 {
-  return !error ? true : false;
+  return !code ? true : false;
 }
 
-inline bool NFail(const std::error_code &error)
+inline bool NFail(const NCode &code)
 {
-  return error ? true : false;
+  return code ? true : false;
 }
 
 inline bool NPathExists(const char *path)
@@ -738,7 +821,7 @@ inline NThread::~NThread()
   }
 }
 
-inline std::error_code NThread::Start()
+inline NCode NThread::Start()
 {
   if (this->m_thread.joinable())
   {
@@ -747,10 +830,10 @@ inline std::error_code NThread::Start()
   else
   {
     NLogE("Failed to start thread, thread is not joinable.");
-    return std::make_error_code(std::errc::operation_canceled);
+    return NOP_CANCELED;
   }
 
-  return std::error_code();
+  return NOK;
 }
 
 inline void NThread::Notify()
