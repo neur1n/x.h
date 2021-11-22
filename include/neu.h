@@ -22,7 +22,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 
 
-Last update: 2021-11-22 19:42
+Last update: 2021-11-22 19:50
 ******************************************************************************/
 #ifndef NEU_H
 #define NEU_H
@@ -286,6 +286,7 @@ static constexpr T NPi = (T)3.141592653589793238462643383279502884197169399375;
 //************************************************************* Declarations{{{
 //Function{{{
 /* The followings are in Marco section.
+  NLogP(const char *format, ...);
   NLogF(const char *format, ...);
   NLogE(const char *format, ...);
   NLogW(const char *format, ...);
@@ -871,7 +872,7 @@ inline void NTimer::Tic(const bool &echo)
 
   if (echo)
   {
-    NLogI("Timing started.");
+    NLogP("Timing started.");
   }
 }
 
@@ -882,7 +883,7 @@ inline long long NTimer::Toc(const char *unit, const bool &echo)
 
   if (echo)
   {
-    NLogI("Time elapsed: %lld (%s)", this->m_elapsed, unit);
+    NLogP("Time elapsed: %lld (%s)", this->m_elapsed, unit);
   }
 
   return this->m_elapsed;
