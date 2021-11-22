@@ -22,7 +22,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 
 
-Last update: 2021-11-22 19:33
+Last update: 2021-11-22 19:42
 ******************************************************************************/
 #ifndef NEU_H
 #define NEU_H
@@ -92,7 +92,9 @@ struct NVariadicPlaceholder {};
 template<int N>
 struct std::is_placeholder<NVariadicPlaceholder<N>> :std::integral_constant<int, N+1> {};
 
+//The Must-Put-on-Top{{{
 std::string NTimestamp(const char *format = "%Y-%m-%d %H:%M:%S");
+//The Must-Put-on-Top}}}
 //****************************************************************** Special}}}
 
 //******************************************************************** Macro{{{
@@ -315,8 +317,6 @@ long long NDuration(
 void NSleep(const unsigned long long &ms);
 
 std::string NFullPath(const char *path);
-
-std::string NTimestamp(const char *format = "%Y-%m-%d %H:%M:%S");
 
 template<class T, size_t N>
 size_t NArraySize(const T (&array)[N]);
