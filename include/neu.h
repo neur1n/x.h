@@ -22,7 +22,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 
 
-Last update: 2021-11-10 15:40
+Last update: 2021-11-22 19:33
 ******************************************************************************/
 #ifndef NEU_H
 #define NEU_H
@@ -91,6 +91,8 @@ struct NVariadicPlaceholder {};
 
 template<int N>
 struct std::is_placeholder<NVariadicPlaceholder<N>> :std::integral_constant<int, N+1> {};
+
+std::string NTimestamp(const char *format = "%Y-%m-%d %H:%M:%S");
 //****************************************************************** Special}}}
 
 //******************************************************************** Macro{{{
@@ -145,9 +147,9 @@ struct std::is_placeholder<NVariadicPlaceholder<N>> :std::integral_constant<int,
 #define NLOG_COLOR_D NCOLOR_BLUE(1)
 
 #ifdef NDEBUG
-#define NLOG_FORMAT(level, format) "[" level " %s %s] " format "\n" NCOLOR_RESET, __DATE__, __TIME__
+#define NLOG_FORMAT(level, format) "[" level " %s] " format "\n" NCOLOR_RESET, NTimestamp().c_str()
 #else
-#define NLOG_FORMAT(level, format) "[" level " %s %s %s > %s > %d] " format "\n" NCOLOR_RESET, __DATE__, __TIME__, __FILENAME__, __FUNCTION__, __LINE__
+#define NLOG_FORMAT(level, format) "[" level " %s %s > %s > %d] " format "\n" NCOLOR_RESET, NTimestamp().c_str(), __FILENAME__, __FUNCTION__, __LINE__
 #endif
 
 #ifndef NLOG_LEVEL
