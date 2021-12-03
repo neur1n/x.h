@@ -22,7 +22,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 
 
-Last update: 2021-12-03 10:09
+Last update: 2021-12-03 16:37
 ******************************************************************************/
 #ifndef NEU_H
 #define NEU_H
@@ -308,6 +308,8 @@ bool NPathExists(const char *path);
 
 bool NStringEmpty(const char *string);
 
+const char *NCodeMessage(const int &code);
+
 const char *NCodeMessage(const NCode &code);
 
 int NPressedKey();
@@ -480,6 +482,12 @@ inline bool NPathExists(const char *path)
 inline bool NStringEmpty(const char *string)
 {
   return (string == nullptr || string[0] == '\0');
+}
+
+inline const char *NCodeMessage(const int &code)
+{
+  static std::string msg = std::system_category().message(code);
+  return msg.c_str();
 }
 
 inline const char *NCodeMessage(const NCode &code)
