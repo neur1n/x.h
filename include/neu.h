@@ -22,7 +22,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 
 
-Last update: 2021-12-03 16:37
+Last update: 2021-12-14 15:56
 ******************************************************************************/
 #ifndef NEU_H
 #define NEU_H
@@ -315,8 +315,8 @@ const char *NCodeMessage(const NCode &code);
 int NPressedKey();
 
 long long NDuration(
-    const std::chrono::system_clock::time_point &start,
-    const std::chrono::system_clock::time_point &end,
+    const std::chrono::steady_clock::time_point &start,
+    const std::chrono::steady_clock::time_point &end,
     const std::string &unit = "ms");
 
 void NSleep(const unsigned long long &ms);
@@ -426,7 +426,7 @@ public:
   long long Toc(const char *unit = "ms", const bool &echo = false);
 
 private:
-  std::chrono::system_clock::time_point m_tic;
+  std::chrono::steady_clock::time_point m_tic;
   long long m_elapsed;
 };  // class NTimer
 //Class}}}
@@ -584,21 +584,33 @@ inline int NPressedKey()
 }
 
 inline long long NDuration(
-    const std::chrono::system_clock::time_point &start,
-    const std::chrono::system_clock::time_point &end,
+    const std::chrono::steady_clock::time_point &start,
+    const std::chrono::steady_clock::time_point &end,
     const std::string &unit)
 {
-  if (unit.compare("s") == 0)
+  if (unit.compare("h") == 0)
+  {
+    return std::chrono::duration_cast<std::chrono::hours>(end - start).count();
+  }
+  else if (unit.compare("m") == 0)
+  {
+    return std::chrono::duration_cast<std::chrono::minutes>(end - start).count();
+  }
+  else if (unit.compare("s") == 0)
   {
     return std::chrono::duration_cast<std::chrono::seconds>(end - start).count();
+  }
+  else if (unit.compare("ms") == 0)
+  {
+    return std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count();
   }
   else if (unit.compare("us") == 0)
   {
     return std::chrono::duration_cast<std::chrono::microseconds>(end - start).count();
   }
-  else //  if (unit.compare("ms") == 0)
+  else  // if (unit.compare("ns") == 0)
   {
-    return std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count();
+    return std::chrono::duration_cast<std::chrono::nanoseconds>(end - start).count();
   }
 }
 
@@ -874,7 +886,7 @@ inline void NThread::WaitUntil(bool ready)
 
 //NTimer{{{
 inline NTimer::NTimer()
-  :m_tic(std::chrono::system_clock::now()), m_elapsed(0)
+  :m_tic(std::chrono::steady_clock::now()), m_elapsed(0)
 {
 }
 
@@ -884,7 +896,7 @@ inline NTimer::~NTimer()
 
 inline void NTimer::Tic(const bool &echo)
 {
-  this->m_tic = std::chrono::system_clock::now();
+  this->m_tic = std::chrono::steady_clock::now();
 
   if (echo)
   {
@@ -895,7 +907,7 @@ inline void NTimer::Tic(const bool &echo)
 inline long long NTimer::Toc(const char *unit, const bool &echo)
 {
   this->m_elapsed = NDuration(
-      this->m_tic, std::chrono::system_clock::now(), unit);
+      this->m_tic, std::chrono::steady_clock::now(), unit);
 
   if (echo)
   {
