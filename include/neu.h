@@ -22,7 +22,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 
 
-Last update: 2021-12-17 16:39
+Last update: 2021-12-17 19:00
 ******************************************************************************/
 #ifndef NEU_H
 #define NEU_H
@@ -419,17 +419,66 @@ private:
 class NTimer
 {
 public:
+  typedef struct _Report_
+  {
+    _Report_(const char *_u = "us", const char *_t = "")
+    {
+      Reset(_u, _t);
+    }
+
+    void Reset(const char *_u = "us", const char *_t = "")
+    {
+      valid = false;
+      max = {0LL, LLONG_MIN};
+      min = {0LL, LLONG_MAX};
+      sum = 0LL;
+      cyc = 0LL;
+      avg = 0.0;
+      ttl = _t;
+      unit = _u;
+    }
+
+    const std::string ToString()
+    {
+      char log[128];
+      std::sprintf(
+          log,
+          "[%s] %lld cycles - total: %lld%s, avg: %f%s, min (%lld): %lld%s, max (%lld): %lld%s",
+          ttl, cyc,
+          sum, unit,
+          avg, unit,
+          min.i, min.v, unit,
+          max.i, max.v, unit);
+      return std::string(log);
+    }
+
+    bool valid;
+    struct
+    {
+      long long i;
+      long long v;
+    } max, min;
+    long long sum;
+    long long cyc;
+    double avg;
+    const char *ttl;
+    const char *unit;
+  } Report;
+
   NTimer();
 
   ~NTimer();
 
   void Tic(const bool &echo = false);
 
-  long long Toc(const char *unit = "ms", const bool &echo = false);
+  const long long Toc(const char *unit = "us", const bool &echo = false);
+
+  const Report Toc(
+      const long long &cycle, const char *unit = "us", const char *title = "");
 
 private:
   std::chrono::steady_clock::time_point m_tic;
-  long long m_elapsed;
+  Report m_report;
 };  // class NTimer
 //Class}}}
 //************************************************************* Declarations}}}
@@ -893,7 +942,7 @@ inline void NThread::WaitUntil(bool ready)
 
 //NTimer{{{
 inline NTimer::NTimer()
-  :m_tic(std::chrono::steady_clock::now()), m_elapsed(0)
+  :m_tic(NNow())
 {
 }
 
@@ -911,17 +960,58 @@ inline void NTimer::Tic(const bool &echo)
   }
 }
 
-inline long long NTimer::Toc(const char *unit, const bool &echo)
+inline const long long NTimer::Toc(const char *unit, const bool &echo)
 {
-  this->m_elapsed = NDuration(
+  long long elapsed = NDuration(
       this->m_tic, std::chrono::steady_clock::now(), unit);
 
   if (echo)
   {
-    NLogP("Time elapsed: %lld (%s)", this->m_elapsed, unit);
+    NLogP("Timing stops at:  %s.", NTimestamp().c_str());
+    NLogP("Time elapsed: %lld%s", elapsed, unit);
   }
 
-  return this->m_elapsed;
+  return elapsed;
+}
+
+inline const NTimer::Report NTimer::Toc(
+    const long long &cycle, const char *unit, const char *title)
+{
+  long long interval = this->Toc(unit);
+
+  if (cycle < 1LL)
+  {
+    NLogE("Cycle is smaller than 1: %s.", NCodeMessage(NINVALID_ARG));
+    return this->m_report;
+  }
+
+  if (interval > this->m_report.max.v)
+  {
+    this->m_report.max.i = this->m_report.cyc;
+    this->m_report.max.v = interval;
+  }
+  if (interval < this->m_report.min.v)
+  {
+    this->m_report.min.i = this->m_report.cyc;
+    this->m_report.min.v = interval;
+  }
+
+  this->m_report.sum += interval;
+  this->m_report.cyc += 1LL;
+  this->m_report.avg = (double)this->m_report.sum / (double)this->m_report.cyc;
+
+  if (this->m_report.cyc % cycle == 0LL)
+  {
+    this->m_report.ttl = title;
+    this->m_report.unit =unit;
+    this->m_report.valid = true;
+    printf("%s\n", this->m_report.ToString().c_str());
+
+    this->m_report.Reset(unit, title);
+    return this->m_report;
+  }
+
+  return this->m_report;
 }
 //NTimer}}}
 //******************************************************************** Class}}}
