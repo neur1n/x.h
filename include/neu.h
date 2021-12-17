@@ -22,7 +22,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 
 
-Last update: 2021-12-14 15:56
+Last update: 2021-12-17 16:39
 ******************************************************************************/
 #ifndef NEU_H
 #define NEU_H
@@ -304,24 +304,26 @@ bool NSucc(const NCode &code);
 
 bool NFail(const NCode &code);
 
-bool NPathExists(const char *path);
-
-bool NStringEmpty(const char *string);
-
 const char *NCodeMessage(const int &code);
 
 const char *NCodeMessage(const NCode &code);
 
-int NPressedKey();
-
 long long NDuration(
     const std::chrono::steady_clock::time_point &start,
     const std::chrono::steady_clock::time_point &end,
-    const std::string &unit = "ms");
+    const std::string &unit = "us");
+
+std::string NFullPath(const char *path);
+
+std::chrono::steady_clock::time_point NNow();
+
+bool NPathExists(const char *path);
+
+int NPressedKey();
 
 void NSleep(const unsigned long long &ms);
 
-std::string NFullPath(const char *path);
+bool NStringEmpty(const char *string);
 
 template<class T, size_t N>
 size_t NArraySize(const T (&array)[N]);
@@ -464,6 +466,73 @@ inline bool NFail(const NCode &code)
   return code ? true : false;
 }
 
+inline const char *NCodeMessage(const int &code)
+{
+  static std::string msg = std::system_category().message(code);
+  return msg.c_str();
+}
+
+inline const char *NCodeMessage(const NCode &code)
+{
+  static std::string msg = code.message();
+  return msg.c_str();
+}
+
+inline long long NDuration(
+    const std::chrono::steady_clock::time_point &start,
+    const std::chrono::steady_clock::time_point &end,
+    const std::string &unit)
+{
+  if (unit.compare("h") == 0)
+  {
+    return std::chrono::duration_cast<std::chrono::hours>(end - start).count();
+  }
+  else if (unit.compare("m") == 0)
+  {
+    return std::chrono::duration_cast<std::chrono::minutes>(end - start).count();
+  }
+  else if (unit.compare("s") == 0)
+  {
+    return std::chrono::duration_cast<std::chrono::seconds>(end - start).count();
+  }
+  else if (unit.compare("ms") == 0)
+  {
+    return std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count();
+  }
+  else if (unit.compare("us") == 0)
+  {
+    return std::chrono::duration_cast<std::chrono::microseconds>(end - start).count();
+  }
+  else  // if (unit.compare("ns") == 0)
+  {
+    return std::chrono::duration_cast<std::chrono::nanoseconds>(end - start).count();
+  }
+}
+
+inline std::string NFullPath(const char *file)
+{
+#if defined(_MSC_VER)
+  char abs_path[_MAX_PATH];
+  if (!_fullpath(abs_path, file, _MAX_PATH))
+  {
+    return nullptr;
+  }
+#else
+  char abs_path[PATH_MAX];
+  if (!realpath(file, abs_path))
+  {
+    return nullptr;
+  }
+#endif
+
+  return std::string(abs_path);
+}
+
+inline std::chrono::steady_clock::time_point NNow()
+{
+  return std::chrono::steady_clock::now();
+}
+
 inline bool NPathExists(const char *path)
 {
   int result = -1;
@@ -477,23 +546,6 @@ inline bool NPathExists(const char *path)
 #endif
 
   return (result == 0);
-}
-
-inline bool NStringEmpty(const char *string)
-{
-  return (string == nullptr || string[0] == '\0');
-}
-
-inline const char *NCodeMessage(const int &code)
-{
-  static std::string msg = std::system_category().message(code);
-  return msg.c_str();
-}
-
-inline const char *NCodeMessage(const NCode &code)
-{
-  static std::string msg = code.message();
-  return msg.c_str();
 }
 
 inline int NPressedKey()
@@ -583,59 +635,14 @@ inline int NPressedKey()
 #endif
 }
 
-inline long long NDuration(
-    const std::chrono::steady_clock::time_point &start,
-    const std::chrono::steady_clock::time_point &end,
-    const std::string &unit)
-{
-  if (unit.compare("h") == 0)
-  {
-    return std::chrono::duration_cast<std::chrono::hours>(end - start).count();
-  }
-  else if (unit.compare("m") == 0)
-  {
-    return std::chrono::duration_cast<std::chrono::minutes>(end - start).count();
-  }
-  else if (unit.compare("s") == 0)
-  {
-    return std::chrono::duration_cast<std::chrono::seconds>(end - start).count();
-  }
-  else if (unit.compare("ms") == 0)
-  {
-    return std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count();
-  }
-  else if (unit.compare("us") == 0)
-  {
-    return std::chrono::duration_cast<std::chrono::microseconds>(end - start).count();
-  }
-  else  // if (unit.compare("ns") == 0)
-  {
-    return std::chrono::duration_cast<std::chrono::nanoseconds>(end - start).count();
-  }
-}
-
 inline void NSleep(const unsigned long long &ms)
 {
   std::this_thread::sleep_for(std::chrono::milliseconds(ms));
 }
 
-inline std::string NFullPath(const char *file)
+inline bool NStringEmpty(const char *string)
 {
-#if defined(_MSC_VER)
-  char abs_path[_MAX_PATH];
-  if (!_fullpath(abs_path, file, _MAX_PATH))
-  {
-    return nullptr;
-  }
-#else
-  char abs_path[PATH_MAX];
-  if (!realpath(file, abs_path))
-  {
-    return nullptr;
-  }
-#endif
-
-  return std::string(abs_path);
+  return (string == nullptr || string[0] == '\0');
 }
 
 inline std::string NTimestamp(const char *format)
@@ -900,7 +907,7 @@ inline void NTimer::Tic(const bool &echo)
 
   if (echo)
   {
-    NLogP("Timing started.");
+    NLogP("Timing starts at: %s.", NTimestamp().c_str());
   }
 }
 
