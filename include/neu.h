@@ -982,6 +982,7 @@ inline const NTimer::Report NTimer::Toc(
   if (cycle < 1LL)
   {
     NLogE("Cycle is smaller than 1: %s.", NCodeMessage(NINVALID_ARG));
+    this->m_report.Reset();
     return this->m_report;
   }
 
@@ -1003,7 +1004,7 @@ inline const NTimer::Report NTimer::Toc(
   if (this->m_report.cyc % cycle == 0LL)
   {
     this->m_report.ttl = title;
-    this->m_report.unit =unit;
+    this->m_report.unit = unit;
     this->m_report.valid = true;
     printf("%s\n", this->m_report.ToString().c_str());
 
