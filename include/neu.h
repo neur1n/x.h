@@ -304,9 +304,9 @@ bool NSucc(const NCode &code);
 
 bool NFail(const NCode &code);
 
-const char *NCodeMessage(const int &code);
+std::string NCodeMessage(const int &code);
 
-const char *NCodeMessage(const NCode &code);
+std::string NCodeMessage(const NCode &code);
 
 long long NDuration(
     const std::chrono::steady_clock::time_point &start,
@@ -515,16 +515,14 @@ inline bool NFail(const NCode &code)
   return code ? true : false;
 }
 
-inline const char *NCodeMessage(const int &code)
+inline std::string NCodeMessage(const int &code)
 {
-  static std::string msg = std::system_category().message(code);
-  return msg.c_str();
+  return std::system_category().message(code);
 }
 
-inline const char *NCodeMessage(const NCode &code)
+inline std::string NCodeMessage(const NCode &code)
 {
-  static std::string msg = code.message();
-  return msg.c_str();
+  return code.message();
 }
 
 inline long long NDuration(
@@ -981,7 +979,6 @@ inline const NTimer::Report NTimer::Toc(
 
   if (cycle < 1LL)
   {
-    NLogE("Cycle is smaller than 1: %s.", NCodeMessage(NINVALID_ARG));
     this->m_report.Reset();
     return this->m_report;
   }
