@@ -22,7 +22,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 
 
-Last update: 2021-12-17 19:00
+Last update: 2021-12-19 23:31
 ******************************************************************************/
 #ifndef NEU_H
 #define NEU_H
