@@ -27,23 +27,9 @@ Last update: 2021-12-19 23:31
 #ifndef NEU_H
 #define NEU_H
 
-#include <algorithm>
-#include <cctype>
-#include <cmath>
-#include <condition_variable>
-#include <cstdarg>
-#include <cstdio>
-#include <cstdlib>
-#include <cstring>
 #include <functional>
-#include <map>
 #include <mutex>
-#include <queue>
 #include <string>
-#include <system_error>
-#include <thread>
-#include <vector>
-#include <sys/stat.h>
 
 #if defined(_MSC_VER)
 #include <conio.h>
@@ -363,38 +349,6 @@ private:
 
   std::function<R(Args...)> m_function;
 };  // class NCallable
-
-template<class T>
-class NQueue
-{
-public:
-  NQueue() = default;
-  NQueue(const NQueue<T> &) = delete;
-  NQueue& operator=(const NQueue<T> &) = delete;
-
-  NQueue(NQueue<T> &&other);
-
-  ~NQueue();
-
-  const T &Back(const bool &wait = true);
-
-  void Clear();
-
-  bool Empty();
-
-  const T &Front();
-
-  void Pop();
-
-  void Push(const T &item);
-
-  size_t Size();
-
-private:
-  std::condition_variable m_cv;
-  std::deque<T> m_queue;
-  std::mutex m_mutex;
-};  // class NQueue
 
 class NThread
 {
@@ -807,103 +761,6 @@ void NCallable<R, Args...>::InternalBind(
       function, std::forward<Args2>(arguments)..., NVariadicPlaceholder<I>{}...);
 }
 //NCallable}}}
-
-//NQueue{{{
-template<class T>
-NQueue<T>::NQueue(NQueue<T> &&other)
-{
-  this->m_queue.clear();
-  this->m_queue = std::move(other.m_queue);
-  other.m_queue.clear();
-}
-
-template<class T>
-NQueue<T>::~NQueue()
-{
-  this->m_queue.clear();
-}
-
-template<class T>
-const T &NQueue<T>::Back(const bool &wait)
-{
-  std::unique_lock<std::mutex> lock(this->m_mutex);
-
-  if (wait)
-  {
-    while (this->m_queue.empty())
-    {
-      this->m_cv.wait(lock);
-    }
-  }
-  else
-  {
-    if (this->m_queue.empty())
-    {
-      throw std::out_of_range("[ERROR] Queue is empty.");
-    }
-  }
-
-  return this->m_queue.back();
-}
-
-template<class T>
-void NQueue<T>::Clear()
-{
-  std::lock_guard<std::mutex> lock(this->m_mutex);
-  if (!this->m_queue.empty())
-  {
-    this->m_queue.clear();
-  }
-}
-
-template<class T>
-bool NQueue<T>::Empty()
-{
-  std::lock_guard<std::mutex> lock(this->m_mutex);
-  return this->m_queue.empty();
-}
-
-template<class T>
-const T &NQueue<T>::Front()
-{
-  std::unique_lock<std::mutex> lock(this->m_mutex);
-
-  while (this->m_queue.empty())
-  {
-    this->m_cv.wait(lock);
-  }
-
-  return this->m_queue.front();
-}
-
-template<class T>
-void NQueue<T>::Pop()
-{
-  std::unique_lock<std::mutex> lock(this->m_mutex);
-
-  while (this->m_queue.empty())
-  {
-    this->m_cv.wait(lock);
-  }
-
-  this->m_queue.pop_front();
-}
-
-template<class T>
-void NQueue<T>::Push(const T &item)
-{
-  std::lock_guard<std::mutex> lock(this->m_mutex);
-  this->m_queue.push_back(item);
-  this->m_cv.notify_all();
-}
-
-template<class T>
-size_t NQueue<T>::Size()
-{
-  std::lock_guard<std::mutex> lock(this->m_mutex);
-  return this->m_queue.size();
-}
-//NQueue}}}
 
 //NThread{{{
 template<class Fn, class ...Args>
