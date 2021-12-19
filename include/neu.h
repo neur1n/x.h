@@ -39,7 +39,7 @@ Last update: 2021-12-17 19:00
 #include <map>
 #include <mutex>
 #include <queue>
-#include <stdarg.h>
+#include <string>
 #include <system_error>
 #include <thread>
 #include <vector>
@@ -440,16 +440,30 @@ public:
 
     const std::string ToString()
     {
-      char log[128];
-      std::sprintf(
-          log,
-          "[%s] %lld cycles - total: %lld%s, avg: %f%s, min (%lld): %lld%s, max (%lld): %lld%s",
-          ttl, cyc,
-          sum, unit,
-          avg, unit,
-          min.i, min.v, unit,
-          max.i, max.v, unit);
-      return std::string(log);
+      std::string log;
+
+      log += "[";
+      log += ttl;
+      log += "] ";
+      log += std::to_string(cyc);
+      log += " cycles - total: ";
+      log += std::to_string(sum);
+      log += unit;
+      log += ", avg: ";
+      log += std::to_string(avg);
+      log += unit;
+      log += ", min (";
+      log += std::to_string(min.i);
+      log += "): ";
+      log += std::to_string(min.v);
+      log += unit;
+      log += ", max (";
+      log += std::to_string(max.i);
+      log += "): ";
+      log += std::to_string(max.v);
+      log += unit;
+
+      return log;
     }
 
     bool valid;
