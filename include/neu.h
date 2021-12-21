@@ -22,7 +22,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 
 
-Last update: 2021-12-19 23:31
+Last update: 2021-12-21 10:29
 ******************************************************************************/
 #ifndef NEU_H
 #define NEU_H
@@ -30,6 +30,8 @@ Last update: 2021-12-19 23:31
 #include <functional>
 #include <mutex>
 #include <string>
+#include <thread>
+#include <sys/stat.h>
 
 #if defined(_MSC_VER)
 #include <conio.h>
