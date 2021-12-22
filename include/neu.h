@@ -22,7 +22,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 
 
-Last update: 2021-12-21 10:29
+Last update: 2021-12-22 19:05
 ******************************************************************************/
 #ifndef NEU_H
 #define NEU_H
@@ -268,7 +268,7 @@ static const NCode NWRONG_PROTO_TYPE           = std::make_error_code(std::errc:
 //}}}
 
 template<class T>
-static constexpr T NPi = (T)3.141592653589793238462643383279502884197169399375;
+static T NPi = (T)3.141592653589793238462643383279502884197169399375;
 //******************************************************************** Macro}}}
 
 //************************************************************* Declarations{{{
