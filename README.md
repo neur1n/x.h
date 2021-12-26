@@ -43,15 +43,16 @@
         <li><a href="#npi">NPi</a></li>
         <li><a href="#nsucc">NSucc</a></li>
         <li><a href="#nfail">NFail</a></li>
-        <li><a href="#npathexists">NPathExists</a></li>
-        <li><a href="#nstringempty">NStringEmpty</a></li>
         <li><a href="#ncodemessage_1">NCodeMessage [1/2]</a></li>
         <li><a href="#ncodemessage_2">NCodeMessage [2/2]</a></li>
-        <li><a href="#npressedkey">NPressedKey</a></li>
         <li><a href="#nduration">NDuration</a></li>
-        <li><a href="#nsleep">NSleep</a></li>
         <li><a href="#nfullpath">NFullPath</a></li>
-        <li><a href="#narrarsize">NArraySize</a></li>
+        <li><a href="#nnow">NNow</a></li>
+        <li><a href="#npathexists">NPathExists</a></li>
+        <li><a href="#npressedkey">NPressedKey</a></li>
+        <li><a href="#nsleep">NSleep</a></li>
+        <li><a href="#nstringempty">NStringEmpty</a></li>
+        <li><a href="#narraysize">NArraySize</a></li>
         <li><a href="#nclamp">NClamp</a></li>
         <li><a href="#nrelease">NRelease</a></li>
         <li><a href="#nreleasearray">NReleaseArray</a></li>
@@ -258,7 +259,7 @@ the naming may be more semantic than the
 ### NPi
 ```cpp
 template<class T>
-static constexpr T NPi = (T)3.141592653589793238462643383279502884197169399375;
+static const T NPi = (T)3.141592653589793238462643383279502884197169399375;
 ```
 
 A templated π for different precisions, e.g. `float`, `double`.
@@ -292,37 +293,9 @@ Check if the error code indicates an operation failed.
 - `true` if the code indicates an operation failed.
 
 
-### NPathExists
-```cpp
-bool NPathExists(const char *path)
-```
-
-Check if a file or directory exits.
-
-#### Parameters
-- path: The path to the querying file/directory.
-
-#### Returns
-- `true` if the file/directory exists.
-
-
-### NStringEmpty
-```cpp
-bool NStringEmpty(const char *string)
-```
-
-Check if a string is empty.
-
-#### Parameters
-- string: The string.
-
-#### Returns
-- `true` if the string is empty.
-
-
 ### NCodeMessage [1/2] <a name="ncodemessage_1"></a>
 ```cpp
-const char *NCodeMessage(const int &code)
+std::string NCodeMessage(const int &code)
 ```
 
 Get the description string of the error code. This function can be used to
@@ -340,7 +313,7 @@ does).
 
 ### NCodeMessage [2/2] <a name="ncodemessage_2"></a>
 ```cpp
-const char *NCodeMessage(const NCode &code)
+std::string NCodeMessage(const NCode &code)
 ```
 
 Get the description string of a `std::error_code`.
@@ -350,6 +323,67 @@ Get the description string of a `std::error_code`.
 
 #### Returns
 - The description string of the error code.
+
+
+### NDuration
+```cpp
+long long NDuration(
+    const std::chrono::system_clock::time_point &start,
+    const std::chrono::system_clock::time_point &end,
+    const std::string &unit = "us")
+```
+
+Get the duration between two time points.
+
+#### Parameters
+- start: The start time point.
+- end: The end time point.
+- unit (optional): The unit of the outcome. Default is microsecond. Checkout
+[std::chrono::duration_cast](https://www.cplusplus.com/reference/chrono/duration_cast/)
+for more details.
+
+#### Returns
+- The duration of the two time points in specified unit.
+
+
+### NFullPath
+```cpp
+std::string NFullPath(const char *path)
+```
+
+Get the absolute path to a file.
+
+#### Parameters
+- path: The (maybe relative) path to a file.
+
+#### Returns
+- A `std::string` containing the absolute path to the file.
+
+
+### NNow
+```cpp
+std::chrono::steady_clock::time_point NNow()
+```
+
+Get time point object representing the current timestamp. It shall be
+specifically used for time interval calculation.
+
+#### Returns
+- A `std::chrono::steady_clock::time_point` object representing the current timestamp.
+
+
+### NPathExists
+```cpp
+bool NPathExists(const char *path)
+```
+
+Check if a file or directory exits.
+
+#### Parameters
+- path: The path to the querying file/directory.
+
+#### Returns
+- `true` if the file/directory exists.
 
 
 ### NPressedKey
@@ -381,27 +415,6 @@ int main(int argc, char **argv)
 - The pressed key.
 
 
-### NDuration
-```cpp
-long long NDuration(
-    const std::chrono::system_clock::time_point &start,
-    const std::chrono::system_clock::time_point &end,
-    const std::string &unit = "ms")
-```
-
-Get the duration between two time points.
-
-#### Parameters
-- start: The start time point.
-- end: The end time point.
-- unit (optional): The unit of the outcome. Default is millisecond. Checkout
-[std::chrono::duration_cast](https://www.cplusplus.com/reference/chrono/duration_cast/)
-for more details.
-
-#### Returns
-- The duration of the two time points in specified unit.
-
-
 ### NSleep
 ```cpp
 void NSleep(const unsigned long long &ms)
@@ -413,18 +426,18 @@ Blocks execution of the calling thread for specified milliseconds.
 - ms: The span of the sleep duration.
 
 
-### NFullPath
+### NStringEmpty
 ```cpp
-std::string NFullPath(const char *path)
+bool NStringEmpty(const char *string)
 ```
 
-Get the absolute path to a file.
+Check if a string is empty.
 
 #### Parameters
-- path: The (maybe relative) path to a file.
+- string: The string.
 
 #### Returns
-- A `std::string` containing the absolute path to the file.
+- `true` if the string is empty.
 
 
 ### NArraySize
