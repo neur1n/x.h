@@ -22,27 +22,15 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 
 
-Last update: 2021-12-03 16:37
+Last update: 2021-12-25 16:00
 ******************************************************************************/
 #ifndef NEU_H
 #define NEU_H
 
-#include <algorithm>
-#include <cctype>
-#include <cmath>
-#include <condition_variable>
-#include <cstdarg>
-#include <cstdio>
-#include <cstdlib>
-#include <cstring>
 #include <functional>
-#include <map>
 #include <mutex>
-#include <queue>
-#include <stdarg.h>
-#include <system_error>
+#include <string>
 #include <thread>
-#include <vector>
 #include <sys/stat.h>
 
 #if defined(_MSC_VER)
@@ -280,7 +268,7 @@ static const NCode NWRONG_PROTO_TYPE           = std::make_error_code(std::errc:
 //}}}
 
 template<class T>
-static constexpr T NPi = (T)3.141592653589793238462643383279502884197169399375;
+static const T NPi = (T)3.141592653589793238462643383279502884197169399375;
 //******************************************************************** Macro}}}
 
 //************************************************************* Declarations{{{
@@ -304,24 +292,26 @@ bool NSucc(const NCode &code);
 
 bool NFail(const NCode &code);
 
+std::string NCodeMessage(const int &code);
+
+std::string NCodeMessage(const NCode &code);
+
+long long NDuration(
+    const std::chrono::steady_clock::time_point &start,
+    const std::chrono::steady_clock::time_point &end,
+    const std::string &unit = "us");
+
+std::string NFullPath(const char *path);
+
+std::chrono::steady_clock::time_point NNow();
+
 bool NPathExists(const char *path);
-
-bool NStringEmpty(const char *string);
-
-const char *NCodeMessage(const int &code);
-
-const char *NCodeMessage(const NCode &code);
 
 int NPressedKey();
 
-long long NDuration(
-    const std::chrono::system_clock::time_point &start,
-    const std::chrono::system_clock::time_point &end,
-    const std::string &unit = "ms");
-
 void NSleep(const unsigned long long &ms);
 
-std::string NFullPath(const char *path);
+bool NStringEmpty(const char *string);
 
 template<class T, size_t N>
 size_t NArraySize(const T (&array)[N]);
@@ -362,38 +352,6 @@ private:
   std::function<R(Args...)> m_function;
 };  // class NCallable
 
-template<class T>
-class NQueue
-{
-public:
-  NQueue() = default;
-  NQueue(const NQueue<T> &) = delete;
-  NQueue& operator=(const NQueue<T> &) = delete;
-
-  NQueue(NQueue<T> &&other);
-
-  ~NQueue();
-
-  const T &Back(const bool &wait = true);
-
-  void Clear();
-
-  bool Empty();
-
-  const T &Front();
-
-  void Pop();
-
-  void Push(const T &item);
-
-  size_t Size();
-
-private:
-  std::condition_variable m_cv;
-  std::deque<T> m_queue;
-  std::mutex m_mutex;
-};  // class NQueue
-
 class NThread
 {
 public:
@@ -417,17 +375,80 @@ private:
 class NTimer
 {
 public:
+  typedef struct _Report_
+  {
+    _Report_(const char *_u = "us", const char *_t = "")
+    {
+      Reset(_u, _t);
+    }
+
+    void Reset(const char *_u = "us", const char *_t = "")
+    {
+      valid = false;
+      max = {0LL, LLONG_MIN};
+      min = {0LL, LLONG_MAX};
+      sum = 0LL;
+      cyc = 0LL;
+      avg = 0.0;
+      ttl = _t;
+      unit = _u;
+    }
+
+    const std::string ToString()
+    {
+      std::string log;
+
+      log += "[";
+      log += ttl;
+      log += "] ";
+      log += std::to_string(cyc);
+      log += " cycles - total: ";
+      log += std::to_string(sum);
+      log += unit;
+      log += ", avg: ";
+      log += std::to_string(avg);
+      log += unit;
+      log += ", min (";
+      log += std::to_string(min.i);
+      log += "): ";
+      log += std::to_string(min.v);
+      log += unit;
+      log += ", max (";
+      log += std::to_string(max.i);
+      log += "): ";
+      log += std::to_string(max.v);
+      log += unit;
+
+      return log;
+    }
+
+    bool valid;
+    struct
+    {
+      long long i;
+      long long v;
+    } max, min;
+    long long sum;
+    long long cyc;
+    double avg;
+    const char *ttl;
+    const char *unit;
+  } Report;
+
   NTimer();
 
   ~NTimer();
 
   void Tic(const bool &echo = false);
 
-  long long Toc(const char *unit = "ms", const bool &echo = false);
+  const long long Toc(const char *unit = "us", const bool &echo = false);
+
+  const Report Toc(
+      const long long &cycle, const char *unit = "us", const char *title = "");
 
 private:
-  std::chrono::system_clock::time_point m_tic;
-  long long m_elapsed;
+  std::chrono::steady_clock::time_point m_tic;
+  Report m_report;
 };  // class NTimer
 //Class}}}
 //************************************************************* Declarations}}}
@@ -464,6 +485,71 @@ inline bool NFail(const NCode &code)
   return code ? true : false;
 }
 
+inline std::string NCodeMessage(const int &code)
+{
+  return std::system_category().message(code);
+}
+
+inline std::string NCodeMessage(const NCode &code)
+{
+  return code.message();
+}
+
+inline long long NDuration(
+    const std::chrono::steady_clock::time_point &start,
+    const std::chrono::steady_clock::time_point &end,
+    const std::string &unit)
+{
+  if (unit.compare("h") == 0)
+  {
+    return std::chrono::duration_cast<std::chrono::hours>(end - start).count();
+  }
+  else if (unit.compare("m") == 0)
+  {
+    return std::chrono::duration_cast<std::chrono::minutes>(end - start).count();
+  }
+  else if (unit.compare("s") == 0)
+  {
+    return std::chrono::duration_cast<std::chrono::seconds>(end - start).count();
+  }
+  else if (unit.compare("ms") == 0)
+  {
+    return std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count();
+  }
+  else if (unit.compare("us") == 0)
+  {
+    return std::chrono::duration_cast<std::chrono::microseconds>(end - start).count();
+  }
+  else  // if (unit.compare("ns") == 0)
+  {
+    return std::chrono::duration_cast<std::chrono::nanoseconds>(end - start).count();
+  }
+}
+
+inline std::string NFullPath(const char *file)
+{
+#if defined(_MSC_VER)
+  char abs_path[_MAX_PATH];
+  if (!_fullpath(abs_path, file, _MAX_PATH))
+  {
+    return nullptr;
+  }
+#else
+  char abs_path[PATH_MAX];
+  if (!realpath(file, abs_path))
+  {
+    return nullptr;
+  }
+#endif
+
+  return std::string(abs_path);
+}
+
+inline std::chrono::steady_clock::time_point NNow()
+{
+  return std::chrono::steady_clock::now();
+}
+
 inline bool NPathExists(const char *path)
 {
   int result = -1;
@@ -477,23 +563,6 @@ inline bool NPathExists(const char *path)
 #endif
 
   return (result == 0);
-}
-
-inline bool NStringEmpty(const char *string)
-{
-  return (string == nullptr || string[0] == '\0');
-}
-
-inline const char *NCodeMessage(const int &code)
-{
-  static std::string msg = std::system_category().message(code);
-  return msg.c_str();
-}
-
-inline const char *NCodeMessage(const NCode &code)
-{
-  static std::string msg = code.message();
-  return msg.c_str();
 }
 
 inline int NPressedKey()
@@ -583,47 +652,14 @@ inline int NPressedKey()
 #endif
 }
 
-inline long long NDuration(
-    const std::chrono::system_clock::time_point &start,
-    const std::chrono::system_clock::time_point &end,
-    const std::string &unit)
-{
-  if (unit.compare("s") == 0)
-  {
-    return std::chrono::duration_cast<std::chrono::seconds>(end - start).count();
-  }
-  else if (unit.compare("us") == 0)
-  {
-    return std::chrono::duration_cast<std::chrono::microseconds>(end - start).count();
-  }
-  else //  if (unit.compare("ms") == 0)
-  {
-    return std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count();
-  }
-}
-
 inline void NSleep(const unsigned long long &ms)
 {
   std::this_thread::sleep_for(std::chrono::milliseconds(ms));
 }
 
-inline std::string NFullPath(const char *file)
+inline bool NStringEmpty(const char *string)
 {
-#if defined(_MSC_VER)
-  char abs_path[_MAX_PATH];
-  if (!_fullpath(abs_path, file, _MAX_PATH))
-  {
-    return nullptr;
-  }
-#else
-  char abs_path[PATH_MAX];
-  if (!realpath(file, abs_path))
-  {
-    return nullptr;
-  }
-#endif
-
-  return std::string(abs_path);
+  return (string == nullptr || string[0] == '\0');
 }
 
 inline std::string NTimestamp(const char *format)
@@ -728,103 +764,6 @@ void NCallable<R, Args...>::InternalBind(
 }
 //NCallable}}}
 
-//NQueue{{{
-template<class T>
-NQueue<T>::NQueue(NQueue<T> &&other)
-{
-  this->m_queue.clear();
-  this->m_queue = std::move(other.m_queue);
-  other.m_queue.clear();
-}
-
-template<class T>
-NQueue<T>::~NQueue()
-{
-  this->m_queue.clear();
-}
-
-template<class T>
-const T &NQueue<T>::Back(const bool &wait)
-{
-  std::unique_lock<std::mutex> lock(this->m_mutex);
-
-  if (wait)
-  {
-    while (this->m_queue.empty())
-    {
-      this->m_cv.wait(lock);
-    }
-  }
-  else
-  {
-    if (this->m_queue.empty())
-    {
-      throw std::out_of_range("[ERROR] Queue is empty.");
-    }
-  }
-
-  return this->m_queue.back();
-}
-
-template<class T>
-void NQueue<T>::Clear()
-{
-  std::lock_guard<std::mutex> lock(this->m_mutex);
-  if (!this->m_queue.empty())
-  {
-    this->m_queue.clear();
-  }
-}
-
-template<class T>
-bool NQueue<T>::Empty()
-{
-  std::lock_guard<std::mutex> lock(this->m_mutex);
-  return this->m_queue.empty();
-}
-
-template<class T>
-const T &NQueue<T>::Front()
-{
-  std::unique_lock<std::mutex> lock(this->m_mutex);
-
-  while (this->m_queue.empty())
-  {
-    this->m_cv.wait(lock);
-  }
-
-  return this->m_queue.front();
-}
-
-template<class T>
-void NQueue<T>::Pop()
-{
-  std::unique_lock<std::mutex> lock(this->m_mutex);
-
-  while (this->m_queue.empty())
-  {
-    this->m_cv.wait(lock);
-  }
-
-  this->m_queue.pop_front();
-}
-
-template<class T>
-void NQueue<T>::Push(const T &item)
-{
-  std::lock_guard<std::mutex> lock(this->m_mutex);
-  this->m_queue.push_back(item);
-  this->m_cv.notify_all();
-}
-
-template<class T>
-size_t NQueue<T>::Size()
-{
-  std::lock_guard<std::mutex> lock(this->m_mutex);
-  return this->m_queue.size();
-}
-//NQueue}}}
-
 //NThread{{{
 template<class Fn, class ...Args>
 NThread::NThread(Fn&& function, Args&&... arguments)
@@ -874,7 +813,7 @@ inline void NThread::WaitUntil(bool ready)
 
 //NTimer{{{
 inline NTimer::NTimer()
-  :m_tic(std::chrono::system_clock::now()), m_elapsed(0)
+  :m_tic(NNow())
 {
 }
 
@@ -884,25 +823,66 @@ inline NTimer::~NTimer()
 
 inline void NTimer::Tic(const bool &echo)
 {
-  this->m_tic = std::chrono::system_clock::now();
+  this->m_tic = std::chrono::steady_clock::now();
 
   if (echo)
   {
-    NLogP("Timing started.");
+    NLogP("Timing starts at: %s.", NTimestamp().c_str());
   }
 }
 
-inline long long NTimer::Toc(const char *unit, const bool &echo)
+inline const long long NTimer::Toc(const char *unit, const bool &echo)
 {
-  this->m_elapsed = NDuration(
-      this->m_tic, std::chrono::system_clock::now(), unit);
+  long long elapsed = NDuration(
+      this->m_tic, std::chrono::steady_clock::now(), unit);
 
   if (echo)
   {
-    NLogP("Time elapsed: %lld (%s)", this->m_elapsed, unit);
+    NLogP("Timing stops at:  %s.", NTimestamp().c_str());
+    NLogP("Time elapsed: %lld%s", elapsed, unit);
   }
 
-  return this->m_elapsed;
+  return elapsed;
+}
+
+inline const NTimer::Report NTimer::Toc(
+    const long long &cycle, const char *unit, const char *title)
+{
+  long long interval = this->Toc(unit);
+
+  if (cycle < 1LL)
+  {
+    this->m_report.Reset();
+    return this->m_report;
+  }
+
+  if (interval > this->m_report.max.v)
+  {
+    this->m_report.max.i = this->m_report.cyc;
+    this->m_report.max.v = interval;
+  }
+  if (interval < this->m_report.min.v)
+  {
+    this->m_report.min.i = this->m_report.cyc;
+    this->m_report.min.v = interval;
+  }
+
+  this->m_report.sum += interval;
+  this->m_report.cyc += 1LL;
+  this->m_report.avg = (double)this->m_report.sum / (double)this->m_report.cyc;
+
+  if (this->m_report.cyc % cycle == 0LL)
+  {
+    this->m_report.ttl = title;
+    this->m_report.unit = unit;
+    this->m_report.valid = true;
+    printf("%s\n", this->m_report.ToString().c_str());
+
+    this->m_report.Reset(unit, title);
+    return this->m_report;
+  }
+
+  return this->m_report;
 }
 //NTimer}}}
 //******************************************************************** Class}}}
