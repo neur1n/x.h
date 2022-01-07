@@ -22,11 +22,12 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 
 
-Last update: 2022-01-07 17:26
+Last update: 2022-01-07 18:37
 ******************************************************************************/
 #ifndef NEU_H
 #define NEU_H
 
+#include <cassert>
 #include <functional>
 #include <mutex>
 #include <string>
@@ -180,6 +181,18 @@ std::string NTimestamp(const char *format = "%Y-%m-%d %H:%M:%S");
 #define NLogD(format, ...) do {printf(NLOG_COLOR_D NLOG_FORMAT("D", format), ##__VA_ARGS__);} while (false)
 #else
 #define NLogD(format, ...)
+#endif
+
+#ifdef NDEBUG
+#define NAssert(expr) do { \
+  if (!(expr)) \
+  { \
+    fprintf(stderr, "\n[ASSERTION FAILURE %s %s > %s > %d] \n%s", NTimestamp().c_str(), NFullPath(__FILENAME__).c_str(), __FUNCTION__, __LINE__, #expr); \
+    exit(EXIT_FAILURE); \
+  } \
+} while (false)
+#else
+#define NAssert(expr) do {assert(expr);} while (false)
 #endif
 
 #define NBit(bit) (1 << bit)
