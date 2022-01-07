@@ -22,7 +22,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 
 
-Last update: 2021-12-25 16:00
+Last update: 2022-01-07 17:26
 ******************************************************************************/
 #ifndef NEU_H
 #define NEU_H
@@ -101,17 +101,17 @@ std::string NTimestamp(const char *format = "%Y-%m-%d %H:%M:%S");
 #define __FILENAME__ (strrchr(__FILE__, '/') ? strrchr(__FILE__, '/') + 1 : __FILE__)
 #endif
 
-#define NKEY_ESC   0x1B
-#define NKEY_A     0x41
-#define NKEY_B     0x42
-#define NKEY_C     0x43
-#define NKEY_D     0x44
-#define NKEY_Q     0x51
+#define NKEY_ESC   (0x1B)
+#define NKEY_A     (0x41)
+#define NKEY_B     (0x42)
+#define NKEY_C     (0x43)
+#define NKEY_D     (0x44)
+#define NKEY_Q     (0x51)
 #if defined(_MSC_VER)
-#define NKEY_LEFT  0x4B
-#define NKEY_UP    0x48
-#define NKEY_RIGHT 0x4D
-#define NKEY_DOWN  0x50
+#define NKEY_LEFT  (0x4B)
+#define NKEY_UP    (0x48)
+#define NKEY_RIGHT (0x4D)
+#define NKEY_DOWN  (0x50)
 #else
 #define NKEY_LEFT  (-1)
 #define NKEY_UP    (-2)
@@ -143,41 +143,41 @@ std::string NTimestamp(const char *format = "%Y-%m-%d %H:%M:%S");
 #endif
 
 #ifndef NLOG_LEVEL
-#define NLOG_LEVEL 5
+#define NLOG_LEVEL (5)
 #endif
 
 #if NLOG_LEVEL >= 0
-#define NLogP(format, ...) printf(NLOG_COLOR_P NLOG_FORMAT("P", format), ##__VA_ARGS__)
+#define NLogP(format, ...) do {printf(NLOG_COLOR_P NLOG_FORMAT("P", format), ##__VA_ARGS__);} while (false)
 #else
 #define NLogP(format, ...)
 #endif
 
 #if NLOG_LEVEL >= 1
-#define NLogF(format, ...) printf(NLOG_COLOR_F NLOG_FORMAT("F", format), ##__VA_ARGS__); exit(EXIT_FAILURE)
+#define NLogF(format, ...) do {printf(NLOG_COLOR_F NLOG_FORMAT("F", format), ##__VA_ARGS__); exit(EXIT_FAILURE);} while (false)
 #else
 #define NLogF(format, ...)
 #endif
 
 #if NLOG_LEVEL >= 2
-#define NLogE(format, ...) printf(NLOG_COLOR_E NLOG_FORMAT("E", format), ##__VA_ARGS__)
+#define NLogE(format, ...) do {printf(NLOG_COLOR_E NLOG_FORMAT("E", format), ##__VA_ARGS__);} while (false)
 #else
 #define NLogE(format, ...)
 #endif
 
 #if NLOG_LEVEL >= 3
-#define NLogW(format, ...) printf(NLOG_COLOR_W NLOG_FORMAT("W", format), ##__VA_ARGS__)
+#define NLogW(format, ...) do {printf(NLOG_COLOR_W NLOG_FORMAT("W", format), ##__VA_ARGS__);} while (false)
 #else
 #define NLogW(format, ...)
 #endif
 
 #if NLOG_LEVEL >= 4
-#define NLogI(format, ...) printf(NLOG_COLOR_I NLOG_FORMAT("I", format), ##__VA_ARGS__)
+#define NLogI(format, ...) do {printf(NLOG_COLOR_I NLOG_FORMAT("I", format), ##__VA_ARGS__);} while (false)
 #else
 #define NLogI(format, ...)
 #endif
 
 #if NLOG_LEVEL >= 5
-#define NLogD(format, ...) printf(NLOG_COLOR_D NLOG_FORMAT("D", format), ##__VA_ARGS__)
+#define NLogD(format, ...) do {printf(NLOG_COLOR_D NLOG_FORMAT("D", format), ##__VA_ARGS__);} while (false)
 #else
 #define NLogD(format, ...)
 #endif
