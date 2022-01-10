@@ -22,7 +22,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 
 
-Last update: 2022-01-10 18:45
+Last update: 2022-01-10 19:05
 ******************************************************************************/
 #ifndef NEU_H
 #define NEU_H
@@ -124,7 +124,7 @@ std::string NTimestamp(const char *format = "%Y-%m-%d %H:%M:%S");
 #define NKEY_DOWN  (-4)
 #endif
 
-// NLog {{{
+//NLog{{{
 #define NCOLOR_BLACK(bold)   "\033[" #bold ";30m"
 #define NCOLOR_RED(bold)     "\033[" #bold ";31m"
 #define NCOLOR_GREEN(bold)   "\033[" #bold ";32m"
@@ -232,7 +232,7 @@ std::string NTimestamp(const char *format = "%Y-%m-%d %H:%M:%S");
   NLogToFile(file, NLOG_FORMAT("D", format, ""), ##__VA_ARGS__); \
   NLogD(format, ##__VA_ARGS__); \
 } while (false)
-//}}}
+//NLog}}}
 
 #ifdef NDEBUG
 #define NAssert(expr) do { \
@@ -248,7 +248,7 @@ std::string NTimestamp(const char *format = "%Y-%m-%d %H:%M:%S");
 
 #define NBit(bit) (1 << bit)
 
-// NCode {{{
+//NCode{{{
 typedef std::error_code NCode;
 static const NCode NOK                         = std::error_code();
 static const NCode NAF_NOT_SUPPORT             = std::make_error_code(std::errc::address_family_not_supported);
@@ -329,7 +329,7 @@ static const NCode NTOO_MANY_LINKS             = std::make_error_code(std::errc:
 static const NCode NTOO_MANY_SYMLINK_LEVELS    = std::make_error_code(std::errc::too_many_symbolic_link_levels);
 static const NCode NOVERFLOW                   = std::make_error_code(std::errc::value_too_large);
 static const NCode NWRONG_PROTO_TYPE           = std::make_error_code(std::errc::wrong_protocol_type);
-//}}}
+//NCode}}}
 
 template<class T>
 static const T NPi = (T)3.141592653589793238462643383279502884197169399375;
@@ -344,6 +344,12 @@ static const T NPi = (T)3.141592653589793238462643383279502884197169399375;
   NLogW(const char *format, ...);
   NLogI(const char *format, ...);
   NLogD(const char *format, ...);
+  NLogPS(const std::string &file, const char *format, ...);
+  NLogFS(const std::string &file, const char *format, ...);
+  NLogES(const std::string &file, const char *format, ...);
+  NLogWS(const std::string &file, const char *format, ...);
+  NLogIS(const std::string &file, const char *format, ...);
+  NLogDS(const std::string &file, const char *format, ...);
   NBit(int bit);
 */
 
@@ -424,7 +430,7 @@ public:
 
   ~NThread();
 
-  NCode Start();
+  void Start();
 
   void Notify();
 
@@ -882,19 +888,12 @@ inline NThread::~NThread()
   }
 }
 
-inline NCode NThread::Start()
+inline void NThread::Start()
 {
   if (this->m_thread.joinable())
   {
     this->m_thread.join();
   }
-  else
-  {
-    NLogE("Failed to start thread, thread is not joinable.");
-    return NOP_CANCELED;
-  }
-
-  return NOK;
 }
 
 inline void NThread::Notify()
@@ -930,7 +929,7 @@ inline void NTimer::Tic(const bool &echo)
 
   if (echo)
   {
-    NLogP("Timing starts at: %s.", NTimestamp().c_str());
+    printf("Timing starts at: %s.\n", NTimestamp().c_str());
   }
 }
 
@@ -941,8 +940,8 @@ inline const long long NTimer::Toc(const char *unit, const bool &echo)
 
   if (echo)
   {
-    NLogP("Timing stops at:  %s.", NTimestamp().c_str());
-    NLogP("Time elapsed: %lld%s", elapsed, unit);
+    printf("Timing stops at:  %s.\n", NTimestamp().c_str());
+    printf("Time elapsed: %lld%s.\n", elapsed, unit);
   }
 
   return elapsed;
