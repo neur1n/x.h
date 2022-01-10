@@ -22,12 +22,14 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 
 
-Last update: 2022-01-07 18:37
+Last update: 2022-01-10 16:16
 ******************************************************************************/
 #ifndef NEU_H
 #define NEU_H
 
 #include <cassert>
+#include <cstdarg>
+#include <fstream>
 #include <functional>
 #include <mutex>
 #include <string>
@@ -316,9 +318,11 @@ long long NDuration(
 
 std::string NFullPath(const char *path);
 
+bool NLogToFile(const std::string &file, const char *format, ...);
+
 std::chrono::steady_clock::time_point NNow();
 
-bool NPathExists(const char *path);
+bool NPathExists(const std::string &path);
 
 int NPressedKey();
 
@@ -539,23 +543,57 @@ inline long long NDuration(
   }
 }
 
-inline std::string NFullPath(const char *file)
+inline std::string NFullPath(const char *path)
 {
 #if defined(_MSC_VER)
   char abs_path[_MAX_PATH];
-  if (!_fullpath(abs_path, file, _MAX_PATH))
+  if (!_fullpath(abs_path, path, _MAX_PATH))
   {
-    return nullptr;
+    return std::string();
   }
 #else
   char abs_path[PATH_MAX];
-  if (!realpath(file, abs_path))
+  if (!realpath(path, abs_path))
   {
-    return nullptr;
+    return std::string();
   }
 #endif
 
   return std::string(abs_path);
+}
+
+inline bool NLogToFile(const std::string &file, const char *format, ...)
+{
+#if defined(_MSC_VER)
+  FILE *stream = nullptr;
+  errno_t err = fopen_s(&stream, file.c_str(), "a");
+  if (err != 0)
+  {
+    return false;
+  }
+#else
+  FILE *stream = fopen(file.c_str(), "a");
+  if (stream == nullptr)
+  {
+    return false;
+  }
+#endif
+
+  va_list args;
+  va_start(args, format);
+  vfprintf(stream, format, args);
+  va_end(args);
+
+  if (stream != nullptr)
+  {
+    err = fclose(stream);
+    if (err != 0)
+    {
+      return false;
+    }
+  }
+
+  return true;
 }
 
 inline std::chrono::steady_clock::time_point NNow()
@@ -563,16 +601,16 @@ inline std::chrono::steady_clock::time_point NNow()
   return std::chrono::steady_clock::now();
 }
 
-inline bool NPathExists(const char *path)
+inline bool NPathExists(const std::string &path)
 {
   int result = -1;
 
 #if defined(_MSC_VER)
   struct _stat buffer;
-  result = _stat(path, &buffer);
+  result = _stat(path.c_str(), &buffer);
 #else
   struct stat buffer;
-  result = stat(path, &buffer);
+  result = stat(path.c_str(), &buffer);
 #endif
 
   return (result == 0);
