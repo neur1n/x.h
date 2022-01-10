@@ -22,7 +22,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 
 
-Last update: 2022-01-10 16:16
+Last update: 2022-01-10 18:45
 ******************************************************************************/
 #ifndef NEU_H
 #define NEU_H
@@ -84,6 +84,8 @@ template<int N>
 struct std::is_placeholder<NVariadicPlaceholder<N>> :std::integral_constant<int, N+1> {};
 
 //The Must-Put-on-Top{{{
+bool NLogToFile(const std::string &file, const char *format, ...);
+
 std::string NTimestamp(const char *format = "%Y-%m-%d %H:%M:%S");
 //The Must-Put-on-Top}}}
 //****************************************************************** Special}}}
@@ -122,6 +124,7 @@ std::string NTimestamp(const char *format = "%Y-%m-%d %H:%M:%S");
 #define NKEY_DOWN  (-4)
 #endif
 
+// NLog {{{
 #define NCOLOR_BLACK(bold)   "\033[" #bold ";30m"
 #define NCOLOR_RED(bold)     "\033[" #bold ";31m"
 #define NCOLOR_GREEN(bold)   "\033[" #bold ";32m"
@@ -140,9 +143,11 @@ std::string NTimestamp(const char *format = "%Y-%m-%d %H:%M:%S");
 #define NLOG_COLOR_D NCOLOR_BLUE(1)
 
 #ifdef NDEBUG
-#define NLOG_FORMAT(level, format) "[" level " %s] " format "\n" NCOLOR_RESET, NTimestamp().c_str()
+#define NLOG_FORMAT(level, format, reset) "[" level " %s] " format "\n" reset, \
+  NTimestamp().c_str()
 #else
-#define NLOG_FORMAT(level, format) "[" level " %s %s > %s > %d] " format "\n" NCOLOR_RESET, NTimestamp().c_str(), __FILENAME__, __FUNCTION__, __LINE__
+#define NLOG_FORMAT(level, format, reset) "[" level " %s %s > %s > %d] " format "\n" reset, \
+  NTimestamp().c_str(), __FILENAME__, __FUNCTION__, __LINE__
 #endif
 
 #ifndef NLOG_LEVEL
@@ -150,40 +155,84 @@ std::string NTimestamp(const char *format = "%Y-%m-%d %H:%M:%S");
 #endif
 
 #if NLOG_LEVEL >= 0
-#define NLogP(format, ...) do {printf(NLOG_COLOR_P NLOG_FORMAT("P", format), ##__VA_ARGS__);} while (false)
+#define NLogP(format, ...) do { \
+  printf(NLOG_COLOR_P NLOG_FORMAT("P", format, NCOLOR_RESET), ##__VA_ARGS__); \
+} while (false)
 #else
 #define NLogP(format, ...)
 #endif
+#define NLogPS(file, format, ...) do { \
+  static_assert(file != nullptr, "The first argument 'file' cannot be null."); \
+  NLogToFile(file, NLOG_FORMAT("P", format, ""), ##__VA_ARGS__); \
+  NLogP(format, ##__VA_ARGS__); \
+} while (false)
 
 #if NLOG_LEVEL >= 1
-#define NLogF(format, ...) do {printf(NLOG_COLOR_F NLOG_FORMAT("F", format), ##__VA_ARGS__); exit(EXIT_FAILURE);} while (false)
+#define NLogF(format, ...) do { \
+  printf(NLOG_COLOR_F NLOG_FORMAT("F", format, NCOLOR_RESET), ##__VA_ARGS__); \
+  exit(EXIT_FAILURE); \
+} while (false)
 #else
 #define NLogF(format, ...)
 #endif
+#define NLogFS(file, format, ...) do { \
+  static_assert(file != nullptr, "The first argument 'file' cannot be null."); \
+  NLogToFile(file, NLOG_FORMAT("F", format, ""), ##__VA_ARGS__); \
+  NLogF(format, ##__VA_ARGS__); \
+} while (false)
 
 #if NLOG_LEVEL >= 2
-#define NLogE(format, ...) do {printf(NLOG_COLOR_E NLOG_FORMAT("E", format), ##__VA_ARGS__);} while (false)
+#define NLogE(format, ...) do { \
+  printf(NLOG_COLOR_E NLOG_FORMAT("E", format, NCOLOR_RESET), ##__VA_ARGS__); \
+} while (false)
 #else
 #define NLogE(format, ...)
 #endif
+#define NLogES(file, format, ...) do { \
+  static_assert(file != nullptr, "The first argument 'file' cannot be null."); \
+  NLogToFile(file, NLOG_FORMAT("E", format, ""), ##__VA_ARGS__); \
+  NLogE(format, ##__VA_ARGS__); \
+} while (false)
 
 #if NLOG_LEVEL >= 3
-#define NLogW(format, ...) do {printf(NLOG_COLOR_W NLOG_FORMAT("W", format), ##__VA_ARGS__);} while (false)
+#define NLogW(format, ...) do { \
+  printf(NLOG_COLOR_W NLOG_FORMAT("W", format, NCOLOR_RESET), ##__VA_ARGS__); \
+} while (false)
 #else
 #define NLogW(format, ...)
 #endif
+#define NLogWS(file, format, ...) do { \
+  static_assert(file != nullptr, "The first argument 'file' cannot be null."); \
+  NLogToFile(file, NLOG_FORMAT("W", format, ""), ##__VA_ARGS__); \
+  NLogW(format, ##__VA_ARGS__); \
+} while (false)
 
 #if NLOG_LEVEL >= 4
-#define NLogI(format, ...) do {printf(NLOG_COLOR_I NLOG_FORMAT("I", format), ##__VA_ARGS__);} while (false)
+#define NLogI(format, ...) do { \
+  printf(NLOG_COLOR_I NLOG_FORMAT("I", format, NCOLOR_RESET), ##__VA_ARGS__); \
+} while (false)
 #else
 #define NLogI(format, ...)
 #endif
+#define NLogIS(file, format, ...) do { \
+  static_assert(file != nullptr, "The first argument 'file' cannot be null."); \
+  NLogToFile(file, NLOG_FORMAT("I", format, ""), ##__VA_ARGS__); \
+  NLogI(format, ##__VA_ARGS__); \
+} while (false)
 
 #if NLOG_LEVEL >= 5
-#define NLogD(format, ...) do {printf(NLOG_COLOR_D NLOG_FORMAT("D", format), ##__VA_ARGS__);} while (false)
+#define NLogD(format, ...) do { \
+  printf(NLOG_COLOR_D NLOG_FORMAT("D", format, NCOLOR_RESET), ##__VA_ARGS__); \
+} while (false)
 #else
 #define NLogD(format, ...)
 #endif
+#define NLogDS(file, format, ...) do { \
+  static_assert(file != nullptr, "The first argument 'file' cannot be null."); \
+  NLogToFile(file, NLOG_FORMAT("D", format, ""), ##__VA_ARGS__); \
+  NLogD(format, ##__VA_ARGS__); \
+} while (false)
+//}}}
 
 #ifdef NDEBUG
 #define NAssert(expr) do { \
@@ -199,7 +248,7 @@ std::string NTimestamp(const char *format = "%Y-%m-%d %H:%M:%S");
 
 #define NBit(bit) (1 << bit)
 
-//{{{
+// NCode {{{
 typedef std::error_code NCode;
 static const NCode NOK                         = std::error_code();
 static const NCode NAF_NOT_SUPPORT             = std::make_error_code(std::errc::address_family_not_supported);
@@ -317,8 +366,6 @@ long long NDuration(
     const std::string &unit = "us");
 
 std::string NFullPath(const char *path);
-
-bool NLogToFile(const std::string &file, const char *format, ...);
 
 std::chrono::steady_clock::time_point NNow();
 
@@ -564,6 +611,11 @@ inline std::string NFullPath(const char *path)
 
 inline bool NLogToFile(const std::string &file, const char *format, ...)
 {
+  if (file.empty())
+  {
+    return false;
+  }
+
 #if defined(_MSC_VER)
   FILE *stream = nullptr;
   errno_t err = fopen_s(&stream, file.c_str(), "a");
