@@ -22,7 +22,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 
 
-Last update: 2022-01-10 19:05
+Last update: 2022-01-10 19:16
 ******************************************************************************/
 #ifndef NEU_H
 #define NEU_H
@@ -627,12 +627,14 @@ inline bool NLogToFile(const std::string &file, const char *format, ...)
   errno_t err = fopen_s(&stream, file.c_str(), "a");
   if (err != 0)
   {
+    fprintf(stderr, "Failed to call fopen_s: %s\n", NCodeMessage(err).c_str());
     return false;
   }
 #else
   FILE *stream = fopen(file.c_str(), "a");
   if (stream == nullptr)
   {
+    fprintf(stderr, "Failed to call fopen: %s\n", NCodeMessage(errno).c_str());
     return false;
   }
 #endif
@@ -647,6 +649,7 @@ inline bool NLogToFile(const std::string &file, const char *format, ...)
     err = fclose(stream);
     if (err != 0)
     {
+      fprintf(stderr, "Failed to call fclose: %s\n", NCodeMessage(err).c_str());
       return false;
     }
   }
