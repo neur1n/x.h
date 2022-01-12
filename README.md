@@ -38,6 +38,7 @@
         <li><a href="#dll_api">DLL_API</a></li>
         <li><a href="#nkey_x">NKEY_X</a></li>
         <li><a href="#nlogx">NLogX</a></li>
+        <li><a href="#nassert">NAssert</a></li>
         <li><a href="#nbit">NBit</a></li>
         <li><a href="#ncode">NCode</a></li>
         <li><a href="#npi">NPi</a></li>
@@ -54,6 +55,7 @@
         <li><a href="#nstringempty">NStringEmpty</a></li>
         <li><a href="#narraysize">NArraySize</a></li>
         <li><a href="#nclamp">NClamp</a></li>
+        <li><a href="#nconcatstring">NConcatString</li>
         <li><a href="#nrelease">NRelease</a></li>
         <li><a href="#nreleasearray">NReleaseArray</a></li>
       </ul>
@@ -98,7 +100,7 @@ following snippet to your project's main `CMakeLists.txt`:
 SET(NeuH_DIR "path/to/neu.h")              # Not the neu.h file, but the repository
 FIND_PACKAGE(NeuH REQUIRED)                # Notice that the package name is not "neu.h"
 INCLUDE_DIRECTORIES(${NeuH_INCLUDE_DIRS})  # Add to inclusion
-SET(NeuH_LOG_LEVEL 0)                      # If not specified, 5 will be used by default
+SET(NeuH_LOG_LEVEL 3)                      # If not specified, 6 will be used by default
 ```
 
 Notice that when using the whole repository, this library can be found with
@@ -106,18 +108,18 @@ Notice that when using the whole repository, this library can be found with
 
 - `NeuH_INCLUDE_DIRS`: the include directories of neu.h
 - `NeuH_LOG_LEVEL`: the log verbosity level of neu.h, of which the available
-
 values are:
-  - \>= 5: enables `NLogP`, `NLogF`, `NLogE`, `NLogW`, `NLogI`, `NLogD` (all log printings) 
-  - 4: enables `NLogP`, `NLogF`, `NLogE`, `NLogW`, `NLogI`
-  - 3: enables `NLogP`, `NLogF`, `NLogE`, `NLogW`
-  - 2: enables `NLogP`, `NLogF`, `NLogE`
-  - 1: enables `NLogP`, `NLogF`
-  - 0: enables `NLogP`
-  - < 0: disables all log printings
+  - \>= 6: enables `NLogP(S)`, `NLogF(S)`, `NLogE(S)`, `NLogW(S)`, `NLogI(S)`, `NLogD(S)` (all loggings) 
+  - 5: enables `NLogP(S)`, `NLogF(S)`, `NLogE(S)`, `NLogW(S)`, `NLogI(S)`
+  - 4: enables `NLogP(S)`, `NLogF(S)`, `NLogE(S)`, `NLogW(S)`
+  - 3: enables `NLogP(S)`, `NLogF(S)`, `NLogE(S)`
+  - 2: enables `NLogP(S)`, `NLogF(S)`
+  - 1: enables `NLogP(S)`
+  - <= 0: disables all log printings
 
   where `P`, `F`, `E`, `W`, `I`, `D` are short for `PUBLIC`, `FATAL`, `ERROR`,
-  `WARNING`, `INFO`, `DEBUG` respectively.
+  `WARNING`, `INFO`, `DEBUG` respectively. The `NLogXS` version allows the
+  loggings to be saved in to a file.
 
 
 <!----------------------------------------------------------- DOCUMENTATION -->
@@ -138,17 +140,17 @@ A macro for declaring a function as a dynamic library interface.
 
 ### NKEY_X
 ```cpp
-#define NKEY_ESC   0x1B
-#define NKEY_A     0x41
-#define NKEY_B     0x42
-#define NKEY_C     0x43
-#define NKEY_D     0x44
-#define NKEY_Q     0x51
+#define NKEY_ESC   (0x1B)
+#define NKEY_A     (0x41)
+#define NKEY_B     (0x42)
+#define NKEY_C     (0x43)
+#define NKEY_D     (0x44)
+#define NKEY_Q     (0x51)
 #if defined(_MSC_VER)
-#define NKEY_LEFT  0x4B
-#define NKEY_UP    0x48
-#define NKEY_RIGHT 0x4D
-#define NKEY_DOWN  0x50
+#define NKEY_LEFT  (0x4B)
+#define NKEY_UP    (0x48)
+#define NKEY_RIGHT (0x4D)
+#define NKEY_DOWN  (0x50)
 #else
 #define NKEY_LEFT  (-1)
 #define NKEY_UP    (-2)
@@ -166,17 +168,23 @@ negative integers to work around. Please checkout
 
 ### NLogX
 ```cpp
-NLogP(const char *format, ...)  // Public
-NLogF(const char *format, ...)  // Fatal
-NLogE(const char *format, ...)  // Error
-NLogW(const char *format, ...)  // Warning
-NLogI(const char *format, ...)  // Info
-NLogD(const char *format, ...)  // Debug
+NLogP(const char *format, ...)
+NLogF(const char *format, ...)
+NLogE(const char *format, ...)
+NLogW(const char *format, ...)
+NLogI(const char *format, ...)
+NLogD(const char *format, ...)
+NLogPS(const std::string &file, const char *format, ...)
+NLogFS(const std::string &file, const char *format, ...)
+NLogES(const std::string &file, const char *format, ...)
+NLogWS(const std::string &file, const char *format, ...)
+NLogIS(const std::string &file, const char *format, ...)
+NLogDS(const std::string &file, const char *format, ...)
 ```
 
 Logging marcos, of which the formats of them are almost identical. What
-differentiate them are the prefixes and the colors. Additionally, `NLogF` will
-call `exit(EXIT_FAILURE)` to make the program exits.
+differentiate them are the prefixes and the colors. Additionally, `NLogF(S)`
+will call `exit(EXIT_FAILURE)` to make the program exits.
 
 <table class="center" style="text-align:center">
 <thead>
@@ -190,34 +198,34 @@ call `exit(EXIT_FAILURE)` to make the program exits.
 </thead>
 <tbody>
   <tr>
-    <td>NLogP</td>
+    <td>NLogP(S)</td>
     <td><span style="color:white">█</span></td>
     <td>P</td>
     <td rowspan="6">[prefix timestamp file &gt; function &gt; line] message</td>
     <td rowspan="6">[prefix timestamp] message</td>
   </tr>
   <tr>
-    <td>NLogF</td>
+    <td>NLogF(S)</td>
     <td><span style="color:purple">█</span></td>
     <td>F</td>
   </tr>
   <tr>
-    <td>NLogE</td>
+    <td>NLogE(S)</td>
     <td><span style="color:red">█</span></td>
     <td>E</td>
   </tr>
   <tr>
-    <td>NLogW</td>
+    <td>NLogW(S)</td>
     <td><span style="color:yellow">█</span></td>
     <td>W</td>
   </tr>
   <tr>
-    <td>NLogI</td>
+    <td>NLogI(S)</td>
     <td><span style="color:green">█</span></td>
     <td>I</td>
   </tr>
   <tr>
-    <td>NLogD</td>
+    <td>NLogD(S)</td>
     <td><span style="color:blue">█</span></td>
     <td>D</td>
   </tr>
@@ -225,13 +233,26 @@ call `exit(EXIT_FAILURE)` to make the program exits.
 </table>
 
 #### Parameters
-- format: same as that in [printf](https://www.cplusplus.com/reference/cstdio/printf/).
-- ... (optional): same as that in [printf](https://www.cplusplus.com/reference/cstdio/printf/).
+- file: Available in `NLogXS` version, specifying the file to save the loggings.
+- format: Same as that in [printf](https://www.cplusplus.com/reference/cstdio/printf/).
+- ... (optional): Same as that in [printf](https://www.cplusplus.com/reference/cstdio/printf/).
+
+
+### NAssert
+```cpp
+NAssert(expr)
+```
+
+An macro enables the assertion functionality for both debug and release builds.
+For debug build, it is the same as the assertion macro in `<cassert> (assert.h)`.
+
+#### Parameters
+- expr: The assertion expression.
 
 
 ### NBit
 ```cpp
-NBit(int bit)
+NBit(bit)
 ```
 
 A macro used to generate an integer with only the n-th bit set to 1. This is
@@ -460,7 +481,7 @@ arrays declared with the `new` operator.
 ```cpp
 template<class T>
 const T &NClamp(const T &x, const T &low, const T &high)
-```
+``
 
 Clamp the value between a lower bound and a upper bound.
 
@@ -471,6 +492,42 @@ Clamp the value between a lower bound and a upper bound.
 
 #### Returns
 - The clamped value.
+
+
+### NConcatString
+```cpp
+template <class ...Args>
+std::string NConcatString(Args &&...items)
+```
+
+A function used to combine items into one string. The acceptable inputs are
+arithmetic data (i.e. `int`, `double` etc), C-style strings (`const char*`) and 
+`std::string` objects.
+
+According to my tests and this [benchmark](https://stackoverflow.com/a/18892355/10481376),
+this function uses [std::string operator+=](https://www.cplusplus.com/reference/string/string/operator+=/)
+to preform string concatenation to achieve good performace. Yes, please note
+that `NConcatString` cannot achieve the "best" performace:
+
+```cpp
+// The best.
+std::string str1 = std::string("hello") + std::string(" ") + std::to_string("123"); 
+
+// The secondary.
+std::string str2 = NConcatString(std::string("hello"), std::string(" "), std::to_string("123"));
+
+// The worst, but much fewer typings.
+std::string str3 = NConcatString("hello", " ", "123");
+```
+
+However, if this function is called a plenty times (e.g. 10000 loops), the
+performace of the above three should be similar.
+
+#### Parameters
+- items...: Items to be combined.
+
+#### Return
+- The combined string.
 
 
 ### NRelease

@@ -22,7 +22,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 
 
-Last update: 2022-01-12 10:55
+Last update: 2022-01-12 14:36
 ******************************************************************************/
 #ifndef NEU_H
 #define NEU_H
@@ -402,6 +402,9 @@ size_t NArraySize(const T (&array)[N]);
 template<class T>
 const T &NClamp(const T &x, const T &low, const T &high);
 
+template <class ...Args>
+std::string NConcatString(Args &&...items);
+
 template<class T>
 void NRelease(T &&pointer);
 
@@ -426,11 +429,11 @@ public:
 
 private:
   template<class T, class... Args1, class... Args2>
-  void Bind(R (T::*function)(Args1...), Args2&&... arguments);
+  void Bind(R (T::*function)(Args1...), Args2 &&...arguments);
 
   template<class T, class... Args1, class... Args2, size_t... I>
   void InternalBind(
-      std::index_sequence<I...>, R (T::*function)(Args1...), Args2&&... arguments);
+      std::index_sequence<I...>, R (T::*function)(Args1...), Args2 &&...arguments);
 
   std::function<R(Args...)> m_function;
 };  // class NCallable
@@ -439,7 +442,7 @@ class NThread
 {
 public:
   template<class Fn, class ...Args>
-  NThread(Fn&& function, Args&&... arguments);
+  NThread(Fn &&function, Args &&...arguments);
 
   ~NThread();
 
@@ -826,6 +829,34 @@ const T &NClamp(const T &x, const T &low, const T &high)
 #else
   return x < low ? low : (x > high ? high : x);
 #endif
+}
+
+inline void NConcatStringInternal(std::string &str, std::string &&item)
+{
+  str += item;
+}
+
+inline void NConcatStringInternal(std::string &str, const char *item)
+{
+  str += std::string(item);
+}
+
+template <class T>
+void NConcatStringInternal(std::string &str, T &&item)
+{
+  static_assert(std::is_arithmetic<T>::value, "Arithmetic data required.");
+  str += std::to_string(item);
+}
+
+template <class ...Args>
+std::string NConcatString(Args &&...items)
+{
+  using Expander = int[];
+  std::string str;
+
+  (void)Expander{0, ((void)NConcatStringInternal(str, std::forward<Args>(items)), 0)...};
+
+  return str;
 }
 
 template<class T>
