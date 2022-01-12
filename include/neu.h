@@ -22,7 +22,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 
 
-Last update: 2022-01-11 16:58
+Last update: 2022-01-12 10:55
 ******************************************************************************/
 #ifndef NEU_H
 #define NEU_H
@@ -150,11 +150,17 @@ std::string NTimestamp(const char *format = "%Y-%m-%d %H:%M:%S");
   NTimestamp().c_str(), __FILENAME__, __FUNCTION__, __LINE__
 #endif
 
+#ifdef NDEBUG
 #ifndef NLOG_LEVEL
-#define NLOG_LEVEL (5)
+#error NLOG_LEVEL is not specified!
+#endif
+#else
+#ifndef NLOG_LEVEL
+#define NLOG_LEVEL (6)
+#endif
 #endif
 
-#if NLOG_LEVEL >= 0
+#if NLOG_LEVEL >= 1
 #define NLogP(format, ...) do { \
   printf(NLOG_COLOR_P NLOG_FORMAT("P", format, NCOLOR_RESET), ##__VA_ARGS__); \
 } while (false)
@@ -168,7 +174,7 @@ std::string NTimestamp(const char *format = "%Y-%m-%d %H:%M:%S");
 #define NLogPS(file, format, ...)
 #endif
 
-#if NLOG_LEVEL >= 1
+#if NLOG_LEVEL >= 2
 #define NLogF(format, ...) do { \
   printf(NLOG_COLOR_F NLOG_FORMAT("F", format, NCOLOR_RESET), ##__VA_ARGS__); \
   exit(EXIT_FAILURE); \
@@ -183,7 +189,7 @@ std::string NTimestamp(const char *format = "%Y-%m-%d %H:%M:%S");
 #define NLogFS(file, format, ...)
 #endif
 
-#if NLOG_LEVEL >= 2
+#if NLOG_LEVEL >= 3
 #define NLogE(format, ...) do { \
   printf(NLOG_COLOR_E NLOG_FORMAT("E", format, NCOLOR_RESET), ##__VA_ARGS__); \
 } while (false)
@@ -197,7 +203,7 @@ std::string NTimestamp(const char *format = "%Y-%m-%d %H:%M:%S");
 #define NLogES(file, format, ...)
 #endif
 
-#if NLOG_LEVEL >= 3
+#if NLOG_LEVEL >= 4
 #define NLogW(format, ...) do { \
   printf(NLOG_COLOR_W NLOG_FORMAT("W", format, NCOLOR_RESET), ##__VA_ARGS__); \
 } while (false)
@@ -211,7 +217,7 @@ std::string NTimestamp(const char *format = "%Y-%m-%d %H:%M:%S");
 #define NLogWS(file, format, ...)
 #endif
 
-#if NLOG_LEVEL >= 4
+#if NLOG_LEVEL >= 5
 #define NLogI(format, ...) do { \
   printf(NLOG_COLOR_I NLOG_FORMAT("I", format, NCOLOR_RESET), ##__VA_ARGS__); \
 } while (false)
@@ -225,7 +231,7 @@ std::string NTimestamp(const char *format = "%Y-%m-%d %H:%M:%S");
 #define NLogIS(file, format, ...)
 #endif
 
-#if NLOG_LEVEL >= 5
+#if NLOG_LEVEL >= 6
 #define NLogD(format, ...) do { \
   printf(NLOG_COLOR_D NLOG_FORMAT("D", format, NCOLOR_RESET), ##__VA_ARGS__); \
 } while (false)
