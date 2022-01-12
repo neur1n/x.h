@@ -55,7 +55,7 @@
         <li><a href="#nstringempty">NStringEmpty</a></li>
         <li><a href="#narraysize">NArraySize</a></li>
         <li><a href="#nclamp">NClamp</a></li>
-        <li><a href="#nconcatstring">NConcatString</li>
+        <li><a href="#nconcatstring">NConcatString</a></li>
         <li><a href="#nrelease">NRelease</a></li>
         <li><a href="#nreleasearray">NReleaseArray</a></li>
       </ul>
@@ -481,7 +481,7 @@ arrays declared with the `new` operator.
 ```cpp
 template<class T>
 const T &NClamp(const T &x, const T &low, const T &high)
-``
+```
 
 Clamp the value between a lower bound and a upper bound.
 
