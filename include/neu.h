@@ -22,7 +22,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 
 
-Last update: 2022-01-27 18:20
+Last update: 2022-01-27 18:23
 ******************************************************************************/
 #ifndef NEU_H
 #define NEU_H
@@ -639,7 +639,7 @@ inline bool NLogToFile(const std::string &file, const char *format, ...)
   }
 
   FILE *stream = nullptr;
-  errno_t err = 0;
+  int err = 0;
 
 #if defined(_MSC_VER)
   err = fopen_s(&stream, file.c_str(), "a");
