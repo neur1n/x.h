@@ -22,7 +22,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 
 
-Last update: 2022-01-12 14:36
+Last update: 2022-01-27 18:20
 ******************************************************************************/
 #ifndef NEU_H
 #define NEU_H
@@ -638,16 +638,18 @@ inline bool NLogToFile(const std::string &file, const char *format, ...)
     return false;
   }
 
-#if defined(_MSC_VER)
   FILE *stream = nullptr;
-  errno_t err = fopen_s(&stream, file.c_str(), "a");
+  errno_t err = 0;
+
+#if defined(_MSC_VER)
+  err = fopen_s(&stream, file.c_str(), "a");
   if (err != 0)
   {
     fprintf(stderr, "Failed to call fopen_s: %s\n", NCodeMessage(err).c_str());
     return false;
   }
 #else
-  FILE *stream = fopen(file.c_str(), "a");
+  stream = fopen(file.c_str(), "a");
   if (stream == nullptr)
   {
     fprintf(stderr, "Failed to call fopen: %s\n", NCodeMessage(errno).c_str());
