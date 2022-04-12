@@ -109,17 +109,16 @@ Notice that when using the whole repository, this library can be found with
 - `NeuH_INCLUDE_DIRS`: the include directories of neu.h
 - `NeuH_LOG_LEVEL`: the log verbosity level of neu.h, of which the available
 values are:
-  - \>= 6: enables `NLogP(S)`, `NLogF(S)`, `NLogE(S)`, `NLogW(S)`, `NLogI(S)`, `NLogD(S)` (all loggings) 
-  - 5: enables `NLogP(S)`, `NLogF(S)`, `NLogE(S)`, `NLogW(S)`, `NLogI(S)`
-  - 4: enables `NLogP(S)`, `NLogF(S)`, `NLogE(S)`, `NLogW(S)`
-  - 3: enables `NLogP(S)`, `NLogF(S)`, `NLogE(S)`
-  - 2: enables `NLogP(S)`, `NLogF(S)`
-  - 1: enables `NLogP(S)`
+  - \>= 6: enables `NLogP`, `NLogF`, `NLogE`, `NLogW`, `NLogI`, `NLogD` (all loggings) 
+  - 5: enables `NLogP`, `NLogF`, `NLogE`, `NLogW`, `NLogI`
+  - 4: enables `NLogP`, `NLogF`, `NLogE`, `NLogW`
+  - 3: enables `NLogP`, `NLogF`, `NLogE`
+  - 2: enables `NLogP`, `NLogF`
+  - 1: enables `NLogP`
   - <= 0: disables all log printings
 
   where `P`, `F`, `E`, `W`, `I`, `D` are short for `PUBLIC`, `FATAL`, `ERROR`,
-  `WARNING`, `INFO`, `DEBUG` respectively. The `NLogXS` version allows the
-  loggings to be saved in to a file.
+  `WARNING`, `INFO`, `DEBUG` respectively.
 
 
 <!----------------------------------------------------------- DOCUMENTATION -->
@@ -168,22 +167,16 @@ negative integers to work around. Please checkout
 
 ### NLogX
 ```cpp
-NLogP(const char *format, ...)
-NLogF(const char *format, ...)
-NLogE(const char *format, ...)
-NLogW(const char *format, ...)
-NLogI(const char *format, ...)
-NLogD(const char *format, ...)
-NLogPS(const std::string &file, const char *format, ...)
-NLogFS(const std::string &file, const char *format, ...)
-NLogES(const std::string &file, const char *format, ...)
-NLogWS(const std::string &file, const char *format, ...)
-NLogIS(const std::string &file, const char *format, ...)
-NLogDS(const std::string &file, const char *format, ...)
+NLogP(const char *file, const char *format, ...)
+NLogF(const char *file, const char *format, ...)
+NLogE(const char *file, const char *format, ...)
+NLogW(const char *file, const char *format, ...)
+NLogI(const char *file, const char *format, ...)
+NLogD(const char *file, const char *format, ...)
 ```
 
 Logging marcos, of which the formats of them are almost identical. What
-differentiate them are the prefixes and the colors. Additionally, `NLogF(S)`
+differentiate them are the prefixes and the colors. Additionally, `NLogF`
 will call `exit(EXIT_FAILURE)` to make the program exits.
 
 <table class="center" style="text-align:center">
@@ -198,34 +191,34 @@ will call `exit(EXIT_FAILURE)` to make the program exits.
 </thead>
 <tbody>
   <tr>
-    <td>NLogP(S)</td>
+    <td>NLogP</td>
     <td><span style="color:white">█</span></td>
     <td>P</td>
     <td rowspan="6">[prefix timestamp file &gt; function &gt; line] message</td>
     <td rowspan="6">[prefix timestamp] message</td>
   </tr>
   <tr>
-    <td>NLogF(S)</td>
+    <td>NLogF</td>
     <td><span style="color:purple">█</span></td>
     <td>F</td>
   </tr>
   <tr>
-    <td>NLogE(S)</td>
+    <td>NLogE</td>
     <td><span style="color:red">█</span></td>
     <td>E</td>
   </tr>
   <tr>
-    <td>NLogW(S)</td>
+    <td>NLogW</td>
     <td><span style="color:yellow">█</span></td>
     <td>W</td>
   </tr>
   <tr>
-    <td>NLogI(S)</td>
+    <td>NLogI</td>
     <td><span style="color:green">█</span></td>
     <td>I</td>
   </tr>
   <tr>
-    <td>NLogD(S)</td>
+    <td>NLogD</td>
     <td><span style="color:blue">█</span></td>
     <td>D</td>
   </tr>
@@ -233,7 +226,7 @@ will call `exit(EXIT_FAILURE)` to make the program exits.
 </table>
 
 #### Parameters
-- file: Available in `NLogXS` version, specifying the file to save the loggings.
+- file: If not `nullptr` or empty, loggings will be saved to the specified file.
 - format: Same as that in [printf](https://www.cplusplus.com/reference/cstdio/printf/).
 - ... (optional): Same as that in [printf](https://www.cplusplus.com/reference/cstdio/printf/).
 

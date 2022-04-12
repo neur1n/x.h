@@ -22,7 +22,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 
 
-Last update: 2022-01-27 18:23
+Last update: 2022-04-12 17:35
 ******************************************************************************/
 #ifndef NEU_H
 #define NEU_H
@@ -135,12 +135,25 @@ std::string NTimestamp(const char *format = "%Y-%m-%d %H:%M:%S");
 #define NCOLOR_WHITE(bold)   "\033[" #bold ";37m"
 #define NCOLOR_RESET         "\033[0m"
 
+#ifndef NLOG_BOLD
+#define NLOG_BOLD (1)
+#endif
+
+#if NLOG_BOLD
 #define NLOG_COLOR_P NCOLOR_WHITE(1)
 #define NLOG_COLOR_F NCOLOR_MAGENTA(1)
 #define NLOG_COLOR_E NCOLOR_RED(1)
 #define NLOG_COLOR_W NCOLOR_YELLOW(1)
 #define NLOG_COLOR_I NCOLOR_GREEN(1)
 #define NLOG_COLOR_D NCOLOR_BLUE(1)
+#else
+#define NLOG_COLOR_P NCOLOR_WHITE(0)
+#define NLOG_COLOR_F NCOLOR_MAGENTA(0)
+#define NLOG_COLOR_E NCOLOR_RED(0)
+#define NLOG_COLOR_W NCOLOR_YELLOW(0)
+#define NLOG_COLOR_I NCOLOR_GREEN(0)
+#define NLOG_COLOR_D NCOLOR_BLUE(0)
+#endif
 
 #ifdef NDEBUG
 #define NLOG_FORMAT(level, format, reset) "[" level " %s] " format "\n" reset, \
@@ -161,88 +174,58 @@ std::string NTimestamp(const char *format = "%Y-%m-%d %H:%M:%S");
 #endif
 
 #if NLOG_LEVEL >= 1
-#define NLogP(format, ...) do { \
-  printf(NLOG_COLOR_P NLOG_FORMAT("P", format, NCOLOR_RESET), ##__VA_ARGS__); \
-} while (false)
-
-#define NLogPS(file, format, ...) do { \
+#define NLogP(file, format, ...) do { \
   NLogToFile(file, NLOG_FORMAT("P", format, ""), ##__VA_ARGS__); \
-  NLogP(format, ##__VA_ARGS__); \
+  printf(NLOG_COLOR_P NLOG_FORMAT("P", format, NCOLOR_RESET), ##__VA_ARGS__); \
 } while (false)
 #else
 #define NLogP(format, ...)
-#define NLogPS(file, format, ...)
 #endif
 
 #if NLOG_LEVEL >= 2
-#define NLogF(format, ...) do { \
+#define NLogF(file, format, ...) do { \
+  NLogToFile(file, NLOG_FORMAT("F", format, ""), ##__VA_ARGS__); \
   printf(NLOG_COLOR_F NLOG_FORMAT("F", format, NCOLOR_RESET), ##__VA_ARGS__); \
   exit(EXIT_FAILURE); \
 } while (false)
-
-#define NLogFS(file, format, ...) do { \
-  NLogToFile(file, NLOG_FORMAT("F", format, ""), ##__VA_ARGS__); \
-  NLogF(format, ##__VA_ARGS__); \
-} while (false)
 #else
 #define NLogF(format, ...)
-#define NLogFS(file, format, ...)
 #endif
 
 #if NLOG_LEVEL >= 3
 #define NLogE(format, ...) do { \
-  printf(NLOG_COLOR_E NLOG_FORMAT("E", format, NCOLOR_RESET), ##__VA_ARGS__); \
-} while (false)
-
-#define NLogES(file, format, ...) do { \
   NLogToFile(file, NLOG_FORMAT("E", format, ""), ##__VA_ARGS__); \
-  NLogE(format, ##__VA_ARGS__); \
+  printf(NLOG_COLOR_E NLOG_FORMAT("E", format, NCOLOR_RESET), ##__VA_ARGS__); \
 } while (false)
 #else
 #define NLogE(format, ...)
-#define NLogES(file, format, ...)
 #endif
 
 #if NLOG_LEVEL >= 4
 #define NLogW(format, ...) do { \
-  printf(NLOG_COLOR_W NLOG_FORMAT("W", format, NCOLOR_RESET), ##__VA_ARGS__); \
-} while (false)
-
-#define NLogWS(file, format, ...) do { \
   NLogToFile(file, NLOG_FORMAT("W", format, ""), ##__VA_ARGS__); \
-  NLogW(format, ##__VA_ARGS__); \
+  printf(NLOG_COLOR_W NLOG_FORMAT("W", format, NCOLOR_RESET), ##__VA_ARGS__); \
 } while (false)
 #else
 #define NLogW(format, ...)
-#define NLogWS(file, format, ...)
 #endif
 
 #if NLOG_LEVEL >= 5
 #define NLogI(format, ...) do { \
-  printf(NLOG_COLOR_I NLOG_FORMAT("I", format, NCOLOR_RESET), ##__VA_ARGS__); \
-} while (false)
-
-#define NLogIS(file, format, ...) do { \
   NLogToFile(file, NLOG_FORMAT("I", format, ""), ##__VA_ARGS__); \
-  NLogI(format, ##__VA_ARGS__); \
+  printf(NLOG_COLOR_I NLOG_FORMAT("I", format, NCOLOR_RESET), ##__VA_ARGS__); \
 } while (false)
 #else
 #define NLogI(format, ...)
-#define NLogIS(file, format, ...)
 #endif
 
 #if NLOG_LEVEL >= 6
 #define NLogD(format, ...) do { \
-  printf(NLOG_COLOR_D NLOG_FORMAT("D", format, NCOLOR_RESET), ##__VA_ARGS__); \
-} while (false)
-
-#define NLogDS(file, format, ...) do { \
   NLogToFile(file, NLOG_FORMAT("D", format, ""), ##__VA_ARGS__); \
-  NLogD(format, ##__VA_ARGS__); \
+  printf(NLOG_COLOR_D NLOG_FORMAT("D", format, NCOLOR_RESET), ##__VA_ARGS__); \
 } while (false)
 #else
 #define NLogD(format, ...)
-#define NLogDS(file, format, ...)
 #endif
 //NLog}}}
 
@@ -357,12 +340,6 @@ static const T NPi = (T)3.141592653589793238462643383279502884197169399375;
   NLogW(const char *format, ...);
   NLogI(const char *format, ...);
   NLogD(const char *format, ...);
-  NLogPS(const std::string &file, const char *format, ...);
-  NLogFS(const std::string &file, const char *format, ...);
-  NLogES(const std::string &file, const char *format, ...);
-  NLogWS(const std::string &file, const char *format, ...);
-  NLogIS(const std::string &file, const char *format, ...);
-  NLogDS(const std::string &file, const char *format, ...);
   NBit(int bit);
 */
 
@@ -631,9 +608,9 @@ inline std::string NFullPath(const char *path)
   return std::string(abs_path);
 }
 
-inline bool NLogToFile(const std::string &file, const char *format, ...)
+inline bool NLogToFile(const char *file, const char *format, ...)
 {
-  if (file.empty())
+  if (NStringEmpty(file))
   {
     return false;
   }
@@ -642,14 +619,14 @@ inline bool NLogToFile(const std::string &file, const char *format, ...)
   int err = 0;
 
 #if defined(_MSC_VER)
-  err = fopen_s(&stream, file.c_str(), "a");
+  err = fopen_s(&stream, file, "a");
   if (err != 0)
   {
     fprintf(stderr, "Failed to call fopen_s: %s\n", NCodeMessage(err).c_str());
     return false;
   }
 #else
-  stream = fopen(file.c_str(), "a");
+  stream = fopen(file, "a");
   if (stream == nullptr)
   {
     fprintf(stderr, "Failed to call fopen: %s\n", NCodeMessage(errno).c_str());
