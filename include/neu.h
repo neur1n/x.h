@@ -22,7 +22,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 
 
-Last update: 2022-04-12 17:35
+Last update: 2022-04-25 16:57
 ******************************************************************************/
 #ifndef NEU_H
 #define NEU_H
@@ -327,8 +327,13 @@ static const NCode NOVERFLOW                   = std::make_error_code(std::errc:
 static const NCode NWRONG_PROTO_TYPE           = std::make_error_code(std::errc::wrong_protocol_type);
 //NCode}}}
 
+#if (defined(_MSVC_LANG) && _MSVC_LANG < 201402L) || (!defined(_MSVC_LANG) && __cplusplus < 201402L)
 template<class T>
 static const T NPi = (T)3.141592653589793238462643383279502884197169399375;
+#else
+template<class T>
+static constexpr T NPi = (T)3.141592653589793238462643383279502884197169399375;
+#endif
 //******************************************************************** Macro}}}
 
 //************************************************************* Declarations{{{
