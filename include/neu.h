@@ -22,7 +22,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 
 
-Last update: 2022-05-09 17:31
+Last update: 2022-05-18 18:47
 ******************************************************************************/
 #ifndef NEU_H
 #define NEU_H
@@ -84,7 +84,7 @@ template<int N>
 struct std::is_placeholder<NVariadicPlaceholder<N>> :std::integral_constant<int, N+1> {};
 
 //The Must-Put-on-Top{{{
-bool NLogToFile(const std::string &file, const char *format, ...);
+bool NLogToFile(const char *file, const char *format, ...);
 
 std::string NTimestamp(const char *format = "%Y-%m-%d %H:%M:%S");
 //The Must-Put-on-Top}}}
