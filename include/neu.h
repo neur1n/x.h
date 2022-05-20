@@ -22,7 +22,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 
 
-Last update: 2022-05-18 18:47
+Last update: 2022-05-20 16:35
 ******************************************************************************/
 #ifndef NEU_H
 #define NEU_H
@@ -287,8 +287,8 @@ static const NCode NNO_BUF_SPACE               = std::make_error_code(std::errc:
 static const NCode NNO_CHILD_PROCESS           = std::make_error_code(std::errc::no_child_process);
 static const NCode NNO_LINK                    = std::make_error_code(std::errc::no_link);
 static const NCode NNO_LOCK                    = std::make_error_code(std::errc::no_lock_available);
-static const NCode NNO_DATA                    = std::make_error_code(std::errc::no_message_available);
 static const NCode NNO_MSG                     = std::make_error_code(std::errc::no_message);
+static const NCode NNO_DATA                    = std::make_error_code(std::errc::no_message_available);
 static const NCode NNO_PROTO_OPT               = std::make_error_code(std::errc::no_protocol_option);
 static const NCode NNO_SPACE                   = std::make_error_code(std::errc::no_space_on_device);
 static const NCode NNO_STREAM_RES              = std::make_error_code(std::errc::no_stream_resources);
@@ -319,8 +319,8 @@ static const NCode NNOT_RECOVERABLE            = std::make_error_code(std::errc:
 static const NCode NTIMER_EXPIRED              = std::make_error_code(std::errc::stream_timeout);
 static const NCode NTXT_BUSY                   = std::make_error_code(std::errc::text_file_busy);
 static const NCode NCONN_TIMED_OUT             = std::make_error_code(std::errc::timed_out);
-static const NCode NTOO_MANY_FILES_OPEN_IN_SYS = std::make_error_code(std::errc::too_many_files_open_in_system);
 static const NCode NTOO_MANY_FILES_OPEN        = std::make_error_code(std::errc::too_many_files_open);
+static const NCode NTOO_MANY_FILES_OPEN_IN_SYS = std::make_error_code(std::errc::too_many_files_open_in_system);
 static const NCode NTOO_MANY_LINKS             = std::make_error_code(std::errc::too_many_links);
 static const NCode NTOO_MANY_SYMLINK_LEVELS    = std::make_error_code(std::errc::too_many_symbolic_link_levels);
 static const NCode NOVERFLOW                   = std::make_error_code(std::errc::value_too_large);
@@ -339,12 +339,12 @@ static constexpr T NPi = (T)3.141592653589793238462643383279502884197169399375;
 //************************************************************* Declarations{{{
 //Function{{{
 /* The followings are in Marco section.
-  NLogP(const char *format, ...);
-  NLogF(const char *format, ...);
-  NLogE(const char *format, ...);
-  NLogW(const char *format, ...);
-  NLogI(const char *format, ...);
-  NLogD(const char *format, ...);
+  NLogP(const char *file, const char *format, ...);
+  NLogF(const char *file, const char *format, ...);
+  NLogE(const char *file, const char *format, ...);
+  NLogW(const char *file, const char *format, ...);
+  NLogI(const char *file, const char *format, ...);
+  NLogD(const char *file, const char *format, ...);
   NBit(int bit);
 */
 
@@ -361,10 +361,10 @@ std::string NCodeMessage(const int &code);
 
 std::string NCodeMessage(const NCode &code);
 
-long long NDuration(
+double NDuration(
     const std::chrono::steady_clock::time_point &start,
     const std::chrono::steady_clock::time_point &end,
-    const std::string &unit = "us");
+    const std::string &unit = "ms");
 
 std::string NFullPath(const char *path);
 
@@ -445,19 +445,19 @@ class NTimer
 public:
   typedef struct _Report_
   {
-    _Report_(const char *_u = "us", const char *_t = "")
+    _Report_(const char *_u = "ms", const char *_t = "")
     {
       Reset(_u, _t);
     }
 
-    void Reset(const char *_u = "us", const char *_t = "")
+    void Reset(const char *_u = "ms", const char *_t = "")
     {
-      valid = false;
-      max = {0LL, LLONG_MIN};
-      min = {0LL, LLONG_MAX};
-      sum = 0LL;
-      cyc = 0LL;
+      ready = false;
+      cyc = 0.0;
+      sum = 0.0;
       avg = 0.0;
+      max = {0.0, DBL_MIN};
+      min = {0.0, DBL_MAX};
       ttl = _t;
       unit = _u;
     }
@@ -490,15 +490,15 @@ public:
       return log;
     }
 
-    bool valid;
+    bool ready;
+    long long cyc;
+    double sum;
+    double avg;
     struct
     {
-      long long i;
-      long long v;
+      double i;
+      double v;
     } max, min;
-    long long sum;
-    long long cyc;
-    double avg;
     const char *ttl;
     const char *unit;
   } Report;
@@ -509,10 +509,10 @@ public:
 
   void Tic(const bool &echo = false);
 
-  const long long Toc(const char *unit = "us", const bool &echo = false);
+  const double Toc(const char *unit = "ms", const bool &echo = false);
 
   const Report Toc(
-      const long long &cycle, const char *unit = "us", const char *title = "");
+      const long long &cycle, const char *unit = "ms", const char *title = "");
 
 private:
   std::chrono::steady_clock::time_point m_tic;
@@ -563,35 +563,36 @@ inline std::string NCodeMessage(const NCode &code)
   return code.message();
 }
 
-inline long long NDuration(
+inline double NDuration(
     const std::chrono::steady_clock::time_point &start,
     const std::chrono::steady_clock::time_point &end,
     const std::string &unit)
 {
+  double diff =
+    (double)std::chrono::duration_cast<std::chrono::nanoseconds>(end - start).count();
+
   if (unit.compare("h") == 0)
   {
-    return std::chrono::duration_cast<std::chrono::hours>(end - start).count();
+    return diff / 3600000000000.0;
   }
   else if (unit.compare("m") == 0)
   {
-    return std::chrono::duration_cast<std::chrono::minutes>(end - start).count();
+    return diff / 60000000000.0;
   }
   else if (unit.compare("s") == 0)
   {
-    return std::chrono::duration_cast<std::chrono::seconds>(end - start).count();
+    return diff / 1000000000.0;
   }
   else if (unit.compare("ms") == 0)
   {
-    return std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count();
+    return diff / 1000000.0;
   }
   else if (unit.compare("us") == 0)
   {
-    return std::chrono::duration_cast<std::chrono::microseconds>(end - start).count();
+    return diff / 1000.0;
   }
-  else  // if (unit.compare("ns") == 0)
-  {
-    return std::chrono::duration_cast<std::chrono::nanoseconds>(end - start).count();
-  }
+
+  return diff;
 }
 
 inline std::string NFullPath(const char *path)
@@ -776,25 +777,25 @@ inline bool NStringEmpty(const char *string)
 
 inline std::string NTimestamp(const char *format)
 {
-  time_t rawtime(0);
-  struct tm timeinfo;
+  time_t now(0);
+  struct tm info;
 
-  time(&rawtime);
+  time(&now);
 #if defined(_MSC_VER)
-  localtime_s(&timeinfo, &rawtime);
+  localtime_s(&info, &now);
 #else
-  localtime_r(&rawtime, &timeinfo);
+  localtime_r(&now, &info);
 #endif
 
   char buffer[50];
 
   if (NStringEmpty(format))
   {
-    strftime(buffer, sizeof(buffer), "%Y-%m-%d %H:%M:%S", &timeinfo);
+    strftime(buffer, sizeof(buffer), "%Y-%m-%d %H:%M:%S", &info);
   }
   else
   {
-    strftime(buffer, sizeof(buffer), format, &timeinfo);
+    strftime(buffer, sizeof(buffer), format, &info);
   }
   return std::string(buffer);
 }
@@ -956,7 +957,7 @@ inline NTimer::~NTimer()
 
 inline void NTimer::Tic(const bool &echo)
 {
-  this->m_tic = std::chrono::steady_clock::now();
+  this->m_tic = NNow();
 
   if (echo)
   {
@@ -964,15 +965,14 @@ inline void NTimer::Tic(const bool &echo)
   }
 }
 
-inline const long long NTimer::Toc(const char *unit, const bool &echo)
+inline const double NTimer::Toc(const char *unit, const bool &echo)
 {
-  long long elapsed = NDuration(
-      this->m_tic, std::chrono::steady_clock::now(), unit);
+  double elapsed = NDuration(this->m_tic, NNow(), unit);
 
   if (echo)
   {
     printf("Timing stops at:  %s.\n", NTimestamp().c_str());
-    printf("Time elapsed: %lld%s.\n", elapsed, unit);
+    printf("Time elapsed: %f%s.\n", elapsed, unit);
   }
 
   return elapsed;
@@ -981,7 +981,7 @@ inline const long long NTimer::Toc(const char *unit, const bool &echo)
 inline const NTimer::Report NTimer::Toc(
     const long long &cycle, const char *unit, const char *title)
 {
-  long long interval = this->Toc(unit);
+  double interval = this->Toc(unit);
 
   if (cycle < 1LL)
   {
@@ -1002,13 +1002,13 @@ inline const NTimer::Report NTimer::Toc(
 
   this->m_report.sum += interval;
   this->m_report.cyc += 1LL;
-  this->m_report.avg = (double)this->m_report.sum / (double)this->m_report.cyc;
+  this->m_report.avg = this->m_report.sum / this->m_report.cyc;
 
   if (this->m_report.cyc % cycle == 0LL)
   {
     this->m_report.ttl = title;
     this->m_report.unit = unit;
-    this->m_report.valid = true;
+    this->m_report.ready = true;
     printf("%s\n", this->m_report.ToString().c_str());
 
     this->m_report.Reset(unit, title);
