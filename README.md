@@ -56,6 +56,7 @@
         <li><a href="#n_pressed_key">n_pressed_key</a></li>
         <li><a href="#n_sleep">n_sleep</a></li>
         <li><a href="#n_string_empty">n_string_empty</a></li>
+        <li><a href="#n_timestamp">n_timestamp</a></li>
       </ul>
     </li>
     <li><a href="#license">LICENSE</a></li>
@@ -432,7 +433,8 @@ errno_t n_log_to(const char* file, const char* format, ...)
 
 #### Examples
 ```cpp
-errno_t err = n_log_to("./foo/bar.txt", "%s: %s", n_timestamp(), "hello world");
+char ts[26] = {0};
+errno_t err = n_log_to("./foo/bar.txt", "%s: %s", n_timestamp(ts, 26), "hello world");
 if (n_succ(err))
 {
   // do something...
@@ -503,6 +505,23 @@ bool n_string_empty(const char *string)
 
 #### Returns
 - `true` if the string is NULL or '\0' is the only thing it contains.
+
+
+### n_timestamp
+```cpp
+const char* n_timestamp(char *buffer, const size_t size)
+```
+
+#### Parameters
+- `buffer`: Buffer to store timestamp string.
+- `size`: Size of the buffer.
+
+#### Returns
+- Same content of the input buffer. A empty string ("") will be returned if the
+operation failed.
+
+#### Examples
+See <a href="#n_log_to">n_log_to</a>.
 
 
 <!----------------------------------------------------------------- LICENSE -->

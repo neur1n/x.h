@@ -11,7 +11,7 @@ MERCHANTABILITY OR FIT FOR A PARTICULAR PURPOSE.
 See the Mulan PSL v2 for more details.
 
 
-Last update: 2022-05-26 15:52
+Last update: 2022-05-26 16:31
 ******************************************************************************/
 #ifndef NEU_H
 #define NEU_H
@@ -47,7 +47,7 @@ errno_t n_log_to(const char* file, const char* format, ...);
 
 bool n_string_empty(const char* string);
 
-const char* n_timestamp();
+const char* n_timestamp(char* buffer, const size_t size);
 //Special}}}
 
 //******************************************************* N_EXPORT, N_IMPORT{{{
@@ -144,11 +144,13 @@ const char* n_timestamp();
 
 #ifdef NDEBUG
 #define _N_LOG_PREFIX(level, filename, function, line) do { \
-  printf("[%s %s] ", level, n_timestamp()); \
+  char ts[26] = {0}; \
+  printf("[%s %s] ", level, n_timestamp(ts, 26)); \
 } while (false)
 #else
 #define _N_LOG_PREFIX(level, filename, function, line) do { \
-  printf("[%s %s | %s - %s - %ld] ", level, n_timestamp(), filename, function, line); \
+  char ts[26] = {0}; \
+  printf("[%s %s | %s - %s - %ld] ", level, n_timestamp(ts, 26), filename, function, line); \
 } while (false)
 #endif
 
@@ -211,16 +213,18 @@ inline void _n_log_internal(
     int bytes = 0;
 
     char* prefix_buf = (char*)malloc(sz);
+    char ts[26] = {0};
+
     bytes = snprintf(
         prefix_buf, sz, "[%s %s | %s - %s - %ld] ",
-        level, n_timestamp(), filename, function, line);
+        level, n_timestamp(ts, 26), filename, function, line);
     if (bytes + 1 > sz)
     {
       free(prefix_buf);
       prefix_buf = (char*)malloc(bytes + 1);
       snprintf(
           prefix_buf, bytes + 1, "[%s %s | %s - %s - %ld] ",
-          level, n_timestamp(), filename, function, line);
+          level, n_timestamp(ts, 26), filename, function, line);
     }
 
 
@@ -274,8 +278,9 @@ inline void _n_log_internal(
 #ifdef NDEBUG
 #define n_assert(expr) do { \
   if (!(expr)) { \
+    char ts[26] = {0}; \
     fprintf(stderr, "\n[ASSERTION FAILURE %s | %s - %s - %d] \n%s", \
-        n_timestamp(), nfull_path(__FILENAME__), __FUNCTION__, __LINE__, #expr); \
+        n_timestamp(ts, 26), nfull_path(__FILENAME__), __FUNCTION__, __LINE__, #expr); \
     exit(EXIT_FAILURE); } \
 } while (false)
 #else
@@ -533,11 +538,16 @@ inline bool n_string_empty(const char* string)
   return (string == NULL || string[0] == '\0');
 }
 
-inline const char* n_timestamp()
+inline const char* n_timestamp(char* buffer, const size_t size)
 {
   time_t now = time(NULL);
 
-  char* buffer = ctime(&now);
+  errno_t err = ctime_s(buffer, size, &now);
+  if (n_fail(err))
+  {
+    return "";
+  }
+
   buffer[strlen(buffer) - 1] = '\0';
 
   return buffer;
@@ -800,7 +810,8 @@ inline errno_t n_tic(const bool echo, struct n_timer* timer)
 
   if (echo)
   {
-    printf("Timer starts at: %s.\n", n_timestamp());
+    char ts[26] = {0};
+    printf("Timer starts at: %s.\n", n_timestamp(ts, 26));
   }
 
   return 0;
@@ -822,7 +833,8 @@ inline errno_t n_toc(const bool echo, const char* unit, struct n_timer* timer)
 
   if (echo)
   {
-    printf("Timer stops at:  %s.\n", n_timestamp());
+    char ts[26] = {0};
+    printf("Timer stops at:  %s.\n", n_timestamp(ts, 26));
     printf("Time elapsed: %f%s.\n", timer->elapsed, unit);
   }
 
