@@ -9,16 +9,21 @@
 
 
 <p align="center">
-  <img src="https://img.shields.io/badge/C++11-00599C?style=for-the-badge&logo=c%2B%2B&logoColor=white" alt="C++11">
+  <img src="https://img.shields.io/badge/C11-%2300599C.svg?style=for-the-badge&logo=c&logoColor=white" alt="C11">
+  <img src="https://img.shields.io/badge/C++11-%2300599C.svg?style=for-the-badge&logo=c%2B%2B&logoColor=white" alt="C++11">
 
   <a href="./LICENSE">
-    <img src="https://img.shields.io/badge/license-mit-green.svg?style=for-the-badge" alt="license-mit">
+    <img src="https://img.shields.io/badge/license-mulan_psl_v2-green.svg?style=for-the-badge" alt="license-mulan-psl-v2">
   </a>
 </p>
 
 <p align="center">
-  Handy C++ utility collections.
+  Handy C/C++ utility collections.
 </p>
+
+<h3 align="center">
+  ⚡ neu.h was heavily refactored after <a href=https://github.com/Neur1n/neu.h/releases/tag/v0.2.0>v0.2.0</a>.
+</h3>
 
 
 <!------------------------------------------------------- TABLE OF CONTENTS -->
@@ -32,35 +37,28 @@
         <li><a href="#installation">Installation</a></li>
       </ul>
     </li>
-    <li><a href="#usage">Usage</a></li>
     <li><a href="#documentation">Documentation</a>
       <ul>
-        <li><a href="#dll_api">DLL_API</a></li>
-        <li><a href="#nkey_x">NKEY_X</a></li>
-        <li><a href="#nlogx">NLogX</a></li>
-        <li><a href="#nassert">NAssert</a></li>
-        <li><a href="#nbit">NBit</a></li>
-        <li><a href="#ncode">NCode</a></li>
-        <li><a href="#npi">NPi</a></li>
-        <li><a href="#nsucc">NSucc</a></li>
-        <li><a href="#nfail">NFail</a></li>
-        <li><a href="#ncodemessage_1">NCodeMessage [1/2]</a></li>
-        <li><a href="#ncodemessage_2">NCodeMessage [2/2]</a></li>
-        <li><a href="#nduration">NDuration</a></li>
-        <li><a href="#nfullpath">NFullPath</a></li>
-        <li><a href="#nnow">NNow</a></li>
-        <li><a href="#npathexists">NPathExists</a></li>
-        <li><a href="#npressedkey">NPressedKey</a></li>
-        <li><a href="#nsleep">NSleep</a></li>
-        <li><a href="#nstringempty">NStringEmpty</a></li>
-        <li><a href="#narraysize">NArraySize</a></li>
-        <li><a href="#nclamp">NClamp</a></li>
-        <li><a href="#nconcatstring">NConcatString</a></li>
-        <li><a href="#nrelease">NRelease</a></li>
-        <li><a href="#nreleasearray">NReleaseArray</a></li>
+        <li><a href="#n_export-n_import">N_EXPORT, N_IMPORT</a></li>
+        <li><a href="#n_key">N_KEY</a></li>
+        <li><a href="#n_log">NLogX</a></li>
+        <li><a href="#n_array_size">n_array_size</a></li>
+        <li><a href="#n_assert">n_assert</a></li>
+        <li><a href="#n_bit">n_bit</a></li>
+        <li><a href="#n_clamp">n_clamp</a></li>
+        <li><a href="#n_pi">n_pi</a></li>
+        <li><a href="#n_succ">n_succ</a></li>
+        <li><a href="#n_fail">n_fail</a></li>
+        <li><a href="#n_duration">n_duration</a></li>
+        <li><a href="#n_full_path">n_full_path</a></li>
+        <li><a href="#n_log_to">n_log_to</a></li>
+        <li><a href="#n_path_exists">n_path_exists</a></li>
+        <li><a href="#n_pressed_key">n_pressed_key</a></li>
+        <li><a href="#n_sleep">n_sleep</a></li>
+        <li><a href="#n_string_empty">n_string_empty</a></li>
       </ul>
     </li>
-    <li><a href="#license">License</a></li>
+    <li><a href="#license">LICENSE</a></li>
   </ol>
 </details>
 
@@ -68,485 +66,446 @@
 <!--------------------------------------------------------- GETTING STARTED -->
 ## Getting Started
 ### Prerequisites
-- C++ compiler: >= C++11
-- CMake: >= 3.5
+C/C++ compiler that supports C11/C++11.
 
 
 ### Installation
-This library contains only one header, `neu.h`. So you may download this single
-file and put it into your project, or the whole repository via Git:
-
-```bash
-git clone https://github.com/Neur1n/neu.h.git
-```
-
-
-<!------------------------------------------------------------------- USAGE -->
-## Usage
-### Single Header
-If you want to use only the single `neu.h` file, add the directory containing
-
-`neu.h` to `INCLUDE_DIRECTORIES()` in your project's main `CMakeLists.txt`:
-```cmake
-INCLUDE_DIRECTORIES("path/to/neu.h")
-```
-
-
-### Whole Repository
-If the whole repository is downloaded/included into your project, add the
-following snippet to your project's main `CMakeLists.txt`:
-
-```cmake
-SET(NeuH_DIR "path/to/neu.h")              # Not the neu.h file, but the repository
-FIND_PACKAGE(NeuH REQUIRED)                # Notice that the package name is not "neu.h"
-INCLUDE_DIRECTORIES(${NeuH_INCLUDE_DIRS})  # Add to inclusion
-SET(NeuH_LOG_LEVEL 3)                      # If not specified, 6 will be used by default
-```
-
-Notice that when using the whole repository, this library can be found with
-`FIND_PACKAGE()` and additionally defined two variables to be used:
-
-- `NeuH_INCLUDE_DIRS`: the include directories of neu.h
-- `NeuH_LOG_LEVEL`: the log verbosity level of neu.h, of which the available
-values are:
-  - \>= 6: enables `NLogP`, `NLogF`, `NLogE`, `NLogW`, `NLogI`, `NLogD` (all loggings) 
-  - 5: enables `NLogP`, `NLogF`, `NLogE`, `NLogW`, `NLogI`
-  - 4: enables `NLogP`, `NLogF`, `NLogE`, `NLogW`
-  - 3: enables `NLogP`, `NLogF`, `NLogE`
-  - 2: enables `NLogP`, `NLogF`
-  - 1: enables `NLogP`
-  - <= 0: disables all log printings
-
-  where `P`, `F`, `E`, `W`, `I`, `D` are short for `PUBLIC`, `FATAL`, `ERROR`,
-  `WARNING`, `INFO`, `DEBUG` respectively.
+Put `neu.h` into your project.
 
 
 <!----------------------------------------------------------- DOCUMENTATION -->
 ## Documentation
-### DLL_API
+### N_EXPORT, N_IMPORT
 ```cpp
-#ifndef DLL_API
+#ifndef N_EXPORT
 #if defined(_MSC_VER)
-#define DLL_API __declspec(dllexport)
+#define N_EXPORT __declspec(dllexport)
 #else
-#define DLL_API __attribute__ ((visibility("default")))
+#define N_EXPORT __attribute__ ((visibility("default")))
+#endif
+#endif
+
+#ifndef N_IMPORT
+#if defined(_MSC_VER)
+#define N_IMPORT __declspec(dllimport)
+#else
+#define N_IMPORT __attribute__ ((visibility("hidden")))
 #endif
 #endif
 ```
 
-A macro for declaring a function as a dynamic library interface.
+See [Microsoft Docs](https://docs.microsoft.com/en-us/cpp/cpp/dllexport-dllimport?view=msvc-170)
+and [GCC Wiki](https://gcc.gnu.org/wiki/Visibility) for more details.
 
 
-### NKEY_X
+### N_KEY
 ```cpp
-#define NKEY_ESC   (0x1B)
-#define NKEY_A     (0x41)
-#define NKEY_B     (0x42)
-#define NKEY_C     (0x43)
-#define NKEY_D     (0x44)
-#define NKEY_Q     (0x51)
+#define N_KEY_ESC   (0x1B)
+#define N_KEY_A     (0x41)
+#define N_KEY_B     (0x42)
+#define N_KEY_C     (0x43)
+#define N_KEY_D     (0x44)
+#define N_KEY_Q     (0x51)
 #if defined(_MSC_VER)
-#define NKEY_LEFT  (0x4B)
-#define NKEY_UP    (0x48)
-#define NKEY_RIGHT (0x4D)
-#define NKEY_DOWN  (0x50)
+#define N_KEY_LEFT  (0x4B)
+#define N_KEY_UP    (0x48)
+#define N_KEY_RIGHT (0x4D)
+#define N_KEY_DOWN  (0x50)
 #else
-#define NKEY_LEFT  (-1)
-#define NKEY_UP    (-2)
-#define NKEY_RIGHT (-3)
-#define NKEY_DOWN  (-4)
+#define N_KEY_LEFT  (-1)
+#define N_KEY_UP    (-2)
+#define N_KEY_RIGHT (-3)
+#define N_KEY_DOWN  (-4)
 #endif
 ```
 
 Several virtual key macros, most of which are defined as their corresponding
-ASCII code. However, since the arrow keys are handled differently among OSs
-(please tell me if this statement is not accurate), they are defined as
-negative integers to work around. Please checkout
-<a href="#npressedkey">NPressedKey</a> for their usage.
+[ASCII code](https://www.asciitable.com). However, the arrow keys are handled
+differently among OSs (please tell me if this statement is not accurate), they
+are defined as negative integers to work around. Please checkout
+<a href="#n_pressed_key">n_pressed_key</a> for their usage.
 
 
-### NLogX
+### n_log
 ```cpp
-NLogP(const char *file, const char *format, ...)
-NLogF(const char *file, const char *format, ...)
-NLogE(const char *file, const char *format, ...)
-NLogW(const char *file, const char *format, ...)
-NLogI(const char *file, const char *format, ...)
-NLogD(const char *file, const char *format, ...)
+void n_log(const char* level, const char* file, const char* format, ...)
 ```
 
-Logging marcos, of which the formats of them are almost identical. What
-differentiate them are the prefixes and the colors. Additionally, `NLogF`
-will call `exit(EXIT_FAILURE)` to make the program exits.
+#### Parameters
+- `level`: Logging level specification, available values are `P` (Public),
+`F` (Fatal), `E` (Error), `W` (Warning), `I` (Info), `D` (Debug).
+- `file`: File for saving the loggings. If `NULL` provided, no loggings will be
+saved.
+- `format`: Same as that in [printf](https://www.cplusplus.com/reference/cstdio/printf/).
+- `...`: Same as that in [printf](https://www.cplusplus.com/reference/cstdio/printf/).
+
+#### Examples
+```cpp
+int a = 0;
+
+n_log("P", nullptr, "hello");
+n_log("D", nullptr, "%s", "world");
+n_log("I", nullptr, "%d", 10);
+n_log("W", nullptr, "%d", ++a);
+n_log("E", "./log.txt", "%d", ++a);
+n_log("F", "./log.txt", "%s", "fatal");
+```
+
+The formats of each level are almost identical. What differentiate them are the
+level prefixes and the colors. Additionally, fatal level will call
+`exit(EXIT_FAILURE)` to make the program exits.
 
 <table class="center" style="text-align:center">
 <thead>
   <tr>
-    <th>Name</th>
+    <th>Level</th>
     <th>Color</th>
-    <th>Prefix</th>
     <th>Debug Build Format</th>
     <th>Release Build Format</th>
   </tr>
 </thead>
 <tbody>
   <tr>
-    <td>NLogP</td>
-    <td><span style="color:white">█</span></td>
     <td>P</td>
-    <td rowspan="6">[prefix timestamp file &gt; function &gt; line] message</td>
-    <td rowspan="6">[prefix timestamp] message</td>
+    <td><img src="https://via.placeholder.com/20x10/FFFFFF/FFFFFF"></a></td>
+    <td rowspan="6">[level timestamp | file | function | line] message</td>
+    <td rowspan="6">[level timestamp] message</td>
   </tr>
   <tr>
-    <td>NLogF</td>
-    <td><span style="color:purple">█</span></td>
     <td>F</td>
+    <td><img src="https://via.placeholder.com/20x10/FF00FF/FF00FF"></a></td>
   </tr>
   <tr>
-    <td>NLogE</td>
-    <td><span style="color:red">█</span></td>
     <td>E</td>
+    <td><img src="https://via.placeholder.com/20x10/FF0000/FF0000"></a></td>
   </tr>
   <tr>
-    <td>NLogW</td>
-    <td><span style="color:yellow">█</span></td>
     <td>W</td>
+    <td><img src="https://via.placeholder.com/20x10/FFFF00/FFFF00"></a></td>
   </tr>
   <tr>
-    <td>NLogI</td>
-    <td><span style="color:green">█</span></td>
     <td>I</td>
+    <td><img src="https://via.placeholder.com/20x10/00FF00/00FF00"></a></td>
   </tr>
   <tr>
-    <td>NLogD</td>
-    <td><span style="color:blue">█</span></td>
     <td>D</td>
+    <td><img src="https://via.placeholder.com/20x10/0000FF/0000FF"></a></td>
   </tr>
 </tbody>
 </table>
 
-#### Parameters
-- file: If not `nullptr` or empty, loggings will be saved to the specified file.
-- format: Same as that in [printf](https://www.cplusplus.com/reference/cstdio/printf/).
-- ... (optional): Same as that in [printf](https://www.cplusplus.com/reference/cstdio/printf/).
 
-
-### NAssert
+### n_array_size
 ```cpp
-NAssert(expr)
+T n_array_size(array)  // In this document, T indicating a return type from a macro.
+```
+
+#### Parameters
+- `array`: The array of which the size to be queried.
+
+#### Returns
+- The length (count of elements) of the input array.
+
+#### Examples
+```cpp
+int a[5] = {1, 2, 3, 4, 5};
+
+for (size_t i = 0; i < n_array_size(a); ++i)
+{
+  printf("%d", a[i]);
+}
+```
+
+Get length of an array. This macro does not work with those arrays declared
+with `malloc` or `new`, nor throw any exceptions. For C++, some suggest using
+the following template function:
+
+```cpp
+template<class T, size_t N>
+size_t n_array_size(const T (&array)[N])
+{
+  return N;
+}
+```
+
+
+### n_assert
+```cpp
+n_assert(expr)
+```
+
+#### Parameters
+- `expr`: The assertion expression.
+
+#### Examples
+```cpp
+n_assert(1 == 1);
+n_assert(1 != 1);
 ```
 
 An macro enables the assertion functionality for both debug and release builds.
-For debug build, it is the same as the assertion macro in `<cassert> (assert.h)`.
+For debug build, it is the same as the assertion macro in assert.h/cassert
+header.
+
+
+### n_bit
+```cpp
+T n_bit(bit)
+```
 
 #### Parameters
-- expr: The assertion expression.
+- `bit`: Specification for which bit of the integer should be set to 1.
 
-
-### NBit
+#### Examples
 ```cpp
-NBit(bit)
+enum
+{
+  FLAG_NONE   = 0,
+  FLAG_READ   = n_bit(1),
+  FLAG_WRITE  = n_bit(2),
+};
+
+int read_and_write = FLAG_READ | FLAG_WRITE;
 ```
 
 A macro used to generate an integer with only the n-th bit set to 1. This is
 useful when one needs enumerations like `0b0001`, `0b0010`, `0b0100` to perform
 the `&`, `|`, `~` operations.
 
-#### Parameters
-- bit: Specification for which bit of the integer should be set to 1.
-
 #### Returns
-- The generated integer.
+- The generated integer, may be `int`, `long`, etc.
 
 
-### NCode
+### n_clamp
 ```cpp
-typedef std::error_code NCode
+T n_clamp(x, lower, upper)
 ```
 
-An alias to `std::error_code`. Along with the `std::errc` aliases, it allows
-much fewer typings when using the `std::error_code` mechanism. Additionally,
-the naming may be more semantic than the
-[POSIX errno](https://man7.org/linux/man-pages/man3/errno.3.html).
+#### Parameters
+- `x`: Variable or value to be clamped.
+- `lower`: Lower bound.
+- `upper`: Upper bound.
+
+#### Returns
+- The clamped value.
 
 
-### NPi
+### n_max
+```cpp
+T n_max(a, b)
+```
+
+#### Parameters
+- `a`: Some variable or value.
+- `b`: Another variable or value.
+
+#### Returns
+- The bigger value.
+
+
+### n_min
+```cpp
+T n_min(a, b)
+```
+
+#### Parameters
+- `a`: Some variable or value.
+- `b`: Another variable or value.
+
+#### Returns
+- The smaller value.
+
+
+### n_pi
+```cpp
+T n_pi(T)
+```
+
+#### Parameters
+- `T`: Target type, e.g. `float`, `double`, `long`.
+
+#### Returns
+- Pi of specified type.
+
+#### Examples
+```cpp
+float a = n_pi(float);
+double b = n_pi(double);
+```
+
+A macro for retrieving the constant [Pi](https://en.wikipedia.org/wiki/Pi). The
+input argument is used to specify the target data type. In C++, one may use the
+following template:
+
 ```cpp
 template<class T>
-static const T NPi = (T)3.141592653589793238462643383279502884197169399375;
+static constexpr T n_pi = (T)3.141592653589793238462643383279502884197169399375;
+// Usage: n_pi<float>, n_pi<double>, etc.
 ```
 
-A templated π for different precisions, e.g. `float`, `double`.
 
-
-### NSucc
+### n_succ
 ```cpp
-bool NSucc(const NCode &code)
+bool n_succ(const errno_t err)
 ```
-
-Check if the error code indicates an operation succeeded.
 
 #### Parameters
 - code: The error code returned by some function.
 
 #### Returns
-- `true` if the code indicates an operation succeeded.
+- `true` if the error code indicate no failure.
 
-
-### NFail
+#### Examples
 ```cpp
-bool NFail(const NCode &code)
+FILE* stream = NULL;
+errno_t err = 0;
+err = fopen_s(&stream, "some/file", "a");
+if (n_succ(err))
+{
+  // do something...
+}
 ```
 
-Check if the error code indicates an operation failed.
+
+### n_fail
+```cpp
+bool n_fail(const errno_t err)
+```
+
+Check if the error code indicates any failure.
 
 #### Parameters
 - code: The error code returned by some function.
 
 #### Returns
-- `true` if the code indicates an operation failed.
+- `true` if the code indicates a failure.
 
 
-### NCodeMessage [1/2] <a name="ncodemessage_1"></a>
+### n_duration
 ```cpp
-std::string NCodeMessage(const int &code)
+double n_duration(
+    const struct timespec start, const struct timespec end, const char* unit)
 ```
 
-Get the description string of the error code. This function can be used to
-retrieve the description of Windows OS's error code (as
-[FormatMessage](https://docs.microsoft.com/en-us/windows/win32/api/winbase/nf-winbase-formatmessage) does)
-or POSIX's `errno` (as [strerror](https://man7.org/linux/man-pages/man3/strerror.3.html)
-does).
-
 #### Parameters
-- code: The error code.
-
-#### Returns
-- The description string of the error code.
-
-
-### NCodeMessage [2/2] <a name="ncodemessage_2"></a>
-```cpp
-std::string NCodeMessage(const NCode &code)
-```
-
-Get the description string of a `std::error_code`.
-
-#### Parameters
-- code: The error code.
-
-#### Returns
-- The description string of the error code.
-
-
-### NDuration
-```cpp
-long long NDuration(
-    const std::chrono::system_clock::time_point &start,
-    const std::chrono::system_clock::time_point &end,
-    const std::string &unit = "us")
-```
-
-Get the duration between two time points.
-
-#### Parameters
-- start: The start time point.
-- end: The end time point.
-- unit (optional): The unit of the outcome. Default is microsecond. Checkout
-[std::chrono::duration_cast](https://www.cplusplus.com/reference/chrono/duration_cast/)
-for more details.
+- `start`: The start time point.
+- `end`: The end time point.
+- `unit`: The unit of the outcome.
 
 #### Returns
 - The duration of the two time points in specified unit.
 
 
-### NFullPath
+### n_full_path
 ```cpp
-std::string NFullPath(const char *path)
+const char* n_full_path(const char* src, char* dst)
 ```
-
-Get the absolute path to a file.
 
 #### Parameters
-- path: The (maybe relative) path to a file.
+- `src`: The (maybe relative) path to a file.
+- `dst`: The full/absolute path to the input file. It should be allocated with
+sufficient memory before passed into this function, otherwise `NULL` is returned.
 
 #### Returns
-- A `std::string` containing the absolute path to the file.
+- The same value contained in `dst`, or `NULL` when the operation failed.
 
-
-### NNow
+#### Examples
 ```cpp
-std::chrono::steady_clock::time_point NNow()
+const char* file = "./foo/bar.txt";
+char buf[MAX_PATH] = {0};
+n_full_path(file, buf);
 ```
 
-Get time point object representing the current timestamp. It shall be
-specifically used for time interval calculation.
 
-#### Returns
-- A `std::chrono::steady_clock::time_point` object representing the current timestamp.
-
-
-### NPathExists
+### n_log_to
 ```cpp
-bool NPathExists(const char *path)
+errno_t n_log_to(const char* file, const char* format, ...)
 ```
-
-Check if a file or directory exits.
 
 #### Parameters
-- path: The path to the querying file/directory.
+- `file`: The path to a file.
+- `format`: Same as that in [printf](https://www.cplusplus.com/reference/cstdio/printf/).
+- `...`: Same as that in [printf](https://www.cplusplus.com/reference/cstdio/printf/).
+
+#### Returns
+- The resulting error code of the operation.
+
+#### Examples
+```cpp
+errno_t err = n_log_to("./foo/bar.txt", "%s: %s", n_timestamp(), "hello world");
+if (n_succ(err))
+{
+  // do something...
+}
+```
+
+Additionally, see definition of <a href="#n_log">n_log</a> for another example.
+
+
+### n_path_exists
+```cpp
+bool n_path_exists(const char *path)
+```
+
+#### Parameters
+- `path`: The path to a querying file/directory.
 
 #### Returns
 - `true` if the file/directory exists.
 
 
-### NPressedKey
+### n_pressed_key
 ```cpp
-int NPressedKey()
+int n_pressed_key()
 ```
 
-Get the pressed key. This function only works with console programs. One may
-use it to break a infinity loop manually. For example:
+#### Returns
+- The pressed key.
+
+#### Examples
+This function only works with console programs. One may use it to break a
+infinity loop manually:
 
 ```cpp
 int main(int argc, char **argv)
 {
   while (true)
   {
-    if (NPressedKey() == NKEY_ESC)
+    if (n_pressed_key() == N_KEY_ESC)
     {
       break;  // When the 'Esc' key is pressed, the loop breaks.
     }
 
-    NSleep(10);
+    n_sleep(10);
   }
 
   return 0;
 }
 ```
 
-#### Returns
-- The pressed key.
 
-
-### NSleep
+### n_sleep
 ```cpp
-void NSleep(const unsigned long long &ms)
+void n_sleep(const unsigned long long ms)
 ```
 
-Blocks execution of the calling thread for specified milliseconds.
-
 #### Parameters
-- ms: The span of the sleep duration.
+- `ms`: The length of the sleep duration in milliseconds.
 
 
-### NStringEmpty
+### n_string_empty
 ```cpp
-bool NStringEmpty(const char *string)
+bool n_string_empty(const char *string)
 ```
 
-Check if a string is empty.
-
 #### Parameters
-- string: The string.
+- `string`: The string.
 
 #### Returns
-- `true` if the string is empty.
-
-
-### NArraySize
-```cpp
-template<class T, size_t N>
-size_t NArraySize(const T (&array)[N])
-```
-
-Get the element count of an array. This function does not work with those
-arrays declared with the `new` operator.
-
-#### Parameters
-- array: The array of which the size to be queried.
-
-#### Returns
-- The element count of the array.
-
-
-### NClamp
-```cpp
-template<class T>
-const T &NClamp(const T &x, const T &low, const T &high)
-```
-
-Clamp the value between a lower bound and a upper bound.
-
-#### Parameters
-- x: The value to clamp.
-- low: The lower bound.
-- high: The upper bound.
-
-#### Returns
-- The clamped value.
-
-
-### NConcatString
-```cpp
-template <class ...Args>
-std::string NConcatString(Args &&...items)
-```
-
-A function used to combine items into one string. The acceptable inputs are
-arithmetic data (i.e. `int`, `double` etc), C-style strings (`const char*`) and 
-`std::string` objects.
-
-According to my tests and this [benchmark](https://stackoverflow.com/a/18892355/10481376),
-this function uses [std::string operator+=](https://www.cplusplus.com/reference/string/string/operator+=/)
-to preform string concatenation to achieve good performace. Yes, please note
-that `NConcatString` cannot achieve the "best" performace:
-
-```cpp
-// The best.
-std::string str1 = std::string("hello") + std::string(" ") + std::to_string("123"); 
-
-// The secondary.
-std::string str2 = NConcatString(std::string("hello"), std::string(" "), std::to_string("123"));
-
-// The worst, but much fewer typings.
-std::string str3 = NConcatString("hello", " ", "123");
-```
-
-However, if this function is called a plenty times (e.g. 10000 loops), the
-performace of the above three should be similar.
-
-#### Parameters
-- items...: Items to be combined.
-
-#### Return
-- The combined string.
-
-
-### NRelease
-```cpp
-template<class T>
-void NRelease(T &&pointer)
-```
-
-Release a pointer and make it point to `nullptr`.
-
-#### Parameters
-- pointer: The pointer to be release.
-
-
-### NReleaseArray
-```cpp
-template<class T>
-void NReleaseArray(T &&pointer)
-```
-
-Release a pointer pointed to an array and make it point to `nullptr`.
-
-#### Parameters
-- pointer: The pointer to be release.
+- `true` if the string is NULL or '\0' is the only thing it contains.
 
 
 <!----------------------------------------------------------------- LICENSE -->
 ## License
-Distributed under the MIT license. See [LICENSE](LICENSE) for more information.
+Distributed under the [Mulan PSL v2](http://license.coscl.org.cn/MulanPSL2/)
+license. See [LICENSE](LICENSE) for more information.
