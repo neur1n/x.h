@@ -11,7 +11,7 @@ MERCHANTABILITY OR FIT FOR A PARTICULAR PURPOSE.
 See the Mulan PSL v2 for more details.
 
 
-Last update: 2022-05-26 16:31
+Last update: 2022-05-26 22:49
 ******************************************************************************/
 #ifndef NEU_H
 #define NEU_H
@@ -552,7 +552,6 @@ inline const char* n_timestamp(char* buffer, const size_t size)
 
   return buffer;
 }
-
 //Function}}}
 
 //************************************************************** Concurrency{{{

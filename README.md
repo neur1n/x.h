@@ -446,7 +446,7 @@ Additionally, see definition of <a href="#n_log">n_log</a> for another example.
 
 ### n_path_exists
 ```cpp
-bool n_path_exists(const char *path)
+bool n_path_exists(const char* path)
 ```
 
 #### Parameters
@@ -469,7 +469,7 @@ This function only works with console programs. One may use it to break a
 infinity loop manually:
 
 ```cpp
-int main(int argc, char **argv)
+int main(int argc, char** argv)
 {
   while (true)
   {
@@ -497,7 +497,7 @@ void n_sleep(const unsigned long long ms)
 
 ### n_string_empty
 ```cpp
-bool n_string_empty(const char *string)
+bool n_string_empty(const char* string)
 ```
 
 #### Parameters
@@ -509,7 +509,7 @@ bool n_string_empty(const char *string)
 
 ### n_timestamp
 ```cpp
-const char* n_timestamp(char *buffer, const size_t size)
+const char* n_timestamp(char* buffer, const size_t size)
 ```
 
 #### Parameters
