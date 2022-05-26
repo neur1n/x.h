@@ -11,12 +11,10 @@ MERCHANTABILITY OR FIT FOR A PARTICULAR PURPOSE.
 See the Mulan PSL v2 for more details.
 
 
-Last update: 2022-05-26 10:42
+Last update: 2022-05-26 15:52
 ******************************************************************************/
 #ifndef NEU_H
 #define NEU_H
-
-#define _CRT_SECURE_NO_WARNINGS
 
 #include <assert.h>
 #include <float.h>
