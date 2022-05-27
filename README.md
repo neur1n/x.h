@@ -198,7 +198,7 @@ level prefixes and the colors. Additionally, fatal level will call
 
 ### n_array_size
 ```cpp
-T n_array_size(array)  // In this document, T indicating a return type from a macro.
+T n_array_size(array)  // In this document, T indicats a return type from a macro.
 ```
 
 #### Parameters
