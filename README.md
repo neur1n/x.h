@@ -488,7 +488,7 @@ int main(int argc, char** argv)
 
 ### n_sleep
 ```cpp
-void n_sleep(const unsigned long long ms)
+void n_sleep(const unsigned long ms)
 ```
 
 #### Parameters

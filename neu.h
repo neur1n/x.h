@@ -11,7 +11,7 @@ MERCHANTABILITY OR FIT FOR A PARTICULAR PURPOSE.
 See the Mulan PSL v2 for more details.
 
 
-Last update: 2022-05-26 22:49
+Last update: 2022-05-27 17:36
 ******************************************************************************/
 #ifndef NEU_H
 #define NEU_H
@@ -321,8 +321,8 @@ inline bool n_fail(const errno_t err)
 inline double n_duration(
     const struct timespec start, const struct timespec end, const char* unit)
 {
-  double diff =
-    (end.tv_sec - start.tv_sec) * 1000000000LL + end.tv_nsec - start.tv_nsec;
+  double diff = (double)(
+      (end.tv_sec - start.tv_sec) * 1000000000LL + end.tv_nsec - start.tv_nsec);
 
   if (strcmp(unit, "h") == 0)
   {
@@ -524,12 +524,14 @@ inline int n_pressed_key()
 #endif
 }
 
-inline void n_sleep(const unsigned long long ms)
+inline void n_sleep(const unsigned long ms)
 {
 #if defined(_MSC_VER)
   Sleep(ms);
 #else
-  usleep(ms * 1000LL);
+  struct timespec duration;
+  duration.tv_nsec = (long)(ms * 1000000L);
+  nanosleep(&duration, NULL);
 #endif
 }
 
@@ -888,53 +890,54 @@ inline errno_t n_toc_profile(
     {
       char buf[512] = {0};
       char num[64] = {0};
-      int bytes = 0;
+      size_t bsz = sizeof(buf);
+      size_t nsz = sizeof(num);
 
       // [(title)]
       if (!n_string_empty(title))
       {
-        strcat_s(buf, "[");
-        strcat_s(buf, title);
-        strcat_s(buf, "] ");
+        strcat_s(buf, bsz, "[");
+        strcat_s(buf, bsz, title);
+        strcat_s(buf, bsz, "] ");
       }
 
       // [(title)] a cycles - total:
-      bytes = snprintf(num, 64, "%lld", timer->report.cyc);
-      strcat_s(buf, num);
-      strcat_s(buf, " cycles - total: ");
+      snprintf(num, nsz, "%lld", timer->report.cyc);
+      strcat_s(buf, bsz, num);
+      strcat_s(buf, bsz, " cycles - total: ");
 
       // [title] a cycles - total: b(unit), avg:
-      bytes = snprintf(num, 64, "%f", timer->report.sum);
-      strcat_s(buf, num);
-      strcat_s(buf, unit);
-      strcat_s(buf, ", avg: ");
+      snprintf(num, nsz, "%f", timer->report.sum);
+      strcat_s(buf, bsz, num);
+      strcat_s(buf, bsz, unit);
+      strcat_s(buf, bsz, ", avg: ");
 
       // [title] a cycles - total: b(unit), avg: c(unit), min(
-      bytes = snprintf(num, 64, "%f", timer->report.avg);
-      strcat_s(buf, num);
-      strcat_s(buf, unit);
-      strcat_s(buf, ", min (");
+      snprintf(num, nsz, "%f", timer->report.avg);
+      strcat_s(buf, bsz, num);
+      strcat_s(buf, bsz, unit);
+      strcat_s(buf, bsz, ", min (");
 
       // [title] a cycles - total: b(unit), avg: c (unit), min((index)):
-      bytes = snprintf(num, 64, "%lld", timer->report.min.index);
-      strcat_s(buf, num);
-      strcat_s(buf, "): ");
+      snprintf(num, nsz, "%lld", timer->report.min.index);
+      strcat_s(buf, bsz, num);
+      strcat_s(buf, bsz, "): ");
 
       // [title] a cycles - total: b(unit), avg: c (unit), min((index)): (value)(unit), max (
-      bytes = snprintf(num, 64, "%f", timer->report.min.value);
-      strcat_s(buf, num);
-      strcat_s(buf, unit);
-      strcat_s(buf, ", max (");
+      snprintf(num, nsz, "%f", timer->report.min.value);
+      strcat_s(buf, bsz, num);
+      strcat_s(buf, bsz, unit);
+      strcat_s(buf, bsz, ", max (");
 
       // [title] a cycles - total: b(unit), avg: c (unit), min((index)): (value)(unit), max ((index):
-      bytes = snprintf(num, 64, "%lld", timer->report.max.index);
-      strcat_s(buf, num);
-      strcat_s(buf, "): ");
+      snprintf(num, nsz, "%lld", timer->report.max.index);
+      strcat_s(buf, bsz, num);
+      strcat_s(buf, bsz, "): ");
 
       // [title] a cycles - total: b(unit), avg: c (unit), min((index)): (value)(unit), max ((index)): (value)(unit)
-      bytes = snprintf(num, 64, "%f", timer->report.max.value);
-      strcat_s(buf, num);
-      strcat_s(buf, unit);
+      snprintf(num, nsz, "%f", timer->report.max.value);
+      strcat_s(buf, bsz, num);
+      strcat_s(buf, bsz, unit);
 
       printf("%s\n", buf);
     }
