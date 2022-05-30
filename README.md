@@ -41,7 +41,7 @@
       <ul>
         <li><a href="#n_export-n_import">N_EXPORT, N_IMPORT</a></li>
         <li><a href="#n_key">N_KEY</a></li>
-        <li><a href="#n_log">NLogX</a></li>
+        <li><a href="#n_log">n_log</a></li>
         <li><a href="#n_array_size">n_array_size</a></li>
         <li><a href="#n_assert">n_assert</a></li>
         <li><a href="#n_bit">n_bit</a></li>
@@ -144,10 +144,10 @@ saved.
 ```cpp
 int a = 0;
 
-n_log("P", nullptr, "hello");
-n_log("D", nullptr, "%s", "world");
-n_log("I", nullptr, "%d", 10);
-n_log("W", nullptr, "%d", ++a);
+n_log("P", NULL, "hello");
+n_log("D", NULL, "%s", "world");
+n_log("I", NULL, "%d", 10);
+n_log("W", NULL, "%d", ++a);
 n_log("E", "./log.txt", "%d", ++a);
 n_log("F", "./log.txt", "%s", "fatal");
 ```
@@ -194,6 +194,10 @@ level prefixes and the colors. Additionally, fatal level will call
   </tr>
 </tbody>
 </table>
+
+<b>Please note that this macro is not thread-safe. One might need to surround it
+with a mutex or/and a condition variable, especially saving loggings to the
+same file with different calls.</b>
 
 
 ### n_array_size
