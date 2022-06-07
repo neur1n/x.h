@@ -11,7 +11,7 @@ MERCHANTABILITY OR FIT FOR A PARTICULAR PURPOSE.
 See the Mulan PSL v2 for more details.
 
 
-Last update: 2022-05-27 17:36
+Last update: 2022-06-07 16:55
 ******************************************************************************/
 #ifndef NEU_H
 #define NEU_H
@@ -288,22 +288,6 @@ inline void _n_log_internal(
 #endif
 
 #define n_bit(bit) (1 << bit)
-
-#define n_clamp(x, lower, upper) \
-  ({__typeof__(x) _x = (x); \
-    __typeof__(lower) _l = (lower); \
-    __typeof__(upper) _u = (upper); \
-    _x < _l ? _l : (_x > _u ? _u : _x);})
-
-#define n_max(a, b) \
-  ({__typeof__(a) _a = (a); \
-    __typeof__(b) _b = (b); \
-    _a > _b ? _a : _b; })
-
-#define n_min(a, b) \
-  ({__typeof__(a) _a = (a); \
-    __typeof__(b) _b = (b); \
-    _a < _b ? _a : _b; })
 
 #define n_pi(T) (T)(3.141592653589793238462643383279502884197169399375)
 
