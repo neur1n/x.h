@@ -11,7 +11,7 @@ MERCHANTABILITY OR FIT FOR A PARTICULAR PURPOSE.
 See the Mulan PSL v2 for more details.
 
 
-Last update: 2022-06-07 16:55
+Last update: 2022-06-08 18:30
 ******************************************************************************/
 #ifndef NEU_H
 #define NEU_H
@@ -958,7 +958,6 @@ inline errno_t n_toc_profile(
 } while (false)
 
 //******************************************************************* n_thrd{{{
-#ifdef __cplusplus
 struct n_thread
 {
   enum n_thrd_ctrl_code cc;
@@ -1029,8 +1028,8 @@ inline int n_thrd_yield()
 }
 //n_thrd}}}
 //C++}}}
-#else
 //************************************************************************ C{{{
+#else
 #define n_release(x) do { \
   if (x != NULL) { \
     free(x); \
@@ -1184,7 +1183,6 @@ inline int n_thrd_yield()
   return thrd_success;
 #endif
 }
-#endif
 //n_thrd}}}
 //C}}}
 #endif
