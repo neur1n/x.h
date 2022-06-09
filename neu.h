@@ -11,7 +11,7 @@ MERCHANTABILITY OR FIT FOR A PARTICULAR PURPOSE.
 See the Mulan PSL v2 for more details.
 
 
-Last update: 2022-06-08 18:30
+Last update: 2022-06-08 19:00
 ******************************************************************************/
 #ifndef NEU_H
 #define NEU_H
@@ -43,6 +43,26 @@ Last update: 2022-06-08 18:30
 extern "C" {
 #endif
 //****************************************************************** Special{{{
+typedef CONDITION_VARIABLE cnd_t;
+typedef CRITICAL_SECTION mtx_t;
+
+cnd_t _n_log_cnd;
+mtx_t _n_log_mtx;
+bool _n_log_done;
+bool _n_log_sync;
+
+void n_cnd_destroy(cnd_t* cnd);
+int n_cnd_init(cnd_t* cnd);
+int n_cnd_notify_all(cnd_t* cnd);
+int n_cnd_wait(cnd_t* cnd, mtx_t* mutex);
+
+void n_mtx_destroy(mtx_t* mtx);
+int n_mtx_init(mtx_t* mtx, int type);
+
+void n_log_sync_destroy();
+
+int n_log_sync_init();
+
 errno_t n_log_to(const char* file, const char* format, ...);
 
 bool n_string_empty(const char* string);
@@ -158,6 +178,17 @@ inline void _n_log_internal(
     const char* filename, const char* function, const long line,
     const char* level, const char* file, const char* format, ...)
 {
+  if (_n_log_sync)
+  {
+    while (!_n_log_done)
+    {
+      n_cnd_wait(&_n_log_cnd, &_n_log_mtx);
+    }
+
+    _n_log_done = false;
+    n_cnd_notify_all(&_n_log_cnd);
+  }
+
   if (strcmp(level, "P") == 0)
   {
 #if N_LOG_LEVEL >= 1
@@ -260,6 +291,12 @@ inline void _n_log_internal(
     printf("%s\n", _N_COLOR_RESET);
   }
 
+  if (_n_log_sync)
+  {
+    _n_log_done = true;
+    n_cnd_notify_all(&_n_log_cnd);
+  }
+
   if (strcmp(level, "F") == 0)
   {
 #if N_LOG_LEVEL >= 2
@@ -346,6 +383,35 @@ inline const char* n_full_path(const char* src, char* dst)
 #else
   return realpath(src, dst);
 #endif
+}
+
+inline void n_log_sync_destroy()
+{
+  n_cnd_destroy(&_n_log_cnd);
+  n_mtx_destroy(&_n_log_mtx);
+  _n_log_done = true;
+  _n_log_sync = false;
+}
+
+inline int n_log_sync_init()
+{
+  int err = 0;
+  err = n_cnd_init(&_n_log_cnd);
+  if (err != 0)
+  {
+    return err;
+  }
+
+  err = n_mtx_init(&_n_log_mtx, 0);
+  if (err != 0)
+  {
+    return err;
+  }
+
+  _n_log_done = true;
+  _n_log_sync = true;
+
+  return 0;
 }
 
 inline errno_t n_log_to(const char* file, const char* format, ...)
@@ -558,8 +624,6 @@ enum
   mtx_timed     = 2,
 };
 
-typedef CONDITION_VARIABLE cnd_t;
-typedef CRITICAL_SECTION mtx_t;
 typedef HANDLE thrd_t;
 typedef unsigned int (*thrd_start_t)(void*) ;
 #endif
