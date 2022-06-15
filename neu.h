@@ -11,7 +11,7 @@ MERCHANTABILITY OR FIT FOR A PARTICULAR PURPOSE.
 See the Mulan PSL v2 for more details.
 
 
-Last update: 2022-06-08 19:00
+Last update: 2022-06-13 10:20
 ******************************************************************************/
 #ifndef NEU_H
 #define NEU_H
@@ -46,10 +46,10 @@ extern "C" {
 typedef CONDITION_VARIABLE cnd_t;
 typedef CRITICAL_SECTION mtx_t;
 
-cnd_t _n_log_cnd;
-mtx_t _n_log_mtx;
-bool _n_log_done;
-bool _n_log_sync;
+static cnd_t _n_log_cnd;
+static mtx_t _n_log_mtx;
+static bool _n_log_done;
+static bool _n_log_sync;
 
 void n_cnd_destroy(cnd_t* cnd);
 int n_cnd_init(cnd_t* cnd);
