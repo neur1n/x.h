@@ -11,7 +11,7 @@ MERCHANTABILITY OR FIT FOR A PARTICULAR PURPOSE.
 See the Mulan PSL v2 for more details.
 
 
-Last update: 2022-06-13 10:20
+Last update: 2022-06-15 16:40
 ******************************************************************************/
 #ifndef NEU_H
 #define NEU_H
@@ -58,6 +58,8 @@ int n_cnd_wait(cnd_t* cnd, mtx_t* mutex);
 
 void n_mtx_destroy(mtx_t* mtx);
 int n_mtx_init(mtx_t* mtx, int type);
+
+const char* n_full_path(const char* src, char* dst);
 
 void n_log_sync_destroy();
 
@@ -317,7 +319,7 @@ inline void _n_log_internal(
   if (!(expr)) { \
     char ts[26] = {0}; \
     fprintf(stderr, "\n[ASSERTION FAILURE %s | %s - %s - %d] \n%s", \
-        n_timestamp(ts, 26), nfull_path(__FILENAME__), __FUNCTION__, __LINE__, #expr); \
+        n_timestamp(ts, 26), n_full_path(__FILENAME__, ts), __FUNCTION__, __LINE__, #expr); \
     exit(EXIT_FAILURE); } \
 } while (false)
 #else
