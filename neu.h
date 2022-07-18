@@ -11,7 +11,7 @@ MERCHANTABILITY OR FIT FOR A PARTICULAR PURPOSE.
 See the Mulan PSL v2 for more details.
 
 
-Last update: 2022-06-15 16:40
+Last update: 2022-07-18 20:28
 ******************************************************************************/
 #ifndef NEU_H
 #define NEU_H
@@ -1077,7 +1077,7 @@ inline int n_thrd_join(struct n_thread& thread)
   return thrd_success;
 }
 
-inline void n_thrd_wait(struct n_thread& thread, bool& ready)
+inline void n_thrd_wait(struct n_thread& thread, bool ready)
 {
   std::unique_lock<std::mutex> lock(thread.mtx);
 
