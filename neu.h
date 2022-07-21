@@ -12,6 +12,7 @@ See the Mulan PSL v2 for more details.
 
 
 Last update: 2022-07-18 20:28
+Version: v0.2.1
 ******************************************************************************/
 #ifndef NEU_H
 #define NEU_H
