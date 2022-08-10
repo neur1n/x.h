@@ -11,13 +11,59 @@ MERCHANTABILITY OR FIT FOR A PARTICULAR PURPOSE.
 See the Mulan PSL v2 for more details.
 
 
-Last update: 2022-07-18 20:28
-Version: v0.2.1
+Last update: 2022-08-01 15:42
+Version: v0.2.2
 ******************************************************************************/
 #ifndef NEU_H
 #define NEU_H
 
+//******************************************************* Compiler Detection{{{
+#if defined(__clang__)
+#  undef N_IS_CLANG
+#  define N_IS_CLANG (1)
+#elif defined(__GNUC__)
+#  undef N_IS_GCC
+#  define N_IS_GCC (1)
+#elif defined(_MSC_VER)
+#  undef N_IS_MSVC
+#  define N_IS_MSVC (1)
+#endif
+// Compiler Detection}}}
+
+//************************************************************* OS Detection{{{
+#if defined(__CYGWIN__)
+#  undef N_IS_CYGWIN
+#  define N_IS_CYGWIN (1)
+#elif defined(linux) || defined(__linux) || defined(__linux) \
+     || defined(__gnu_linux__)
+#  undef N_IS_LINUX
+#  define N_IS_LINUX (1)
+#elif defined(_WIN32) || defined(_WIN64) || defined(__WIN32__) \
+     || defined(__TOS_WIN__) || defined(__WINDOWS__)
+#  undef N_IS_WINDOWS
+#  define N_IS_WINDOWS (1)
+#endif
+// OS Detection}}}
+
+//******************************************************* Platform Detection{{{
+#if defined(__ANDROID__)
+#  undef N_IS_ANDROID
+#  define N_IS_ANDROID (1)
+#elif defined(__MINGW32__)
+#  undef N_IS_MINGW
+#  define N_IS_MINGW (1)
+#  if !defined(__MINGW64__)
+#    undef N_IS_MINGW32
+#    define N_IS_MINGW32 (1)
+#  else
+#    undef N_IS_MINGW64
+#    define N_IS_MINGW64 (1)
+#  endif
+#endif
+// Platform Detection}}}
+
 #include <assert.h>
+#include <errno.h>
 #include <float.h>
 #include <stdarg.h>
 #include <stdbool.h>
@@ -26,12 +72,12 @@ Version: v0.2.1
 #include <sys/stat.h>
 #include <time.h>
 
-#if defined(_MSC_VER)
+#if N_IS_WINDOWS
 #include <conio.h>
 #include <process.h>
 #include <Windows.h>
 #else
-#include <linux/limits.h>
+#include <limits.h>
 #include <sys/ioctl.h>
 #include <termios.h>
 #include <threads.h>
@@ -75,7 +121,7 @@ const char* n_timestamp(char* buffer, const size_t size);
 
 //******************************************************* N_EXPORT, N_IMPORT{{{
 #ifndef N_EXPORT
-#if defined(_MSC_VER)
+#if N_IS_WINDOWS
 #define N_EXPORT __declspec(dllexport)
 #else
 #define N_EXPORT __attribute__ ((visibility("default")))
@@ -83,7 +129,7 @@ const char* n_timestamp(char* buffer, const size_t size);
 #endif
 
 #ifndef N_IMPORT
-#if defined(_MSC_VER)
+#if N_IS_WINDOWS
 #define N_IMPORT __declspec(dllimport)
 #else
 #define N_IMPORT __attribute__ ((visibility("hidden")))
@@ -98,7 +144,7 @@ const char* n_timestamp(char* buffer, const size_t size);
 #define N_KEY_C     (0x43)
 #define N_KEY_D     (0x44)
 #define N_KEY_Q     (0x51)
-#if defined(_MSC_VER)
+#if N_IS_WINDOWS
 #define N_KEY_LEFT  (0x4B)
 #define N_KEY_UP    (0x48)
 #define N_KEY_RIGHT (0x4D)
@@ -158,7 +204,7 @@ const char* n_timestamp(char* buffer, const size_t size);
 #define _N_LOG_COLOR(level) "_N_LOG_COLOR" ## level
 #define _N_LOG_COLOR_EVAL(level)  _N_LOG_COLOR(level)
 
-#if defined(_MSC_VER)
+#if N_IS_WINDOWS
 #define __FILENAME__ (strrchr(__FILE__, '\\') ? strrchr(__FILE__, '\\') + 1 : __FILE__)
 #define __PRETTY_FUNCTION__ __FUNCSIG__
 #else
@@ -381,7 +427,7 @@ inline const char* n_full_path(const char* src, char* dst)
     return NULL;
   }
 
-#if defined(_MSC_VER)
+#if N_IS_WINDOWS
   return _fullpath(dst, src, _MAX_PATH);
 #else
   return realpath(src, dst);
@@ -456,7 +502,7 @@ inline bool n_path_exists(const char* path)
 {
   int result = -1;
 
-#if defined(_MSC_VER)
+#if N_IS_WINDOWS
   struct _stat buffer;
   result = _stat(path, &buffer);
 #else
@@ -467,7 +513,7 @@ inline bool n_path_exists(const char* path)
   return (result == 0);
 }
 
-#if !defined(_MSC_VER)
+#if !N_IS_WINDOWS
 inline int _kbhit()
 {
   static bool initialized = false;
@@ -491,7 +537,7 @@ inline int n_pressed_key()
 {
   int key = 0;
 
-#if defined(_MSC_VER)
+#if N_IS_WINDOWS
   if (_kbhit())
   {
     key = toupper(_getch());
@@ -579,7 +625,7 @@ inline int n_pressed_key()
 
 inline void n_sleep(const unsigned long ms)
 {
-#if defined(_MSC_VER)
+#if N_IS_WINDOWS
   Sleep(ms);
 #else
   struct timespec duration;
@@ -610,7 +656,7 @@ inline const char* n_timestamp(char* buffer, const size_t size)
 //Function}}}
 
 //************************************************************** Concurrency{{{
-#if defined(_MSC_VER)
+#if N_IS_WINDOWS
 enum
 {
   thrd_success  = 0,
@@ -648,7 +694,7 @@ inline void n_cnd_destroy(cnd_t* cnd)
     return;
   }
 
-#if defined(_MSC_VER)
+#if N_IS_WINDOWS
 #else
   return cnd_destroy(cnd);
 #endif
@@ -663,7 +709,7 @@ inline int n_cnd_init(cnd_t* cnd)
     return thrd_error;
   }
 
-#if defined(_MSC_VER)
+#if N_IS_WINDOWS
   InitializeConditionVariable(cnd);
   if (cnd == NULL)
   {
@@ -682,7 +728,7 @@ inline int n_cnd_notify_all(cnd_t* cnd)
     return thrd_error;
   }
 
-#if defined(_MSC_VER)
+#if N_IS_WINDOWS
   WakeAllConditionVariable(cnd);
   return thrd_success;
 #else
@@ -697,7 +743,7 @@ inline int n_cnd_notify_one(cnd_t* cnd)
     return thrd_error;
   }
 
-#if defined(_MSC_VER)
+#if N_IS_WINDOWS
   WakeConditionVariable(cnd);
   return thrd_success;
 #else
@@ -712,7 +758,7 @@ inline int n_cnd_wait(cnd_t* cnd, mtx_t* mutex)
     return thrd_error;
   }
 
-#if defined(_MSC_VER)
+#if N_IS_WINDOWS
   SleepConditionVariableCS(cnd, mutex, INFINITE);
   return thrd_success;
 #else
@@ -729,7 +775,7 @@ inline void n_mtx_destroy(mtx_t* mutex)
     return;
   }
 
-#if defined(_MSC_VER)
+#if N_IS_WINDOWS
   DeleteCriticalSection(mutex);
 #else
   mtx_destroy(mutex);
@@ -745,7 +791,7 @@ inline int n_mtx_init(mtx_t* mutex, int type)
     return thrd_error;
   }
 
-#if defined(_MSC_VER)
+#if N_IS_WINDOWS
   InitializeCriticalSection(mutex);
   if (mutex == NULL)
   {
@@ -764,7 +810,7 @@ inline int n_mtx_lock(mtx_t* mutex)
     return thrd_error;
   }
 
-#if defined(_MSC_VER)
+#if N_IS_WINDOWS
   EnterCriticalSection(mutex);
   return thrd_success;
 #else
@@ -779,7 +825,7 @@ inline int n_mtx_trylock(mtx_t* mutex)
     return thrd_error;
   }
 
-#if defined(_MSC_VER)
+#if N_IS_WINDOWS
   TryEnterCriticalSection(mutex);
   return thrd_success;
 #else
@@ -794,7 +840,7 @@ inline int n_mtx_unlock(mtx_t* mutex)
     return thrd_error;
   }
 
-#if defined(_MSC_VER)
+#if N_IS_WINDOWS
   LeaveCriticalSection(mutex);
   return thrd_success;
 #else
@@ -1121,7 +1167,7 @@ struct n_thread
 
 inline thrd_t n_thrd_current()
 {
-#if defined(_MSC_VER)
+#if N_IS_WINDOWS
   return GetCurrentThread();
 #else
   return thrd_current();
@@ -1130,7 +1176,7 @@ inline thrd_t n_thrd_current()
 
 inline int n_thrd_detach(struct n_thread thread)
 {
-#if defined(_MSC_VER)
+#if N_IS_WINDOWS
   BOOL succeeded = CloseHandle(thread.thd);
   if (!succeeded)
   {
@@ -1157,7 +1203,7 @@ inline bool n_thrd_equal(struct n_thread lhs, struct n_thread rhs)
 
 inline void n_thrd_exit(int exit_code)
 {
-#if defined(_MSC_VER)
+#if N_IS_WINDOWS
   _endthreadex((unsigned int)exit_code);
 #else
   thrd_exit(exit_code);
@@ -1173,7 +1219,7 @@ inline int n_thrd_init(struct n_thread* thread, thrd_start_t fn, void* data)
 
   int result = thrd_success;
 
-#if defined(_MSC_VER)
+#if N_IS_WINDOWS
   thread->thd = (thrd_t)_beginthreadex(NULL, 0, fn, data, 0, NULL);
   if (!thread->thd)
   {
@@ -1206,7 +1252,7 @@ inline int n_thrd_init(struct n_thread* thread, thrd_start_t fn, void* data)
 
 inline int n_thrd_join(struct n_thread thread, int* exit_code)
 {
-#if defined(_MSC_VER)
+#if N_IS_WINDOWS
   if (WaitForSingleObject(thread.thd, INFINITE) != WAIT_OBJECT_0)
   {
     return thrd_error;
@@ -1243,7 +1289,7 @@ inline void n_thrd_wait(struct n_thread thread, bool ready)
 
 inline int n_thrd_yield()
 {
-#if defined(_MSC_VER)
+#if N_IS_WINDOWS
   return SwitchToThread() ? thrd_success : thrd_error;
 #else
   thrd_yield();
