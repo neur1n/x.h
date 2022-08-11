@@ -11,8 +11,8 @@ MERCHANTABILITY OR FIT FOR A PARTICULAR PURPOSE.
 See the Mulan PSL v2 for more details.
 
 
-Last update: 2022-08-01 15:42
-Version: v0.2.2
+Last update: 2022-08-11 15:48
+Version: v0.2.3
 ******************************************************************************/
 #ifndef NEU_H
 #define NEU_H
@@ -90,13 +90,10 @@ Version: v0.2.2
 extern "C" {
 #endif
 //****************************************************************** Special{{{
+#if N_IS_WINDOWS
 typedef CONDITION_VARIABLE cnd_t;
 typedef CRITICAL_SECTION mtx_t;
-
-static cnd_t _n_log_cnd;
-static mtx_t _n_log_mtx;
-static bool _n_log_done;
-static bool _n_log_sync;
+#endif
 
 void n_cnd_destroy(cnd_t* cnd);
 int n_cnd_init(cnd_t* cnd);
@@ -107,10 +104,6 @@ void n_mtx_destroy(mtx_t* mtx);
 int n_mtx_init(mtx_t* mtx, int type);
 
 const char* n_full_path(const char* src, char* dst);
-
-void n_log_sync_destroy();
-
-int n_log_sync_init();
 
 errno_t n_log_to(const char* file, const char* format, ...);
 
@@ -214,31 +207,68 @@ const char* n_timestamp(char* buffer, const size_t size);
 #ifdef NDEBUG
 #define _N_LOG_PREFIX(level, filename, function, line) do { \
   char ts[26] = {0}; \
-  printf("[%s %s] ", level, n_timestamp(ts, 26)); \
+  printf("[%c %s] ", level, n_timestamp(ts, 26)); \
 } while (false)
 #else
 #define _N_LOG_PREFIX(level, filename, function, line) do { \
   char ts[26] = {0}; \
-  printf("[%s %s | %s - %s - %ld] ", level, n_timestamp(ts, 26), filename, function, line); \
+  printf("[%c %s | %s - %s - %ld] ", level, n_timestamp(ts, 26), filename, function, line); \
 } while (false)
 #endif
 
-inline void _n_log_internal(
-    const char* filename, const char* function, const long line,
-    const char* level, const char* file, const char* format, ...)
+struct n_log_syncer
 {
-  if (_n_log_sync)
-  {
-    while (!_n_log_done)
-    {
-      n_cnd_wait(&_n_log_cnd, &_n_log_mtx);
-    }
+  cnd_t cnd;
+  mtx_t mtx;
+  bool done;
+};
 
-    _n_log_done = false;
-    n_cnd_notify_all(&_n_log_cnd);
+inline void n_log_syncer_destroy(struct n_log_syncer* syncer)
+{
+  n_cnd_destroy(&syncer->cnd);
+  n_mtx_destroy(&syncer->mtx);
+  syncer->done = true;
+}
+
+inline int n_log_syncer_init(struct n_log_syncer* syncer)
+{
+  int err = 0;
+
+  err = n_cnd_init(&syncer->cnd);
+  if (err != 0)
+  {
+    return err;
   }
 
-  if (strcmp(level, "P") == 0)
+  err = n_mtx_init(&syncer->mtx, 0);
+  if (err != 0)
+  {
+    return err;
+  }
+
+  syncer->done = true;
+
+  return err;
+}
+
+inline void _n_log_internal(
+    const char* filename, const char* function, const long line,
+    const char level, struct n_log_syncer* syncer, const char* file,
+    const char* format, ...)
+{
+  if (syncer != NULL)
+  {
+    while (!syncer->done)
+    {
+      n_cnd_wait(&syncer->cnd, &syncer->mtx);
+    }
+    syncer->done = false;
+    n_cnd_notify_all(&syncer->cnd);
+  }
+
+  char lvl = toupper(level);
+
+  if ('P' == lvl)
   {
 #if N_LOG_LEVEL >= 1
     printf(_N_LOG_COLOR_P);
@@ -246,7 +276,7 @@ inline void _n_log_internal(
     return;
 #endif
   }
-  else if (strcmp(level, "F") == 0)
+  else if ('F' == lvl)
   {
 #if N_LOG_LEVEL >= 2
     printf(_N_LOG_COLOR_F);
@@ -254,7 +284,7 @@ inline void _n_log_internal(
     return;
 #endif
   }
-  else if (strcmp(level, "E") == 0)
+  else if ('E' == lvl)
   {
 #if N_LOG_LEVEL >= 3
     printf(_N_LOG_COLOR_E);
@@ -262,7 +292,7 @@ inline void _n_log_internal(
     return;
 #endif
   }
-  else if (strcmp(level, "W") == 0)
+  else if ('W' == lvl)
   {
 #if N_LOG_LEVEL >= 4
     printf(_N_LOG_COLOR_W);
@@ -270,7 +300,7 @@ inline void _n_log_internal(
     return;
 #endif
   }
-  else if (strcmp(level, "I") == 0)
+  else if ('I' == lvl)
   {
 #if N_LOG_LEVEL >= 5
     printf(_N_LOG_COLOR_I);
@@ -278,7 +308,7 @@ inline void _n_log_internal(
     return;
 #endif
   }
-  else if (strcmp(level, "D") == 0)
+  else if ('D' == lvl)
   {
 #if N_LOG_LEVEL >= 6
     printf(_N_LOG_COLOR_D);
@@ -296,15 +326,15 @@ inline void _n_log_internal(
     char ts[26] = {0};
 
     bytes = snprintf(
-        prefix_buf, sz, "[%s %s | %s - %s - %ld] ",
-        level, n_timestamp(ts, 26), filename, function, line);
+        prefix_buf, sz, "[%c %s | %s - %s - %ld] ",
+        lvl, n_timestamp(ts, 26), filename, function, line);
     if (bytes + 1 > sz)
     {
       free(prefix_buf);
       prefix_buf = (char*)malloc(bytes + 1);
       snprintf(
-          prefix_buf, bytes + 1, "[%s %s | %s - %s - %ld] ",
-          level, n_timestamp(ts, 26), filename, function, line);
+          prefix_buf, bytes + 1, "[%c %s | %s - %s - %ld] ",
+          lvl, n_timestamp(ts, 26), filename, function, line);
     }
 
 
@@ -330,7 +360,7 @@ inline void _n_log_internal(
   }
   else
   {
-    _N_LOG_PREFIX(level, filename, function, line);
+    _N_LOG_PREFIX(lvl, filename, function, line);
 
     va_list args;
     va_start(args, format);
@@ -340,13 +370,13 @@ inline void _n_log_internal(
     printf("%s\n", _N_COLOR_RESET);
   }
 
-  if (_n_log_sync)
+  if (syncer != NULL)
   {
-    _n_log_done = true;
-    n_cnd_notify_all(&_n_log_cnd);
+    syncer->done = true;
+    n_cnd_notify_all(&syncer->cnd);
   }
 
-  if (strcmp(level, "F") == 0)
+  if ('F' == lvl)
   {
 #if N_LOG_LEVEL >= 2
     exit(EXIT_FAILURE);
@@ -354,8 +384,8 @@ inline void _n_log_internal(
   }
 }
 
-#define n_log(level, file, format, ...) do { \
-  _n_log_internal(__FILENAME__, __FUNCTION__, __LINE__, level, file, format, ##__VA_ARGS__); \
+#define n_log(level, syncer, file, format, ...) do { \
+  _n_log_internal(__FILENAME__, __FUNCTION__, __LINE__, level, syncer, file, format, ##__VA_ARGS__); \
 } while (false)
 //n_log}}}
 
@@ -432,35 +462,6 @@ inline const char* n_full_path(const char* src, char* dst)
 #else
   return realpath(src, dst);
 #endif
-}
-
-inline void n_log_sync_destroy()
-{
-  n_cnd_destroy(&_n_log_cnd);
-  n_mtx_destroy(&_n_log_mtx);
-  _n_log_done = true;
-  _n_log_sync = false;
-}
-
-inline int n_log_sync_init()
-{
-  int err = 0;
-  err = n_cnd_init(&_n_log_cnd);
-  if (err != 0)
-  {
-    return err;
-  }
-
-  err = n_mtx_init(&_n_log_mtx, 0);
-  if (err != 0)
-  {
-    return err;
-  }
-
-  _n_log_done = true;
-  _n_log_sync = true;
-
-  return 0;
 }
 
 inline errno_t n_log_to(const char* file, const char* format, ...)
@@ -1278,7 +1279,7 @@ inline int n_thrd_join(struct n_thread thread, int* exit_code)
 inline void n_thrd_wait(struct n_thread thread, bool ready)
 {
   n_mtx_lock(&thread.mtx);
-  
+
   while (!ready)
   {
     n_cnd_wait(&thread.cnd, &thread.mtx);
