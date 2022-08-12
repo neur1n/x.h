@@ -11,7 +11,7 @@ MERCHANTABILITY OR FIT FOR A PARTICULAR PURPOSE.
 See the Mulan PSL v2 for more details.
 
 
-Last update: 2022-08-11 15:48
+Last update: 2022-08-12 15:47
 Version: v0.2.3
 ******************************************************************************/
 #ifndef NEU_H
@@ -328,7 +328,7 @@ inline void _n_log_internal(
     bytes = snprintf(
         prefix_buf, sz, "[%c %s | %s - %s - %ld] ",
         lvl, n_timestamp(ts, 26), filename, function, line);
-    if (bytes + 1 > sz)
+    if ((size_t)(bytes + 1) > sz)
     {
       free(prefix_buf);
       prefix_buf = (char*)malloc(bytes + 1);
@@ -343,7 +343,7 @@ inline void _n_log_internal(
 
     char* msg_buf = (char*)malloc(sz);
     bytes = vsnprintf(msg_buf, sz, format, msg);
-    if (bytes + 1 > sz)
+    if ((size_t)(bytes + 1) > sz)
     {
       free(msg_buf);
       msg_buf = (char*)malloc(bytes + 1);
