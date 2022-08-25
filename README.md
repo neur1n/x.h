@@ -128,7 +128,7 @@ and [GCC Wiki](https://gcc.gnu.org/wiki/Visibility) for more details.
 #define N_KEY_C     (0x43)
 #define N_KEY_D     (0x44)
 #define N_KEY_Q     (0x51)
-#if defined(_MSC_VER)
+#if N_IS_WINDOWS
 #define N_KEY_LEFT  (0x4B)
 #define N_KEY_UP    (0x48)
 #define N_KEY_RIGHT (0x4D)
