@@ -11,8 +11,8 @@ MERCHANTABILITY OR FIT FOR A PARTICULAR PURPOSE.
 See the Mulan PSL v2 for more details.
 
 
-Last update: 2022-08-12 15:47
-Version: v0.2.3
+Last update: 2022-08-24 16:05
+Version: v0.2.4
 ******************************************************************************/
 #ifndef NEU_H
 #define NEU_H
@@ -90,19 +90,6 @@ Version: v0.2.3
 extern "C" {
 #endif
 //****************************************************************** Special{{{
-#if N_IS_WINDOWS
-typedef CONDITION_VARIABLE cnd_t;
-typedef CRITICAL_SECTION mtx_t;
-#endif
-
-void n_cnd_destroy(cnd_t* cnd);
-int n_cnd_init(cnd_t* cnd);
-int n_cnd_notify_all(cnd_t* cnd);
-int n_cnd_wait(cnd_t* cnd, mtx_t* mutex);
-
-void n_mtx_destroy(mtx_t* mtx);
-int n_mtx_init(mtx_t* mtx, int type);
-
 const char* n_full_path(const char* src, char* dst);
 
 errno_t n_log_to(const char* file, const char* format, ...);
@@ -165,26 +152,14 @@ const char* n_timestamp(char* buffer, const size_t size);
 #endif
 #endif
 
-#if N_LOG_BOLD
-#define _N_COLOR_BLACK   "\033[1;30m"
-#define _N_COLOR_RED     "\033[1;31m"
-#define _N_COLOR_GREEN   "\033[1;32m"
-#define _N_COLOR_YELLOW  "\033[1;33m"
-#define _N_COLOR_BLUE    "\033[1;34m"
-#define _N_COLOR_MAGENTA "\033[1;35m"
-#define _N_COLOR_CYAN    "\033[1;36m"
-#define _N_COLOR_WHITE   "\033[1;37m"
-#else
-#define _N_COLOR_BLACK   "\033[0;30m"
-#define _N_COLOR_RED     "\033[0;31m"
-#define _N_COLOR_GREEN   "\033[0;32m"
-#define _N_COLOR_YELLOW  "\033[0;33m"
-#define _N_COLOR_BLUE    "\033[0;34m"
-#define _N_COLOR_MAGENTA "\033[0;35m"
-#define _N_COLOR_CYAN    "\033[0;36m"
-#define _N_COLOR_WHITE   "\033[0;37m"
-#define _N_COLOR_RESET   "\033[0m"
-#endif
+#define _N_COLOR_BLACK   "\033[30m"
+#define _N_COLOR_RED     "\033[31m"
+#define _N_COLOR_GREEN   "\033[32m"
+#define _N_COLOR_YELLOW  "\033[33m"
+#define _N_COLOR_BLUE    "\033[34m"
+#define _N_COLOR_MAGENTA "\033[35m"
+#define _N_COLOR_CYAN    "\033[36m"
+#define _N_COLOR_WHITE   "\033[37m"
 #define _N_COLOR_RESET   "\033[0m"
 
 #define _N_LOG_COLOR_P _N_COLOR_WHITE
@@ -193,9 +168,6 @@ const char* n_timestamp(char* buffer, const size_t size);
 #define _N_LOG_COLOR_W _N_COLOR_YELLOW
 #define _N_LOG_COLOR_I _N_COLOR_GREEN
 #define _N_LOG_COLOR_D _N_COLOR_BLUE
-
-#define _N_LOG_COLOR(level) "_N_LOG_COLOR" ## level
-#define _N_LOG_COLOR_EVAL(level)  _N_LOG_COLOR(level)
 
 #if N_IS_WINDOWS
 #define __FILENAME__ (strrchr(__FILE__, '\\') ? strrchr(__FILE__, '\\') + 1 : __FILE__)
@@ -216,62 +188,49 @@ const char* n_timestamp(char* buffer, const size_t size);
 } while (false)
 #endif
 
-struct n_log_syncer
+inline errno_t _n_log_prefix(
+    char* buffer, size_t* size, const char level, const char* filename,
+    const char* function, const long line)
 {
-  cnd_t cnd;
-  mtx_t mtx;
-  bool done;
-};
-
-inline void n_log_syncer_destroy(struct n_log_syncer* syncer)
-{
-  n_cnd_destroy(&syncer->cnd);
-  n_mtx_destroy(&syncer->mtx);
-  syncer->done = true;
-}
-
-inline int n_log_syncer_init(struct n_log_syncer* syncer)
-{
-  int err = 0;
-
-  err = n_cnd_init(&syncer->cnd);
-  if (err != 0)
+  if (buffer == NULL || size == NULL)
   {
-    return err;
+    return EINVAL;
   }
 
-  err = n_mtx_init(&syncer->mtx, 0);
-  if (err != 0)
+  char timestamp[26] = {0};
+  n_timestamp(timestamp, 26);
+
+  int bytes = 0;
+
+#ifdef NDEBUG
+  bytes = snprintf(buffer, size, "[%c %s] ", level, timestamp);
+#else
+  bytes = snprintf(
+      buffer, *size, "[%c %s | %s - %s - %ld] ",
+      level, timestamp, filename, function, line);
+#endif
+
+  if ((size_t)(bytes + 1) > *size)
   {
-    return err;
+    *size = (size_t)(bytes + 1);
+    return ENOBUFS;
   }
 
-  syncer->done = true;
-
-  return err;
+  return 0;
 }
 
 inline void _n_log_internal(
-    const char* filename, const char* function, const long line,
-    const char level, struct n_log_syncer* syncer, const char* file,
-    const char* format, ...)
+    const char level, const char* filename, const char* function,
+    const long line, const char* file, const char* format, ...)
 {
-  if (syncer != NULL)
-  {
-    while (!syncer->done)
-    {
-      n_cnd_wait(&syncer->cnd, &syncer->mtx);
-    }
-    syncer->done = false;
-    n_cnd_notify_all(&syncer->cnd);
-  }
-
-  char lvl = toupper(level);
+  char lvl = (char)toupper(level);
+  char color_level[8] = {0};
+  char color_reset[8] = {0};
 
   if ('P' == lvl)
   {
 #if N_LOG_LEVEL >= 1
-    printf(_N_LOG_COLOR_P);
+    snprintf(color_level, 7, _N_LOG_COLOR_P);
 #else
     return;
 #endif
@@ -279,7 +238,7 @@ inline void _n_log_internal(
   else if ('F' == lvl)
   {
 #if N_LOG_LEVEL >= 2
-    printf(_N_LOG_COLOR_F);
+    snprintf(color_level, 7, _N_LOG_COLOR_F);
 #else
     return;
 #endif
@@ -287,7 +246,7 @@ inline void _n_log_internal(
   else if ('E' == lvl)
   {
 #if N_LOG_LEVEL >= 3
-    printf(_N_LOG_COLOR_E);
+    snprintf(color_level, 7, _N_LOG_COLOR_E);
 #else
     return;
 #endif
@@ -295,7 +254,7 @@ inline void _n_log_internal(
   else if ('W' == lvl)
   {
 #if N_LOG_LEVEL >= 4
-    printf(_N_LOG_COLOR_W);
+    snprintf(color_level, 7, _N_LOG_COLOR_W);
 #else
     return;
 #endif
@@ -303,7 +262,7 @@ inline void _n_log_internal(
   else if ('I' == lvl)
   {
 #if N_LOG_LEVEL >= 5
-    printf(_N_LOG_COLOR_I);
+    snprintf(color_level, 7, _N_LOG_COLOR_I);
 #else
     return;
 #endif
@@ -311,81 +270,53 @@ inline void _n_log_internal(
   else if ('D' == lvl)
   {
 #if N_LOG_LEVEL >= 6
-    printf(_N_LOG_COLOR_D);
+    snprintf(color_level, 7, _N_LOG_COLOR_D);
 #else
     return;
 #endif
   }
 
+  size_t prefix_sz = 256;
+  char* prefix = (char*)malloc(prefix_sz);
+
+  errno_t err = _n_log_prefix(prefix, &prefix_sz, lvl, filename, function, line);
+  if (err < 0)
+  {
+    free(prefix);
+    prefix = (char*)malloc(prefix_sz);
+    _n_log_prefix(prefix, &prefix_sz, lvl, filename, function, line);
+  }
+
+  size_t msg_sz = 256;
+  char* msg = (char*)malloc(msg_sz);
+  int bytes = 0;
+
+  va_list data;
+  va_start(data, format);
+
+  bytes = vsnprintf(msg, msg_sz, format, data);
+  if ((size_t)(bytes + 1) > msg_sz)
+  {
+    free(msg);
+    msg = (char*)malloc(bytes + 1);
+    vsnprintf(msg, bytes + 1, format, data);
+  }
+
+  va_end(data);
+
   if (!n_string_empty(file))
   {
-    size_t sz = 256;
-    int bytes = 0;
-
-    char* prefix_buf = (char*)malloc(sz);
-    char ts[26] = {0};
-
-    bytes = snprintf(
-        prefix_buf, sz, "[%c %s | %s - %s - %ld] ",
-        lvl, n_timestamp(ts, 26), filename, function, line);
-    if ((size_t)(bytes + 1) > sz)
-    {
-      free(prefix_buf);
-      prefix_buf = (char*)malloc(bytes + 1);
-      snprintf(
-          prefix_buf, bytes + 1, "[%c %s | %s - %s - %ld] ",
-          lvl, n_timestamp(ts, 26), filename, function, line);
-    }
-
-
-    va_list msg;
-    va_start(msg, format);
-
-    char* msg_buf = (char*)malloc(sz);
-    bytes = vsnprintf(msg_buf, sz, format, msg);
-    if ((size_t)(bytes + 1) > sz)
-    {
-      free(msg_buf);
-      msg_buf = (char*)malloc(bytes + 1);
-      vsnprintf(msg_buf, bytes + 1, format, msg);
-    }
-
-    va_end(msg);
-    n_log_to(file, "%s%s\n", prefix_buf, msg_buf);
-
-    printf("%s%s%s\n", prefix_buf, msg_buf, _N_COLOR_RESET);
-
-    free(prefix_buf);
-    free(msg_buf);
-  }
-  else
-  {
-    _N_LOG_PREFIX(lvl, filename, function, line);
-
-    va_list args;
-    va_start(args, format);
-    vprintf(format, args);
-    va_end(args);
-
-    printf("%s\n", _N_COLOR_RESET);
+    n_log_to(file, "%s%s\n", prefix, msg);
   }
 
-  if (syncer != NULL)
-  {
-    syncer->done = true;
-    n_cnd_notify_all(&syncer->cnd);
-  }
+  printf("%s%s%s%s\n", color_level, prefix, msg, color_reset);
 
-  if ('F' == lvl)
-  {
-#if N_LOG_LEVEL >= 2
-    exit(EXIT_FAILURE);
-#endif
-  }
+  free(prefix);
+  free(msg);
 }
 
-#define n_log(level, syncer, file, format, ...) do { \
-  _n_log_internal(__FILENAME__, __FUNCTION__, __LINE__, level, syncer, file, format, ##__VA_ARGS__); \
+#define n_log(level, file, format, ...) do { \
+  _n_log_internal(level, __FILENAME__, __FUNCTION__, __LINE__, file, format, ##__VA_ARGS__); \
 } while (false)
 //n_log}}}
 
@@ -674,6 +605,8 @@ enum
   mtx_timed     = 2,
 };
 
+typedef CONDITION_VARIABLE cnd_t;
+typedef CRITICAL_SECTION mtx_t;
 typedef HANDLE thrd_t;
 typedef unsigned int (*thrd_start_t)(void*) ;
 #endif
