@@ -39,6 +39,9 @@
     </li>
     <li><a href="#documentation">Documentation</a>
       <ul>
+        <li><a href="#n_is_clang-n_is_gcc-n_is_msvc">N_IS_CLANG, N_IS_GCC, N_IS_MSVC</a></li>
+        <li><a href="#n_is_cygwin-n_is_linux-n_is_windows">N_IS_CYGWIN, N_IS_LINUX, N_IS_WINDOWS</a></li>
+        <li><a href="#n_is_android-n_is_mingw-n_is_mingw64">N_IS_ANDROID, N_IS_MINGW, N_IS_MINGW64</a></li>
         <li><a href="#n_export-n_import">N_EXPORT, N_IMPORT</a></li>
         <li><a href="#n_key">N_KEY</a></li>
         <li><a href="#n_log">n_log</a></li>
@@ -76,10 +79,28 @@ Put `neu.h` into your project.
 
 <!----------------------------------------------------------- DOCUMENTATION -->
 ## Documentation
+### N_IS_CLANG, N_IS_GCC, N_IS_MSVC
+- N_IS_CLANG: The compiler be used is Clang.
+- N_IS_GCC: The compiler be used is GCC.
+- N_IS_MSVC: The compiler be used is MSVC.
+
+
+### N_IS_CYGWIN, N_IS_LINUX, N_IS_WINDOWS
+- N_IS_CYGWIN: The OS is Cygwin.
+- N_IS_LINUX: The OS is Linux.
+- N_IS_WINDOWS: The OS is Windows (both 32 bit and 64 bit).
+
+
+### N_IS_ANDROID, N_IS_MINGW, N_IS_MINGW64
+- N_IS_ANDROID: The platform is Android.
+- N_IS_MINGW: The platform is Mingw (both 32 bit and 64 bit).
+- N_IS_MINGW64: The platform is Mingw64.
+
+
 ### N_EXPORT, N_IMPORT
 ```cpp
 #ifndef N_EXPORT
-#if defined(_MSC_VER)
+#if N_IS_WINDOWS
 #define N_EXPORT __declspec(dllexport)
 #else
 #define N_EXPORT __attribute__ ((visibility("default")))
@@ -87,7 +108,7 @@ Put `neu.h` into your project.
 #endif
 
 #ifndef N_IMPORT
-#if defined(_MSC_VER)
+#if N_IS_WINDOWS
 #define N_IMPORT __declspec(dllimport)
 #else
 #define N_IMPORT __attribute__ ((visibility("hidden")))
@@ -129,7 +150,7 @@ are defined as negative integers to work around. Please checkout
 
 ### n_log
 ```cpp
-void n_log(const char* level, const char* file, const char* format, ...)
+n_log(char level, const char* file, const char* format, ...)
 ```
 
 #### Parameters
@@ -144,12 +165,12 @@ saved.
 ```cpp
 int a = 0;
 
-n_log("P", NULL, "hello");
-n_log("D", NULL, "%s", "world");
-n_log("I", NULL, "%d", 10);
-n_log("W", NULL, "%d", ++a);
-n_log("E", "./log.txt", "%d", ++a);
-n_log("F", "./log.txt", "%s", "fatal");
+n_log('P', "", "hello");
+n_log('D', "", "%s", "world");
+n_log('I', "", "%d", 10);
+n_log('W', "", "%d", ++a);
+n_log('E', "./log.txt", "%d", ++a);
+n_log('F', "./log.txt", "%s", "fatal");
 ```
 
 The formats of each level are almost identical. What differentiate them are the
@@ -194,10 +215,6 @@ level prefixes and the colors. Additionally, fatal level will call
   </tr>
 </tbody>
 </table>
-
-<b>Please note that this macro is not thread-safe. One might need to surround it
-with a mutex or/and a condition variable, especially saving loggings to the
-same file with different calls.</b>
 
 
 ### n_array_size
@@ -279,46 +296,6 @@ the `&`, `|`, `~` operations.
 
 #### Returns
 - The generated integer, may be `int`, `long`, etc.
-
-
-### n_clamp
-```cpp
-T n_clamp(x, lower, upper)
-```
-
-#### Parameters
-- `x`: Variable or value to be clamped.
-- `lower`: Lower bound.
-- `upper`: Upper bound.
-
-#### Returns
-- The clamped value.
-
-
-### n_max
-```cpp
-T n_max(a, b)
-```
-
-#### Parameters
-- `a`: Some variable or value.
-- `b`: Another variable or value.
-
-#### Returns
-- The bigger value.
-
-
-### n_min
-```cpp
-T n_min(a, b)
-```
-
-#### Parameters
-- `a`: Some variable or value.
-- `b`: Another variable or value.
-
-#### Returns
-- The smaller value.
 
 
 ### n_pi

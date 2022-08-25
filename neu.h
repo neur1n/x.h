@@ -11,7 +11,7 @@ MERCHANTABILITY OR FIT FOR A PARTICULAR PURPOSE.
 See the Mulan PSL v2 for more details.
 
 
-Last update: 2022-08-24 16:05
+Last update: 2022-08-25 18:23
 Version: v0.2.4
 ******************************************************************************/
 #ifndef NEU_H
@@ -138,10 +138,6 @@ const char* n_timestamp(char* buffer, const size_t size);
 //N_KEY}}}
 
 //******************************************************************** n_log{{{
-#ifndef N_LOG_BOLD
-#define N_LOG_BOLD (true)
-#endif
-
 #ifdef NDEBUG
 #ifndef N_LOG_LEVEL
 #error N_LOG_LEVEL is not specified!
