@@ -11,8 +11,8 @@ MERCHANTABILITY OR FIT FOR A PARTICULAR PURPOSE.
 See the Mulan PSL v2 for more details.
 
 
-Last update: 2022-08-25 18:23
-Version: v0.2.4
+Last update: 2022-08-29 16:50
+Version: v0.2.5
 ******************************************************************************/
 #ifndef NEU_H
 #define NEU_H
@@ -85,18 +85,26 @@ Version: v0.2.4
 #endif
 
 
+#ifndef N_INLINE
+#ifdef __cplusplus
+#define N_INLINE inline
+#else
+#define N_INLINE static inline
+#endif
+#endif
+
 //******************************************************************** C/C++{{{
 #ifdef __cplusplus
 extern "C" {
 #endif
 //****************************************************************** Special{{{
-const char* n_full_path(const char* src, char* dst);
+N_INLINE const char* n_full_path(const char* src, char* dst);
 
-errno_t n_log_to(const char* file, const char* format, ...);
+N_INLINE errno_t n_log_to(const char* file, const char* format, ...);
 
-bool n_string_empty(const char* string);
+N_INLINE bool n_string_empty(const char* string);
 
-const char* n_timestamp(char* buffer, const size_t size);
+N_INLINE const char* n_timestamp(char* buffer, const size_t size);
 //Special}}}
 
 //******************************************************* N_EXPORT, N_IMPORT{{{
@@ -184,7 +192,7 @@ const char* n_timestamp(char* buffer, const size_t size);
 } while (false)
 #endif
 
-inline errno_t _n_log_prefix(
+N_INLINE errno_t _n_log_prefix(
     char* buffer, size_t* size, const char level, const char* filename,
     const char* function, const long line)
 {
@@ -215,7 +223,7 @@ inline errno_t _n_log_prefix(
   return 0;
 }
 
-inline void _n_log_internal(
+N_INLINE void _n_log_internal(
     const char level, const char* filename, const char* function,
     const long line, const char* file, const char* format, ...)
 {
@@ -335,17 +343,17 @@ inline void _n_log_internal(
 #define n_pi(T) (T)(3.141592653589793238462643383279502884197169399375)
 
 //***************************************************************** Function{{{
-inline bool n_succ(const errno_t err)
+N_INLINE bool n_succ(const errno_t err)
 {
   return (err == 0);
 }
 
-inline bool n_fail(const errno_t err)
+N_INLINE bool n_fail(const errno_t err)
 {
   return (err != 0);
 }
 
-inline double n_duration(
+N_INLINE double n_duration(
     const struct timespec start, const struct timespec end, const char* unit)
 {
   double diff = (double)(
@@ -377,7 +385,7 @@ inline double n_duration(
   }
 }
 
-inline const char* n_full_path(const char* src, char* dst)
+N_INLINE const char* n_full_path(const char* src, char* dst)
 {
   if (dst == NULL)
   {
@@ -391,7 +399,7 @@ inline const char* n_full_path(const char* src, char* dst)
 #endif
 }
 
-inline errno_t n_log_to(const char* file, const char* format, ...)
+N_INLINE errno_t n_log_to(const char* file, const char* format, ...)
 {
   if (n_string_empty(file))
   {
@@ -426,7 +434,7 @@ inline errno_t n_log_to(const char* file, const char* format, ...)
   return err;
 }
 
-inline bool n_path_exists(const char* path)
+N_INLINE bool n_path_exists(const char* path)
 {
   int result = -1;
 
@@ -442,7 +450,7 @@ inline bool n_path_exists(const char* path)
 }
 
 #if !N_IS_WINDOWS
-inline int _kbhit()
+N_INLINE int _kbhit()
 {
   static bool initialized = false;
   if (!initialized)
@@ -461,7 +469,7 @@ inline int _kbhit()
 }
 #endif
 
-inline int n_pressed_key()
+N_INLINE int n_pressed_key()
 {
   int key = 0;
 
@@ -551,7 +559,7 @@ inline int n_pressed_key()
 #endif
 }
 
-inline void n_sleep(const unsigned long ms)
+N_INLINE void n_sleep(const unsigned long ms)
 {
 #if N_IS_WINDOWS
   Sleep(ms);
@@ -562,12 +570,12 @@ inline void n_sleep(const unsigned long ms)
 #endif
 }
 
-inline bool n_string_empty(const char* string)
+N_INLINE bool n_string_empty(const char* string)
 {
   return (string == NULL || string[0] == '\0');
 }
 
-inline const char* n_timestamp(char* buffer, const size_t size)
+N_INLINE const char* n_timestamp(char* buffer, const size_t size)
 {
   time_t now = time(NULL);
 
@@ -617,7 +625,7 @@ enum n_thrd_ctrl_code
 //Concurrency}}}
 
 //******************************************************************** n_cnd{{{
-inline void n_cnd_destroy(cnd_t* cnd)
+N_INLINE void n_cnd_destroy(cnd_t* cnd)
 {
   if (cnd == NULL)
   {
@@ -632,7 +640,7 @@ inline void n_cnd_destroy(cnd_t* cnd)
   cnd = NULL;
 }
 
-inline int n_cnd_init(cnd_t* cnd)
+N_INLINE int n_cnd_init(cnd_t* cnd)
 {
   if (cnd == NULL)
   {
@@ -651,7 +659,7 @@ inline int n_cnd_init(cnd_t* cnd)
 #endif
 }
 
-inline int n_cnd_notify_all(cnd_t* cnd)
+N_INLINE int n_cnd_notify_all(cnd_t* cnd)
 {
   if (cnd == NULL)
   {
@@ -666,7 +674,7 @@ inline int n_cnd_notify_all(cnd_t* cnd)
 #endif
 }
 
-inline int n_cnd_notify_one(cnd_t* cnd)
+N_INLINE int n_cnd_notify_one(cnd_t* cnd)
 {
   if (cnd == NULL)
   {
@@ -681,7 +689,7 @@ inline int n_cnd_notify_one(cnd_t* cnd)
 #endif
 }
 
-inline int n_cnd_wait(cnd_t* cnd, mtx_t* mutex)
+N_INLINE int n_cnd_wait(cnd_t* cnd, mtx_t* mutex)
 {
   if (cnd == NULL || mutex == NULL)
   {
@@ -698,7 +706,7 @@ inline int n_cnd_wait(cnd_t* cnd, mtx_t* mutex)
 //n_cnd_x}}}
 
 //******************************************************************** n_mtx{{{
-inline void n_mtx_destroy(mtx_t* mutex)
+N_INLINE void n_mtx_destroy(mtx_t* mutex)
 {
   if (mutex == NULL)
   {
@@ -714,7 +722,7 @@ inline void n_mtx_destroy(mtx_t* mutex)
   mutex = NULL;
 }
 
-inline int n_mtx_init(mtx_t* mutex, int type)
+N_INLINE int n_mtx_init(mtx_t* mutex, int type)
 {
   if (mutex == NULL)
   {
@@ -733,7 +741,7 @@ inline int n_mtx_init(mtx_t* mutex, int type)
 #endif
 }
 
-inline int n_mtx_lock(mtx_t* mutex)
+N_INLINE int n_mtx_lock(mtx_t* mutex)
 {
   if (mutex == NULL)
   {
@@ -748,7 +756,7 @@ inline int n_mtx_lock(mtx_t* mutex)
 #endif
 }
 
-inline int n_mtx_trylock(mtx_t* mutex)
+N_INLINE int n_mtx_trylock(mtx_t* mutex)
 {
   if (mutex == NULL)
   {
@@ -763,7 +771,7 @@ inline int n_mtx_trylock(mtx_t* mutex)
 #endif
 }
 
-inline int n_mtx_unlock(mtx_t* mutex)
+N_INLINE int n_mtx_unlock(mtx_t* mutex)
 {
   if (mutex == NULL)
   {
@@ -799,14 +807,14 @@ struct n_timer
   } report;
 };
 
-inline struct timespec n_now()
+N_INLINE struct timespec n_now()
 {
   struct timespec ts;
   timespec_get(&ts, TIME_UTC);
   return ts;
 }
 
-inline errno_t n_timer_init(struct n_timer* timer)
+N_INLINE errno_t n_timer_init(struct n_timer* timer)
 {
   if (timer == NULL)
   {
@@ -827,7 +835,7 @@ inline errno_t n_timer_init(struct n_timer* timer)
   return 0;
 }
 
-inline errno_t n_tic(const bool echo, struct n_timer* timer)
+N_INLINE errno_t n_tic(const bool echo, struct n_timer* timer)
 {
   if (timer == NULL)
   {
@@ -845,7 +853,7 @@ inline errno_t n_tic(const bool echo, struct n_timer* timer)
   return 0;
 }
 
-inline errno_t n_toc(const bool echo, const char* unit, struct n_timer* timer)
+N_INLINE errno_t n_toc(const bool echo, const char* unit, struct n_timer* timer)
 {
   if (timer == NULL)
   {
@@ -869,7 +877,7 @@ inline errno_t n_toc(const bool echo, const char* unit, struct n_timer* timer)
   return 0;
 }
 
-inline errno_t n_toc_profile(
+N_INLINE errno_t n_toc_profile(
     const bool echo, const long long cycle, const char* unit, const char* title,
     struct n_timer* timer)
 {
@@ -1009,23 +1017,23 @@ struct n_thread
   std::mutex mtx;
 };
 
-inline std::thread::id n_thrd_current()
+N_INLINE std::thread::id n_thrd_current()
 {
   return std::this_thread::get_id();
 }
 
-inline int n_thrd_detach(struct n_thread& thread)
+N_INLINE int n_thrd_detach(struct n_thread& thread)
 {
   thread.thd.detach();
   return thrd_success;
 }
 
-inline bool n_thrd_equal(const struct n_thread& lhs, const struct n_thread& rhs)
+N_INLINE bool n_thrd_equal(const struct n_thread& lhs, const struct n_thread& rhs)
 {
   return lhs.thd.get_id() == rhs.thd.get_id();
 }
 
-inline void n_thrd_exit()
+N_INLINE void n_thrd_exit()
 {
 }
 
@@ -1043,7 +1051,7 @@ int n_thrd_init(struct n_thread* thread, Fn&& fn, Args&& ...args)
   return thrd_success;
 }
 
-inline int n_thrd_join(struct n_thread& thread)
+N_INLINE int n_thrd_join(struct n_thread& thread)
 {
   if (!thread.thd.joinable())
   {
@@ -1054,7 +1062,7 @@ inline int n_thrd_join(struct n_thread& thread)
   return thrd_success;
 }
 
-inline void n_thrd_wait(struct n_thread& thread, bool ready)
+N_INLINE void n_thrd_wait(struct n_thread& thread, bool ready)
 {
   std::unique_lock<std::mutex> lock(thread.mtx);
 
@@ -1064,7 +1072,7 @@ inline void n_thrd_wait(struct n_thread& thread, bool ready)
   }
 }
 
-inline int n_thrd_yield()
+N_INLINE int n_thrd_yield()
 {
   std::this_thread::yield();
   return thrd_success;
@@ -1095,7 +1103,7 @@ struct n_thread
   mtx_t mtx;
 };
 
-inline thrd_t n_thrd_current()
+N_INLINE thrd_t n_thrd_current()
 {
 #if N_IS_WINDOWS
   return GetCurrentThread();
@@ -1104,7 +1112,7 @@ inline thrd_t n_thrd_current()
 #endif
 }
 
-inline int n_thrd_detach(struct n_thread thread)
+N_INLINE int n_thrd_detach(struct n_thread thread)
 {
 #if N_IS_WINDOWS
   BOOL succeeded = CloseHandle(thread.thd);
@@ -1126,12 +1134,12 @@ inline int n_thrd_detach(struct n_thread thread)
   return thrd_success;
 }
 
-inline bool n_thrd_equal(struct n_thread lhs, struct n_thread rhs)
+N_INLINE bool n_thrd_equal(struct n_thread lhs, struct n_thread rhs)
 {
   return lhs.thd == rhs.thd;
 }
 
-inline void n_thrd_exit(int exit_code)
+N_INLINE void n_thrd_exit(int exit_code)
 {
 #if N_IS_WINDOWS
   _endthreadex((unsigned int)exit_code);
@@ -1140,7 +1148,7 @@ inline void n_thrd_exit(int exit_code)
 #endif
 }
 
-inline int n_thrd_init(struct n_thread* thread, thrd_start_t fn, void* data)
+N_INLINE int n_thrd_init(struct n_thread* thread, thrd_start_t fn, void* data)
 {
   if (thread == NULL)
   {
@@ -1180,7 +1188,7 @@ inline int n_thrd_init(struct n_thread* thread, thrd_start_t fn, void* data)
   return thrd_success;
 }
 
-inline int n_thrd_join(struct n_thread thread, int* exit_code)
+N_INLINE int n_thrd_join(struct n_thread thread, int* exit_code)
 {
 #if N_IS_WINDOWS
   if (WaitForSingleObject(thread.thd, INFINITE) != WAIT_OBJECT_0)
@@ -1205,7 +1213,7 @@ inline int n_thrd_join(struct n_thread thread, int* exit_code)
 #endif
 }
 
-inline void n_thrd_wait(struct n_thread thread, bool ready)
+N_INLINE void n_thrd_wait(struct n_thread thread, bool ready)
 {
   n_mtx_lock(&thread.mtx);
 
@@ -1217,7 +1225,7 @@ inline void n_thrd_wait(struct n_thread thread, bool ready)
   n_mtx_unlock(&thread.mtx);
 }
 
-inline int n_thrd_yield()
+N_INLINE int n_thrd_yield()
 {
 #if N_IS_WINDOWS
   return SwitchToThread() ? thrd_success : thrd_error;
