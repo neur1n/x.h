@@ -74,7 +74,7 @@
 3， 请将如下声明文本放入每个源文件的头部注释中。
 
 Copyright (c) 2022 Jihang Li
-neu.h is licensed under Mulan PSL v2.
+n.h is licensed under Mulan PSL v2.
 You can use this software according to the terms and conditions of the Mulan
 PSL v2.
 You may obtain a copy of Mulan PSL v2 at:
@@ -185,7 +185,7 @@ iii. Attach the statement to the appropriate annotated syntax at the beginning
 of each source file.
 
 Copyright (c) 2022 Jihang Li
-neu.h is licensed under Mulan PSL v2.
+n.h is licensed under Mulan PSL v2.
 You can use this software according to the terms and conditions of the Mulan
 PSL v2.
 You may obtain a copy of Mulan PSL v2 at:

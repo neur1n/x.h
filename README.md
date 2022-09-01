@@ -1,10 +1,10 @@
 <!------------------------------------------------------------------ HEADER -->
 <pre align="center">
-  ▄▀▀▀▀▄▀▀▄ █▀▀▀▀▀▀▀█ █▀▀▀█▀▀▀█    █▀▀▀█▀▀▀█
-  █    █  █ █   ▄▄▄▄█ █   █   █    █   █   █
-  █  █ █  █ █       █ █   █   █    █       █
-  █  █    █ █   ▀▀▀▀█ █   ▀   █    █   █   █
-  ▀▄▄▀▄▄▄▄▀ █▄▄▄▄▄▄▄█ ▀▄▄▄▄▄▄▄▀ ██ █▄▄▄█▄▄▄█
+  ▄▀▀▀▀▄▀▀▄    █▀▀▀█▀▀▀█
+  █    █  █    █   █   █
+  █  █ █  █    █       █
+  █  █    █    █   █   █
+  ▀▄▄▀▄▄▄▄▀ ██ █▄▄▄█▄▄▄█
 </pre>
 
 
@@ -22,7 +22,7 @@
 </p>
 
 <h3 align="center">
-  ⚡ neu.h was heavily refactored after <a href=https://github.com/Neur1n/neu.h/releases/tag/v0.2.0>v0.2.0</a>.
+  ⚡ n.h was heavily refactored after <a href=https://github.com/Neur1n/n.h/releases/tag/v0.2.0>v0.2.0</a>.
 </h3>
 
 
@@ -74,7 +74,7 @@ C/C++ compiler that supports C11/C++11.
 
 
 ### Installation
-Put `neu.h` into your project.
+Put `u.h` into your project.
 
 
 <!----------------------------------------------------------- DOCUMENTATION -->

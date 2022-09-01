@@ -1,6 +1,6 @@
 /******************************************************************************
 Copyright (c) 2022 Jihang Li
-neu.h is licensed under Mulan PSL v2.
+n.h is licensed under Mulan PSL v2.
 You can use this software according to the terms and conditions of the Mulan
 PSL v2.
 You may obtain a copy of Mulan PSL v2 at:
@@ -14,8 +14,8 @@ See the Mulan PSL v2 for more details.
 Last update: 2022-08-29 16:50
 Version: v0.2.5
 ******************************************************************************/
-#ifndef NEU_H
-#define NEU_H
+#ifndef N_H
+#define N_H
 
 //******************************************************* Compiler Detection{{{
 #if defined(__clang__)
@@ -1238,4 +1238,4 @@ N_INLINE int n_thrd_yield()
 //C}}}
 #endif
 
-#endif  // NEU_H
+#endif  // N_H
