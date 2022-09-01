@@ -11,13 +11,17 @@ MERCHANTABILITY OR FIT FOR A PARTICULAR PURPOSE.
 See the Mulan PSL v2 for more details.
 
 
-Last update: 2022-08-29 16:50
-Version: v0.2.5
+Last update: 2022-09-01 11:42
+Version: v0.3.0
 ******************************************************************************/
 #ifndef N_H
 #define N_H
 
 //******************************************************* Compiler Detection{{{
+#define N_IS_CLANG (0)
+#define N_IS_GCC (0)
+#define N_IS_MSVC (0)
+
 #if defined(__clang__)
 #  undef N_IS_CLANG
 #  define N_IS_CLANG (1)
@@ -31,6 +35,10 @@ Version: v0.2.5
 // Compiler Detection}}}
 
 //************************************************************* OS Detection{{{
+#define N_IS_CYGWIN (0)
+#define N_IS_LINUX (0)
+#define N_IS_WINDOWS (0)
+
 #if defined(__CYGWIN__)
 #  undef N_IS_CYGWIN
 #  define N_IS_CYGWIN (1)
@@ -46,6 +54,10 @@ Version: v0.2.5
 // OS Detection}}}
 
 //******************************************************* Platform Detection{{{
+#define N_IS_ANDROID (0)
+#define N_IS_MINGW32 (0)
+#define N_IS_MINGW64 (0)
+
 #if defined(__ANDROID__)
 #  undef N_IS_ANDROID
 #  define N_IS_ANDROID (1)
@@ -67,6 +79,7 @@ Version: v0.2.5
 #include <float.h>
 #include <stdarg.h>
 #include <stdbool.h>
+#include <stdint.h>
 #include <stdio.h>
 #include <string.h>
 #include <sys/stat.h>
@@ -178,18 +191,6 @@ N_INLINE const char* n_timestamp(char* buffer, const size_t size);
 #define __PRETTY_FUNCTION__ __FUNCSIG__
 #else
 #define __FILENAME__ (strrchr(__FILE__, '/') ? strrchr(__FILE__, '/') + 1 : __FILE__)
-#endif
-
-#ifdef NDEBUG
-#define _N_LOG_PREFIX(level, filename, function, line) do { \
-  char ts[26] = {0}; \
-  printf("[%c %s] ", level, n_timestamp(ts, 26)); \
-} while (false)
-#else
-#define _N_LOG_PREFIX(level, filename, function, line) do { \
-  char ts[26] = {0}; \
-  printf("[%c %s | %s - %s - %ld] ", level, n_timestamp(ts, 26), filename, function, line); \
-} while (false)
 #endif
 
 N_INLINE errno_t _n_log_prefix(
@@ -786,6 +787,243 @@ N_INLINE int n_mtx_unlock(mtx_t* mutex)
 #endif
 }
 //n_mtx}}}
+
+//******************************************************************* n_cmem{{{
+struct n_cmem
+{
+  mtx_t mtx;
+  bool full;
+  size_t capacity;
+  size_t rptr;  // read pointer (head)
+  size_t wptr;  // write pointer (tail)
+  uint8_t* buffer;
+};
+
+N_INLINE void n_cmem_clear(struct n_cmem* cm)
+{
+  if (cm == NULL)
+  {
+    return;
+  }
+
+  n_mtx_lock(&cm->mtx);
+
+  cm->full = false;
+  cm->rptr = 0;
+  cm->wptr = 0;
+
+  n_mtx_unlock(&cm->mtx);
+}
+
+N_INLINE void n_cmem_destroy(struct n_cmem* cm)
+{
+  if (cm == NULL)
+  {
+    return;
+  }
+
+  n_mtx_destroy(&cm->mtx);
+  free(cm->buffer);
+}
+
+N_INLINE errno_t n_cmem_get(void* buffer, const size_t size, struct n_cmem* cm)
+{
+  if (cm == NULL || cm->buffer == NULL || size < 1)
+  {
+    return EINVAL;
+  }
+
+  n_mtx_lock(&cm->mtx);
+
+  size_t avail = 0;
+
+  if (cm->full)
+  {
+    avail = cm->capacity;
+  }
+  else
+  {
+    if (cm->wptr >= cm->rptr)
+    {
+      avail = cm->wptr - cm->rptr;
+    }
+    else
+    {
+      avail = cm->capacity - cm->rptr + cm->wptr;
+    }
+  }
+
+  if (avail < size)
+  {
+    n_mtx_unlock(&cm->mtx);
+    return ENODATA;
+  }
+
+  uint8_t* start = cm->buffer + cm->rptr;
+  size_t left = cm->capacity - cm->rptr;
+
+  if (left >= size)
+  {
+    memcpy(buffer, start, size);
+  }
+  else
+  {
+    memcpy(buffer, start, left);
+    memcpy((uint8_t*)buffer + left, cm->buffer, size - left);
+  }
+
+  cm->rptr = (cm->rptr + size) % cm->capacity;
+  cm->full = false;
+
+  n_mtx_unlock(&cm->mtx);
+
+  return 0;
+}
+
+N_INLINE errno_t n_cmem_init(struct n_cmem* cm, const size_t size)
+{
+  if (cm == NULL || size < 1)
+  {
+    return EINVAL;
+  }
+
+  cm->buffer = (uint8_t*)malloc(size);
+  if (cm->buffer == NULL)
+  {
+    return ENOMEM;
+  }
+
+  int err = n_mtx_init(&cm->mtx, mtx_plain);
+  if (n_fail(err))
+  {
+    free(cm->buffer);
+
+    switch (err)
+    {
+      case thrd_nomen:
+        return ENOMEM;
+      case thrd_timedout:
+        return ETIMEDOUT;
+      case thrd_busy:
+        return EAGAIN;
+      default:
+        return EAGAIN;
+    }
+  }
+
+  cm->full = false;
+  cm->capacity = size;
+  cm->rptr = 0;
+  cm->wptr = 0;
+
+  return 0;
+}
+
+N_INLINE errno_t n_cmem_put(struct n_cmem* cm, const void* buffer, const size_t size)
+{
+  if (cm == NULL || cm->buffer == NULL || size < 1)
+  {
+    return EINVAL;
+  }
+
+  n_mtx_lock(&cm->mtx);
+
+  if (size > cm->capacity || cm->full)
+  {
+    n_mtx_unlock(&cm->mtx);
+    return ENOMEM;
+  }
+
+  size_t used = 0;
+
+  if (cm->full)
+  {
+    used = cm->capacity;
+  }
+  else
+  {
+    if (cm->wptr >= cm->rptr)
+    {
+      used = cm->wptr - cm->rptr;
+    }
+    else
+    {
+      used = cm->capacity - cm->rptr + cm->wptr;
+    }
+  }
+
+  size_t free = cm->capacity - used;
+
+  if (free < size)
+  {
+    n_mtx_unlock(&cm->mtx);
+    return ENOMEM;
+  }
+
+  uint8_t* start = cm->buffer + cm->wptr;
+
+  if (cm->wptr >= cm->rptr)
+  {
+    size_t left = cm->capacity - cm->wptr;
+
+    if (left >= size)
+    {
+      memcpy(start, buffer, size);
+    }
+    else
+    {
+      memcpy(start, buffer, left);
+      memcpy(cm->buffer, (uint8_t*)buffer + left, size - left);
+    }
+  }
+  else
+  {
+    memcpy(start, buffer, size);
+  }
+
+  cm->wptr = (cm->wptr + size) / cm->capacity;
+  if (cm->rptr == cm->wptr)
+  {
+    cm->full = true;
+  }
+
+  n_mtx_unlock(&cm->mtx);
+
+  return 0;
+}
+
+N_INLINE size_t n_cmem_size(struct n_cmem* cm)
+{
+  if (cm == NULL)
+  {
+    return 0;
+  }
+
+  n_mtx_lock(&cm->mtx);
+
+  size_t size = 0;
+
+  if (cm->full)
+  {
+    size = cm->capacity;
+  }
+  else
+  {
+    if (cm->wptr >= cm->rptr)
+    {
+      size = cm->wptr - cm->rptr;
+    }
+    else
+    {
+      size = cm->capacity - cm->rptr + cm->wptr;
+    }
+  }
+
+  n_mtx_unlock(&cm->mtx);
+
+  return size;
+}
+//n_cmem}}}
 
 //****************************************************************** n_timer{{{
 struct n_timer
