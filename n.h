@@ -11,8 +11,8 @@ MERCHANTABILITY OR FIT FOR A PARTICULAR PURPOSE.
 See the Mulan PSL v2 for more details.
 
 
-Last update: 2022-09-01 11:42
-Version: v0.3.0
+Last update: 2022-09-02 17:30
+Version: v0.3.1
 ******************************************************************************/
 #ifndef N_H
 #define N_H
@@ -86,9 +86,10 @@ Version: v0.3.0
 #include <time.h>
 
 #if N_IS_WINDOWS
+#include <Windows.h>
 #include <conio.h>
 #include <process.h>
-#include <Windows.h>
+#include <synchapi.h>
 #else
 #include <limits.h>
 #include <sys/ioctl.h>
@@ -97,28 +98,41 @@ Version: v0.3.0
 #include <unistd.h>
 #endif
 
-
-#ifndef N_INLINE
-#ifdef __cplusplus
+#ifdef __cplusplus  //******************************************** C++ Specific
 #define N_INLINE inline
-#else
+
+#define n_release(x) do { \
+  if (x != nullptr) { \
+    delete x; \
+    x = nullptr; \
+  } \
+} while (false)
+
+#define n_release_array(x) do { \
+  if (x != nullptr) { \
+    delete[] x; \
+    x = nullptr; \
+  } \
+} while (false)
+#else  //*********************************************************** C Specific
 #define N_INLINE static inline
 #endif
-#endif
 
-//******************************************************************** C/C++{{{
+//**************************************************************** C and C++{{{
 #ifdef __cplusplus
 extern "C" {
 #endif
-//****************************************************************** Special{{{
-N_INLINE const char* n_full_path(const char* src, char* dst);
+//***************************************************** Special Declarations{{{
+N_INLINE const char* n_full_path(char* dst, const char* src);
 
 N_INLINE errno_t n_log_to(const char* file, const char* format, ...);
+
+N_INLINE struct timespec n_now();
 
 N_INLINE bool n_string_empty(const char* string);
 
 N_INLINE const char* n_timestamp(char* buffer, const size_t size);
-//Special}}}
+// Special Declarations}}}
 
 //******************************************************* N_EXPORT, N_IMPORT{{{
 #ifndef N_EXPORT
@@ -136,7 +150,7 @@ N_INLINE const char* n_timestamp(char* buffer, const size_t size);
 #define N_IMPORT __attribute__ ((visibility("hidden")))
 #endif
 #endif
-//N_EXPORT, N_IMPORT}}}
+// N_EXPORT, N_IMPORT}}}
 
 //******************************************************************** N_KEY{{{
 #define N_KEY_ESC   (0x1B)
@@ -156,7 +170,7 @@ N_INLINE const char* n_timestamp(char* buffer, const size_t size);
 #define N_KEY_RIGHT (-3)
 #define N_KEY_DOWN  (-4)
 #endif
-//N_KEY}}}
+// N_KEY}}}
 
 //******************************************************************** n_log{{{
 #ifdef NDEBUG
@@ -323,7 +337,7 @@ N_INLINE void _n_log_internal(
 #define n_log(level, file, format, ...) do { \
   _n_log_internal(level, __FILENAME__, __FUNCTION__, __LINE__, file, format, ##__VA_ARGS__); \
 } while (false)
-//n_log}}}
+// n_log}}}
 
 #define n_array_size(a) ((sizeof(a) / sizeof(*(a))) / (size_t)(!(sizeof(a) % sizeof(*(a)))))
 
@@ -386,7 +400,7 @@ N_INLINE double n_duration(
   }
 }
 
-N_INLINE const char* n_full_path(const char* src, char* dst)
+N_INLINE const char* n_full_path(char* dst, const char* src)
 {
   if (dst == NULL)
   {
@@ -590,7 +604,7 @@ N_INLINE const char* n_timestamp(char* buffer, const size_t size)
 
   return buffer;
 }
-//Function}}}
+// Function}}}
 
 //************************************************************** Concurrency{{{
 #if N_IS_WINDOWS
@@ -599,7 +613,7 @@ enum
   thrd_success  = 0,
   thrd_busy     = 1,
   thrd_error    = 2,
-  thrd_nomen    = 3,
+  thrd_nomem    = 3,
   thrd_timedout = 4,
 };
 
@@ -611,7 +625,7 @@ enum
 };
 
 typedef CONDITION_VARIABLE cnd_t;
-typedef CRITICAL_SECTION mtx_t;
+typedef HANDLE mtx_t;
 typedef HANDLE thrd_t;
 typedef unsigned int (*thrd_start_t)(void*) ;
 #endif
@@ -623,9 +637,37 @@ enum n_thrd_ctrl_code
   THRD_WAIT  = 2,
   THRD_EXIT  = 3,
 };
-//Concurrency}}}
+
+struct n_mutex
+{
+  int type;
+  mtx_t mtx;
+};
+
+struct n_thread
+{
+  enum n_thrd_ctrl_code ctl;
+  thrd_t thd;
+  cnd_t cnd;
+  struct n_mutex mtx;
+};
 
 //******************************************************************** n_cnd{{{
+N_INLINE int n_cnd_broadcast(cnd_t* cnd)
+{
+  if (cnd == NULL)
+  {
+    return thrd_error;
+  }
+
+#if N_IS_WINDOWS
+  WakeAllConditionVariable(cnd);
+  return thrd_success;
+#else
+  return cnd_broadcast(cnd);
+#endif
+}
+
 N_INLINE void n_cnd_destroy(cnd_t* cnd)
 {
   if (cnd == NULL)
@@ -634,11 +676,10 @@ N_INLINE void n_cnd_destroy(cnd_t* cnd)
   }
 
 #if N_IS_WINDOWS
+  (void)cnd;
 #else
   return cnd_destroy(cnd);
 #endif
-
-  cnd = NULL;
 }
 
 N_INLINE int n_cnd_init(cnd_t* cnd)
@@ -660,22 +701,7 @@ N_INLINE int n_cnd_init(cnd_t* cnd)
 #endif
 }
 
-N_INLINE int n_cnd_notify_all(cnd_t* cnd)
-{
-  if (cnd == NULL)
-  {
-    return thrd_error;
-  }
-
-#if N_IS_WINDOWS
-  WakeAllConditionVariable(cnd);
-  return thrd_success;
-#else
-  return cnd_broadcast(cnd);
-#endif
-}
-
-N_INLINE int n_cnd_notify_one(cnd_t* cnd)
+N_INLINE int n_cnd_signal(cnd_t* cnd)
 {
   if (cnd == NULL)
   {
@@ -690,7 +716,45 @@ N_INLINE int n_cnd_notify_one(cnd_t* cnd)
 #endif
 }
 
-N_INLINE int n_cnd_wait(cnd_t* cnd, mtx_t* mutex)
+N_INLINE int n_cnd_timedwait(
+    cnd_t* cnd, struct n_mutex* mutex, const struct timespec* time_point)
+{
+  if (cnd == NULL || mutex == NULL || time_point == NULL)
+  {
+    return thrd_error;
+  }
+
+#if N_IS_WINDOWS
+  DWORD d = (DWORD)n_duration(n_now(), *time_point, "ms");
+  BOOL succeeded = FALSE;
+
+  if (mutex->type & mtx_recursive)
+  {
+    succeeded = SleepConditionVariableCS(cnd, (CRITICAL_SECTION*)mutex->mtx, d);
+  }
+  else
+  {
+    succeeded = SleepConditionVariableSRW(cnd, (SRWLOCK*)mutex->mtx, d, 0UL);
+  }
+
+  if (!succeeded)
+  {
+    if (GetLastError() == ERROR_TIMEOUT)
+    {
+      return thrd_timedout;
+    }
+    else {
+      return thrd_error;
+    }
+  }
+
+  return thrd_success;
+#else
+  return cnd_timedwait(cnd, mutex->mtx, time_point);
+#endif
+}
+
+N_INLINE int n_cnd_wait(cnd_t* cnd, struct n_mutex* mutex)
 {
   if (cnd == NULL || mutex == NULL)
   {
@@ -698,16 +762,24 @@ N_INLINE int n_cnd_wait(cnd_t* cnd, mtx_t* mutex)
   }
 
 #if N_IS_WINDOWS
-  SleepConditionVariableCS(cnd, mutex, INFINITE);
+  if (mutex->type & mtx_recursive)
+  {
+    SleepConditionVariableCS(cnd, (CRITICAL_SECTION*)mutex->mtx, INFINITE);
+  }
+  else
+  {
+    SleepConditionVariableSRW(cnd, (SRWLOCK*)mutex->mtx, INFINITE, 0UL);
+  }
+
   return thrd_success;
 #else
-  return cnd_wait(cnd, mutex);
+  return cnd_wait(cnd, mutex->mtx);
 #endif
 }
-//n_cnd_x}}}
+// n_cnd}}}
 
 //******************************************************************** n_mtx{{{
-N_INLINE void n_mtx_destroy(mtx_t* mutex)
+N_INLINE void n_mtx_destroy(struct n_mutex* mutex)
 {
   if (mutex == NULL)
   {
@@ -715,15 +787,22 @@ N_INLINE void n_mtx_destroy(mtx_t* mutex)
   }
 
 #if N_IS_WINDOWS
-  DeleteCriticalSection(mutex);
+  if (mutex->type & mtx_recursive)
+  {
+    CRITICAL_SECTION* m = (CRITICAL_SECTION*)mutex->mtx;
+    DeleteCriticalSection(m);
+  }
+  else
+  {
+    SRWLOCK* m = (SRWLOCK*)mutex->mtx;
+    free(m);
+  }
 #else
-  mtx_destroy(mutex);
+  mtx_destroy(mutex->mtx);
 #endif
-
-  mutex = NULL;
 }
 
-N_INLINE int n_mtx_init(mtx_t* mutex, int type)
+N_INLINE int n_mtx_init(struct n_mutex* mutex, int type)
 {
   if (mutex == NULL)
   {
@@ -731,18 +810,34 @@ N_INLINE int n_mtx_init(mtx_t* mutex, int type)
   }
 
 #if N_IS_WINDOWS
-  InitializeCriticalSection(mutex);
-  if (mutex == NULL)
+  if (type & mtx_recursive)
   {
-    return thrd_error;
+    mutex->mtx = malloc(sizeof(CRITICAL_SECTION));
+    if (mutex->mtx == NULL)
+    {
+      return thrd_nomem;
+    }
+    InitializeCriticalSection((CRITICAL_SECTION*)mutex->mtx);
   }
+  else
+  {
+    mutex->mtx = malloc(sizeof(SRWLOCK));
+    if (mutex->mtx == NULL)
+    {
+      return thrd_nomem;
+    }
+    InitializeSRWLock((SRWLOCK*)mutex->mtx);
+  }
+
+  mutex->type = type;
+
   return thrd_success;
 #else
-  return mtx_init(mutex, type);
+  return mtx_init(mutex->mtx, type);
 #endif
 }
 
-N_INLINE int n_mtx_lock(mtx_t* mutex)
+N_INLINE int n_mtx_lock(struct n_mutex* mutex)
 {
   if (mutex == NULL)
   {
@@ -750,14 +845,49 @@ N_INLINE int n_mtx_lock(mtx_t* mutex)
   }
 
 #if N_IS_WINDOWS
-  EnterCriticalSection(mutex);
+  if (mutex->type & mtx_recursive)
+  {
+    EnterCriticalSection((CRITICAL_SECTION*)mutex->mtx);
+  }
+  else
+  {
+    AcquireSRWLockExclusive((SRWLOCK*)mutex->mtx);
+  }
+
   return thrd_success;
 #else
-  return mtx_lock(mutex);
+  return mtx_lock(mutex->mtx);
 #endif
 }
 
-N_INLINE int n_mtx_trylock(mtx_t* mutex)
+N_INLINE int n_mtx_timedlock(struct n_mutex* mutex, const struct timespec* time_point)
+{
+  if (mutex == NULL || (mutex->type & mtx_timed) == 0 || time_point == NULL)
+  {
+    return thrd_error;
+  }
+
+#if N_IS_WINDOWS
+  DWORD err = WaitForSingleObject(
+      mutex->mtx, (DWORD)n_duration(n_now(), *time_point, "ms"));
+
+  switch (err)
+  {
+    case WAIT_ABANDONED:
+      return thrd_busy;
+    case WAIT_TIMEOUT:
+      return thrd_timedout;
+    default:
+      return thrd_error;
+  }
+
+  return thrd_success;
+#else
+  return mtx_timedlock(mutex->mtx, time_point);
+#endif
+}
+
+N_INLINE int n_mtx_trylock(struct n_mutex* mutex)
 {
   if (mutex == NULL)
   {
@@ -765,14 +895,22 @@ N_INLINE int n_mtx_trylock(mtx_t* mutex)
   }
 
 #if N_IS_WINDOWS
-  TryEnterCriticalSection(mutex);
+  if (mutex->type & mtx_recursive)
+  {
+    TryEnterCriticalSection((CRITICAL_SECTION*)mutex->mtx);
+  }
+  else
+  {
+    TryAcquireSRWLockExclusive((SRWLOCK*)mutex->mtx);
+  }
+
   return thrd_success;
 #else
-  return mtx_trylock(mutex);
+  return mtx_trylock(mutex->mtx);
 #endif
 }
 
-N_INLINE int n_mtx_unlock(mtx_t* mutex)
+N_INLINE int n_mtx_unlock(struct n_mutex* mutex)
 {
   if (mutex == NULL)
   {
@@ -780,22 +918,165 @@ N_INLINE int n_mtx_unlock(mtx_t* mutex)
   }
 
 #if N_IS_WINDOWS
-  LeaveCriticalSection(mutex);
+  if (mutex->type & mtx_recursive)
+  {
+    LeaveCriticalSection((CRITICAL_SECTION*)mutex->mtx);
+  }
+  else
+  {
+    ReleaseSRWLockExclusive((SRWLOCK*)mutex->mtx);
+  }
+
   return thrd_success;
 #else
-  return mtx_unlock(mutex);
+  return mtx_unlock(mutex->mtx);
 #endif
 }
-//n_mtx}}}
+// n_mtx}}}
+
+//******************************************************************* n_thrd{{{
+N_INLINE thrd_t n_thrd_current()
+{
+#if N_IS_WINDOWS
+  return GetCurrentThread();
+#else
+  return thrd_current();
+#endif
+}
+
+N_INLINE int n_thrd_detach(struct n_thread thread)
+{
+#if N_IS_WINDOWS
+  BOOL succeeded = CloseHandle(thread.thd);
+  if (!succeeded)
+  {
+    return thrd_error;
+  }
+#else
+  int result = thrd_detach(thread.thd);
+  if (result != thrd_success)
+  {
+    return result;
+  }
+#endif
+
+  n_cnd_destroy(&thread.cnd);
+  n_mtx_destroy(&thread.mtx);
+
+  return thrd_success;
+}
+
+N_INLINE bool n_thrd_equal(struct n_thread lhs, struct n_thread rhs)
+{
+  return lhs.thd == rhs.thd;
+}
+
+N_INLINE void n_thrd_exit(int exit_code)
+{
+#if N_IS_WINDOWS
+  _endthreadex((unsigned int)exit_code);
+#else
+  thrd_exit(exit_code);
+#endif
+}
+
+N_INLINE int n_thrd_init(struct n_thread* thread, thrd_start_t fn, void* data)
+{
+  if (thread == NULL)
+  {
+    return thrd_error;
+  }
+
+  int result = thrd_success;
+
+#if N_IS_WINDOWS
+  thread->thd = (thrd_t)_beginthreadex(NULL, 0, fn, data, 0, NULL);
+  if (!thread->thd)
+  {
+    return thrd_error;
+  }
+#else
+  result = thrd_create(&thread->thd, fn, data);
+  if (result != thrd_success)
+  {
+    return result;
+  }
+#endif
+
+  thread->ctl = THRD_NONE;
+
+  result = n_cnd_init(&thread->cnd);
+  if (result != thrd_success)
+  {
+    return result;
+  }
+
+  result = n_mtx_init(&thread->mtx, mtx_plain);
+  if (result != thrd_success)
+  {
+    return result;
+  }
+
+  return thrd_success;
+}
+
+N_INLINE int n_thrd_join(struct n_thread thread, int* exit_code)
+{
+#if N_IS_WINDOWS
+  if (WaitForSingleObject(thread.thd, INFINITE) != WAIT_OBJECT_0)
+  {
+    return thrd_error;
+  }
+
+  DWORD result = 0UL;
+  if (GetExitCodeThread(thread.thd, &result) == 0)
+  {
+    return thrd_error;
+  }
+
+  if (exit_code != NULL)
+  {
+    *exit_code = (int)result;
+  }
+
+  return n_thrd_detach(thread);
+#else
+  return thrd_join(thread, exit_code);
+#endif
+}
+
+N_INLINE void n_thrd_wait(struct n_thread thread, bool ready)
+{
+  n_mtx_lock(&thread.mtx);
+
+  while (!ready)
+  {
+    n_cnd_wait(&thread.cnd, &thread.mtx);
+  }
+
+  n_mtx_unlock(&thread.mtx);
+}
+
+N_INLINE int n_thrd_yield()
+{
+#if N_IS_WINDOWS
+  return SwitchToThread() ? thrd_success : thrd_error;
+#else
+  thrd_yield();
+  return thrd_success;
+#endif
+}
+// n_thrd}}}
+// Concurrency}}}
 
 //******************************************************************* n_cmem{{{
 struct n_cmem
 {
-  mtx_t mtx;
   bool full;
   size_t capacity;
   size_t rptr;  // read pointer (head)
   size_t wptr;  // write pointer (tail)
+  struct n_mutex mutex;
   uint8_t* buffer;
 };
 
@@ -806,13 +1087,13 @@ N_INLINE void n_cmem_clear(struct n_cmem* cm)
     return;
   }
 
-  n_mtx_lock(&cm->mtx);
+  n_mtx_lock(&cm->mutex);
 
   cm->full = false;
   cm->rptr = 0;
   cm->wptr = 0;
 
-  n_mtx_unlock(&cm->mtx);
+  n_mtx_unlock(&cm->mutex);
 }
 
 N_INLINE void n_cmem_destroy(struct n_cmem* cm)
@@ -822,7 +1103,7 @@ N_INLINE void n_cmem_destroy(struct n_cmem* cm)
     return;
   }
 
-  n_mtx_destroy(&cm->mtx);
+  n_mtx_destroy(&cm->mutex);
   free(cm->buffer);
 }
 
@@ -833,7 +1114,7 @@ N_INLINE errno_t n_cmem_get(void* buffer, const size_t size, struct n_cmem* cm)
     return EINVAL;
   }
 
-  n_mtx_lock(&cm->mtx);
+  n_mtx_lock(&cm->mutex);
 
   size_t avail = 0;
 
@@ -855,7 +1136,7 @@ N_INLINE errno_t n_cmem_get(void* buffer, const size_t size, struct n_cmem* cm)
 
   if (avail < size)
   {
-    n_mtx_unlock(&cm->mtx);
+    n_mtx_unlock(&cm->mutex);
     return ENODATA;
   }
 
@@ -875,7 +1156,7 @@ N_INLINE errno_t n_cmem_get(void* buffer, const size_t size, struct n_cmem* cm)
   cm->rptr = (cm->rptr + size) % cm->capacity;
   cm->full = false;
 
-  n_mtx_unlock(&cm->mtx);
+  n_mtx_unlock(&cm->mutex);
 
   return 0;
 }
@@ -893,14 +1174,14 @@ N_INLINE errno_t n_cmem_init(struct n_cmem* cm, const size_t size)
     return ENOMEM;
   }
 
-  int err = n_mtx_init(&cm->mtx, mtx_plain);
+  int err = n_mtx_init(&cm->mutex, mtx_plain);
   if (n_fail(err))
   {
     free(cm->buffer);
 
     switch (err)
     {
-      case thrd_nomen:
+      case thrd_nomem:
         return ENOMEM;
       case thrd_timedout:
         return ETIMEDOUT;
@@ -926,11 +1207,11 @@ N_INLINE errno_t n_cmem_put(struct n_cmem* cm, const void* buffer, const size_t 
     return EINVAL;
   }
 
-  n_mtx_lock(&cm->mtx);
+  n_mtx_lock(&cm->mutex);
 
   if (size > cm->capacity || cm->full)
   {
-    n_mtx_unlock(&cm->mtx);
+    n_mtx_unlock(&cm->mutex);
     return ENOMEM;
   }
 
@@ -956,7 +1237,7 @@ N_INLINE errno_t n_cmem_put(struct n_cmem* cm, const void* buffer, const size_t 
 
   if (free < size)
   {
-    n_mtx_unlock(&cm->mtx);
+    n_mtx_unlock(&cm->mutex);
     return ENOMEM;
   }
 
@@ -987,7 +1268,7 @@ N_INLINE errno_t n_cmem_put(struct n_cmem* cm, const void* buffer, const size_t 
     cm->full = true;
   }
 
-  n_mtx_unlock(&cm->mtx);
+  n_mtx_unlock(&cm->mutex);
 
   return 0;
 }
@@ -999,7 +1280,7 @@ N_INLINE size_t n_cmem_size(struct n_cmem* cm)
     return 0;
   }
 
-  n_mtx_lock(&cm->mtx);
+  n_mtx_lock(&cm->mutex);
 
   size_t size = 0;
 
@@ -1019,11 +1300,11 @@ N_INLINE size_t n_cmem_size(struct n_cmem* cm)
     }
   }
 
-  n_mtx_unlock(&cm->mtx);
+  n_mtx_unlock(&cm->mutex);
 
   return size;
 }
-//n_cmem}}}
+// n_cmem}}}
 
 //****************************************************************** n_timer{{{
 struct n_timer
@@ -1073,7 +1354,7 @@ N_INLINE errno_t n_timer_init(struct n_timer* timer)
   return 0;
 }
 
-N_INLINE errno_t n_tic(const bool echo, struct n_timer* timer)
+N_INLINE errno_t n_tic(struct n_timer* timer, const bool echo)
 {
   if (timer == NULL)
   {
@@ -1091,7 +1372,7 @@ N_INLINE errno_t n_tic(const bool echo, struct n_timer* timer)
   return 0;
 }
 
-N_INLINE errno_t n_toc(const bool echo, const char* unit, struct n_timer* timer)
+N_INLINE errno_t n_toc(struct n_timer* timer, const bool echo, const char* unit)
 {
   if (timer == NULL)
   {
@@ -1116,8 +1397,8 @@ N_INLINE errno_t n_toc(const bool echo, const char* unit, struct n_timer* timer)
 }
 
 N_INLINE errno_t n_toc_profile(
-    const bool echo, const long long cycle, const char* unit, const char* title,
-    struct n_timer* timer)
+    struct n_timer* timer, const bool echo, const long long cycle,
+    const char* unit, const char* title)
 {
   if (cycle <= 0LL || timer == NULL)
   {
@@ -1134,7 +1415,7 @@ N_INLINE errno_t n_toc_profile(
     title = "";
   }
 
-  errno_t err = n_toc(false, unit, timer);
+  errno_t err = n_toc(timer, false, unit);
   if (n_fail(err))
   {
     return err;
@@ -1220,260 +1501,10 @@ N_INLINE errno_t n_toc_profile(
 
   return 0;
 }
-//n_timer}}}
-
+// n_timer}}}
 #ifdef __cplusplus
 }
 #endif
-//C/C++}}}
-
-//********************************************************************** C++{{{
-#ifdef __cplusplus
-#include <condition_variable>
-#include <thread>
-
-#define n_release(x) do { \
-  if (x != nullptr) { \
-    delete x; \
-    x = nullptr; \
-  } \
-} while (false)
-
-#define n_release_array(x) do { \
-  if (x != nullptr) { \
-    delete[] x; \
-    x = nullptr; \
-  } \
-} while (false)
-
-//******************************************************************* n_thrd{{{
-struct n_thread
-{
-  enum n_thrd_ctrl_code cc;
-  std::thread thd;
-  std::condition_variable cnd;
-  std::mutex mtx;
-};
-
-N_INLINE std::thread::id n_thrd_current()
-{
-  return std::this_thread::get_id();
-}
-
-N_INLINE int n_thrd_detach(struct n_thread& thread)
-{
-  thread.thd.detach();
-  return thrd_success;
-}
-
-N_INLINE bool n_thrd_equal(const struct n_thread& lhs, const struct n_thread& rhs)
-{
-  return lhs.thd.get_id() == rhs.thd.get_id();
-}
-
-N_INLINE void n_thrd_exit()
-{
-}
-
-template<class Fn, class ...Args>
-int n_thrd_init(struct n_thread* thread, Fn&& fn, Args&& ...args)
-{
-  if (thread == nullptr)
-  {
-    return thrd_error;
-  }
-
-  thread->cc = THRD_NONE;
-  thread->thd = std::thread(fn, args...);
-
-  return thrd_success;
-}
-
-N_INLINE int n_thrd_join(struct n_thread& thread)
-{
-  if (!thread.thd.joinable())
-  {
-    return thrd_error;
-  }
-
-  thread.thd.join();
-  return thrd_success;
-}
-
-N_INLINE void n_thrd_wait(struct n_thread& thread, bool ready)
-{
-  std::unique_lock<std::mutex> lock(thread.mtx);
-
-  while (!ready)
-  {
-    thread.cnd.wait(lock);
-  }
-}
-
-N_INLINE int n_thrd_yield()
-{
-  std::this_thread::yield();
-  return thrd_success;
-}
-//n_thrd}}}
-//C++}}}
-//************************************************************************ C{{{
-#else
-#define n_release(x) do { \
-  if (x != NULL) { \
-    free(x); \
-    x = NULL; \
-  } \
-} while (false)
-
-#define n_release_array(x) do { \
-  if (x != NULL) { \
-    free(x); \
-    x = NULL; \
-  } \
-} while (false)
-//******************************************************************* n_thrd{{{
-struct n_thread
-{
-  enum n_thrd_ctrl_code cc;
-  thrd_t thd;
-  cnd_t cnd;
-  mtx_t mtx;
-};
-
-N_INLINE thrd_t n_thrd_current()
-{
-#if N_IS_WINDOWS
-  return GetCurrentThread();
-#else
-  return thrd_current();
-#endif
-}
-
-N_INLINE int n_thrd_detach(struct n_thread thread)
-{
-#if N_IS_WINDOWS
-  BOOL succeeded = CloseHandle(thread.thd);
-  if (!succeeded)
-  {
-    return thrd_error;
-  }
-#else
-  int result = thrd_detach(thread.thd);
-  if (result != thrd_success)
-  {
-    return result;
-  }
-#endif
-
-  n_cnd_destroy(&thread.cnd);
-  n_mtx_destroy(&thread.mtx);
-
-  return thrd_success;
-}
-
-N_INLINE bool n_thrd_equal(struct n_thread lhs, struct n_thread rhs)
-{
-  return lhs.thd == rhs.thd;
-}
-
-N_INLINE void n_thrd_exit(int exit_code)
-{
-#if N_IS_WINDOWS
-  _endthreadex((unsigned int)exit_code);
-#else
-  thrd_exit(exit_code);
-#endif
-}
-
-N_INLINE int n_thrd_init(struct n_thread* thread, thrd_start_t fn, void* data)
-{
-  if (thread == NULL)
-  {
-    return thrd_error;
-  }
-
-  int result = thrd_success;
-
-#if N_IS_WINDOWS
-  thread->thd = (thrd_t)_beginthreadex(NULL, 0, fn, data, 0, NULL);
-  if (!thread->thd)
-  {
-    return thrd_error;
-  }
-#else
-  result = thrd_create(&thread->thd, fn, data);
-  if (result != thrd_success)
-  {
-    return result;
-  }
-#endif
-
-  thread->cc = THRD_NONE;
-
-  result = n_cnd_init(&thread->cnd);
-  if (result != thrd_success)
-  {
-    return result;
-  }
-
-  result = n_mtx_init(&thread->mtx, mtx_plain);
-  if (result != thrd_success)
-  {
-    return result;
-  }
-
-  return thrd_success;
-}
-
-N_INLINE int n_thrd_join(struct n_thread thread, int* exit_code)
-{
-#if N_IS_WINDOWS
-  if (WaitForSingleObject(thread.thd, INFINITE) != WAIT_OBJECT_0)
-  {
-    return thrd_error;
-  }
-
-  DWORD result = 0L;
-  if (GetExitCodeThread(thread.thd, &result) == 0)
-  {
-    return thrd_error;
-  }
-
-  if (exit_code != NULL)
-  {
-    *exit_code = (int)result;
-  }
-
-  return n_thrd_detach(thread);
-#else
-  return thrd_join(thread, exit_code);
-#endif
-}
-
-N_INLINE void n_thrd_wait(struct n_thread thread, bool ready)
-{
-  n_mtx_lock(&thread.mtx);
-
-  while (!ready)
-  {
-    n_cnd_wait(&thread.cnd, &thread.mtx);
-  }
-
-  n_mtx_unlock(&thread.mtx);
-}
-
-N_INLINE int n_thrd_yield()
-{
-#if N_IS_WINDOWS
-  return SwitchToThread() ? thrd_success : thrd_error;
-#else
-  thrd_yield();
-  return thrd_success;
-#endif
-}
-//n_thrd}}}
-//C}}}
-#endif
+// C and C++}}}
 
 #endif  // N_H
