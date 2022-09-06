@@ -11,8 +11,8 @@ MERCHANTABILITY OR FIT FOR A PARTICULAR PURPOSE.
 See the Mulan PSL v2 for more details.
 
 
-Last update: 2022-09-02 17:30
-Version: v0.3.1
+Last update: 2022-09-06 16:29
+Version: v0.3.2
 ******************************************************************************/
 #ifndef N_H
 #define N_H
@@ -219,19 +219,19 @@ N_INLINE errno_t _n_log_prefix(
   char timestamp[26] = {0};
   n_timestamp(timestamp, 26);
 
-  int bytes = 0;
+  size_t bytes = 0;
 
 #ifdef NDEBUG
-  bytes = snprintf(buffer, size, "[%c %s] ", level, timestamp);
+  bytes = (size_t)snprintf(buffer, size, "[%c %s] ", level, timestamp) + 1;
 #else
-  bytes = snprintf(
+  bytes = (size_t)snprintf(
       buffer, *size, "[%c %s | %s - %s - %ld] ",
-      level, timestamp, filename, function, line);
+      level, timestamp, filename, function, line) + 1;
 #endif
 
-  if ((size_t)(bytes + 1) > *size)
+  if (bytes > *size)
   {
-    *size = (size_t)(bytes + 1);
+    *size = bytes;
     return ENOBUFS;
   }
 
@@ -249,7 +249,7 @@ N_INLINE void _n_log_internal(
   if ('P' == lvl)
   {
 #if N_LOG_LEVEL >= 1
-    snprintf(color_level, 7, _N_LOG_COLOR_P);
+    snprintf(color_level, 8, _N_LOG_COLOR_P);
 #else
     return;
 #endif
@@ -257,7 +257,7 @@ N_INLINE void _n_log_internal(
   else if ('F' == lvl)
   {
 #if N_LOG_LEVEL >= 2
-    snprintf(color_level, 7, _N_LOG_COLOR_F);
+    snprintf(color_level, 8, _N_LOG_COLOR_F);
 #else
     return;
 #endif
@@ -265,7 +265,7 @@ N_INLINE void _n_log_internal(
   else if ('E' == lvl)
   {
 #if N_LOG_LEVEL >= 3
-    snprintf(color_level, 7, _N_LOG_COLOR_E);
+    snprintf(color_level, 8, _N_LOG_COLOR_E);
 #else
     return;
 #endif
@@ -273,7 +273,7 @@ N_INLINE void _n_log_internal(
   else if ('W' == lvl)
   {
 #if N_LOG_LEVEL >= 4
-    snprintf(color_level, 7, _N_LOG_COLOR_W);
+    snprintf(color_level, 8, _N_LOG_COLOR_W);
 #else
     return;
 #endif
@@ -281,7 +281,7 @@ N_INLINE void _n_log_internal(
   else if ('I' == lvl)
   {
 #if N_LOG_LEVEL >= 5
-    snprintf(color_level, 7, _N_LOG_COLOR_I);
+    snprintf(color_level, 8, _N_LOG_COLOR_I);
 #else
     return;
 #endif
@@ -289,11 +289,13 @@ N_INLINE void _n_log_internal(
   else if ('D' == lvl)
   {
 #if N_LOG_LEVEL >= 6
-    snprintf(color_level, 7, _N_LOG_COLOR_D);
+    snprintf(color_level, 8, _N_LOG_COLOR_D);
 #else
     return;
 #endif
   }
+
+  snprintf(color_reset, 8, _N_COLOR_RESET);
 
   size_t prefix_sz = 256;
   char* prefix = (char*)malloc(prefix_sz);
@@ -308,17 +310,17 @@ N_INLINE void _n_log_internal(
 
   size_t msg_sz = 256;
   char* msg = (char*)malloc(msg_sz);
-  int bytes = 0;
+  size_t bytes = 0;
 
   va_list data;
   va_start(data, format);
 
-  bytes = vsnprintf(msg, msg_sz, format, data);
-  if ((size_t)(bytes + 1) > msg_sz)
+  bytes = (size_t)vsnprintf(msg, msg_sz, format, data) + 1;
+  if (bytes > msg_sz)
   {
     free(msg);
-    msg = (char*)malloc(bytes + 1);
-    vsnprintf(msg, bytes + 1, format, data);
+    msg = (char*)malloc(bytes);
+    vsnprintf(msg, bytes, format, data);
   }
 
   va_end(data);
@@ -345,9 +347,10 @@ N_INLINE void _n_log_internal(
 #define n_assert(expr) do { \
   if (!(expr)) { \
     char ts[26] = {0}; \
+    char fp[256] = {0}; \
     fprintf(stderr, "\n[ASSERTION FAILURE %s | %s - %s - %d] \n%s", \
-        n_timestamp(ts, 26), n_full_path(__FILENAME__, ts), __FUNCTION__, __LINE__, #expr); \
-    exit(EXIT_FAILURE); } \
+        n_timestamp(ts, 26), n_full_path(fp, __FILENAME__), __FUNCTION__, __LINE__, #expr); \
+    abort(); } \
 } while (false)
 #else
 #define n_assert(expr) do {assert(expr);} while (false)
@@ -791,6 +794,7 @@ N_INLINE void n_mtx_destroy(struct n_mutex* mutex)
   {
     CRITICAL_SECTION* m = (CRITICAL_SECTION*)mutex->mtx;
     DeleteCriticalSection(m);
+    free(m);
   }
   else
   {
@@ -839,7 +843,7 @@ N_INLINE int n_mtx_init(struct n_mutex* mutex, int type)
 
 N_INLINE int n_mtx_lock(struct n_mutex* mutex)
 {
-  if (mutex == NULL)
+  if (mutex == NULL || mutex->mtx == NULL)
   {
     return thrd_error;
   }
@@ -944,24 +948,29 @@ N_INLINE thrd_t n_thrd_current()
 #endif
 }
 
-N_INLINE int n_thrd_detach(struct n_thread thread)
+N_INLINE int n_thrd_detach(struct n_thread* thread)
 {
+  if (thread == NULL)
+  {
+    return thrd_error;
+  }
+
 #if N_IS_WINDOWS
-  BOOL succeeded = CloseHandle(thread.thd);
+  BOOL succeeded = CloseHandle(thread->thd);
   if (!succeeded)
   {
     return thrd_error;
   }
 #else
-  int result = thrd_detach(thread.thd);
+  int result = thrd_detach(thread->thd);
   if (result != thrd_success)
   {
     return result;
   }
 #endif
 
-  n_cnd_destroy(&thread.cnd);
-  n_mtx_destroy(&thread.mtx);
+  n_cnd_destroy(&thread->cnd);
+  n_mtx_destroy(&thread->mtx);
 
   return thrd_success;
 }
@@ -980,7 +989,7 @@ N_INLINE void n_thrd_exit(int exit_code)
 #endif
 }
 
-N_INLINE int n_thrd_init(struct n_thread* thread, thrd_start_t fn, void* data)
+N_INLINE int n_thrd_init(struct n_thread* thread, thrd_start_t fn, void* arg)
 {
   if (thread == NULL)
   {
@@ -990,13 +999,13 @@ N_INLINE int n_thrd_init(struct n_thread* thread, thrd_start_t fn, void* data)
   int result = thrd_success;
 
 #if N_IS_WINDOWS
-  thread->thd = (thrd_t)_beginthreadex(NULL, 0, fn, data, 0, NULL);
+  thread->thd = (thrd_t)_beginthreadex(NULL, 0, fn, arg, 0, NULL);
   if (!thread->thd)
   {
     return thrd_error;
   }
 #else
-  result = thrd_create(&thread->thd, fn, data);
+  result = thrd_create(&thread->thd, fn, arg);
   if (result != thrd_success)
   {
     return result;
@@ -1020,16 +1029,21 @@ N_INLINE int n_thrd_init(struct n_thread* thread, thrd_start_t fn, void* data)
   return thrd_success;
 }
 
-N_INLINE int n_thrd_join(struct n_thread thread, int* exit_code)
+N_INLINE int n_thrd_join(struct n_thread* thread, int* exit_code)
 {
+  if (thread == NULL)
+  {
+    return thrd_error;
+  }
+
 #if N_IS_WINDOWS
-  if (WaitForSingleObject(thread.thd, INFINITE) != WAIT_OBJECT_0)
+  if (WaitForSingleObject(thread->thd, INFINITE) != WAIT_OBJECT_0)
   {
     return thrd_error;
   }
 
   DWORD result = 0UL;
-  if (GetExitCodeThread(thread.thd, &result) == 0)
+  if (GetExitCodeThread(thread->thd, &result) == 0)
   {
     return thrd_error;
   }
@@ -1041,20 +1055,27 @@ N_INLINE int n_thrd_join(struct n_thread thread, int* exit_code)
 
   return n_thrd_detach(thread);
 #else
-  return thrd_join(thread, exit_code);
+  return thrd_join(thread->thd, exit_code);
 #endif
 }
 
-N_INLINE void n_thrd_wait(struct n_thread thread, bool ready)
+N_INLINE int n_thrd_wait(struct n_thread* thread, bool ready)
 {
-  n_mtx_lock(&thread.mtx);
+  if (thread == NULL)
+  {
+    return thrd_error;
+  }
+
+  n_mtx_lock(&thread->mtx);
 
   while (!ready)
   {
-    n_cnd_wait(&thread.cnd, &thread.mtx);
+    n_cnd_wait(&thread->cnd, &thread->mtx);
   }
 
-  n_mtx_unlock(&thread.mtx);
+  n_mtx_unlock(&thread->mtx);
+
+  return thrd_success;
 }
 
 N_INLINE int n_thrd_yield()
@@ -1262,7 +1283,7 @@ N_INLINE errno_t n_cmem_put(struct n_cmem* cm, const void* buffer, const size_t 
     memcpy(start, buffer, size);
   }
 
-  cm->wptr = (cm->wptr + size) / cm->capacity;
+  cm->wptr = (cm->wptr + size) % cm->capacity;
   if (cm->rptr == cm->wptr)
   {
     cm->full = true;
