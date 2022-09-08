@@ -11,8 +11,8 @@ MERCHANTABILITY OR FIT FOR A PARTICULAR PURPOSE.
 See the Mulan PSL v2 for more details.
 
 
-Last update: 2022-09-06 16:29
-Version: v0.3.2
+Last update: 2022-09-08 16:13
+Version: v0.3.3
 ******************************************************************************/
 #ifndef N_H
 #define N_H
@@ -939,6 +939,46 @@ N_INLINE int n_mtx_unlock(struct n_mutex* mutex)
 // n_mtx}}}
 
 //******************************************************************* n_thrd{{{
+N_INLINE int n_thrd_create(struct n_thread* thread, thrd_start_t fn, void* arg)
+{
+  if (thread == NULL)
+  {
+    return thrd_error;
+  }
+
+  int result = thrd_success;
+
+#if N_IS_WINDOWS
+  thread->thd = (thrd_t)_beginthreadex(NULL, 0, fn, arg, 0, NULL);
+  if (!thread->thd)
+  {
+    return thrd_error;
+  }
+#else
+  result = thrd_create(&thread->thd, fn, arg);
+  if (result != thrd_success)
+  {
+    return result;
+  }
+#endif
+
+  thread->ctl = THRD_NONE;
+
+  result = n_cnd_init(&thread->cnd);
+  if (result != thrd_success)
+  {
+    return result;
+  }
+
+  result = n_mtx_init(&thread->mtx, mtx_plain);
+  if (result != thrd_success)
+  {
+    return result;
+  }
+
+  return thrd_success;
+}
+
 N_INLINE thrd_t n_thrd_current()
 {
 #if N_IS_WINDOWS
@@ -989,46 +1029,6 @@ N_INLINE void n_thrd_exit(int exit_code)
 #endif
 }
 
-N_INLINE int n_thrd_init(struct n_thread* thread, thrd_start_t fn, void* arg)
-{
-  if (thread == NULL)
-  {
-    return thrd_error;
-  }
-
-  int result = thrd_success;
-
-#if N_IS_WINDOWS
-  thread->thd = (thrd_t)_beginthreadex(NULL, 0, fn, arg, 0, NULL);
-  if (!thread->thd)
-  {
-    return thrd_error;
-  }
-#else
-  result = thrd_create(&thread->thd, fn, arg);
-  if (result != thrd_success)
-  {
-    return result;
-  }
-#endif
-
-  thread->ctl = THRD_NONE;
-
-  result = n_cnd_init(&thread->cnd);
-  if (result != thrd_success)
-  {
-    return result;
-  }
-
-  result = n_mtx_init(&thread->mtx, mtx_plain);
-  if (result != thrd_success)
-  {
-    return result;
-  }
-
-  return thrd_success;
-}
-
 N_INLINE int n_thrd_join(struct n_thread* thread, int* exit_code)
 {
   if (thread == NULL)
@@ -1057,25 +1057,6 @@ N_INLINE int n_thrd_join(struct n_thread* thread, int* exit_code)
 #else
   return thrd_join(thread->thd, exit_code);
 #endif
-}
-
-N_INLINE int n_thrd_wait(struct n_thread* thread, bool ready)
-{
-  if (thread == NULL)
-  {
-    return thrd_error;
-  }
-
-  n_mtx_lock(&thread->mtx);
-
-  while (!ready)
-  {
-    n_cnd_wait(&thread->cnd, &thread->mtx);
-  }
-
-  n_mtx_unlock(&thread->mtx);
-
-  return thrd_success;
 }
 
 N_INLINE int n_thrd_yield()
