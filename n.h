@@ -11,8 +11,8 @@ MERCHANTABILITY OR FIT FOR A PARTICULAR PURPOSE.
 See the Mulan PSL v2 for more details.
 
 
-Last update: 2022-09-08 16:13
-Version: v0.3.3
+Last update: 2022-09-09 14:36
+Version: v0.3.4
 ******************************************************************************/
 #ifndef N_H
 #define N_H
@@ -457,11 +457,11 @@ N_INLINE bool n_path_exists(const char* path)
   int result = -1;
 
 #if N_IS_WINDOWS
-  struct _stat buffer;
-  result = _stat(path, &buffer);
+  struct _stat64 s;
+  result = _stat64(path, &s);
 #else
-  struct stat buffer;
-  result = stat(path, &buffer);
+  struct stat s;
+  result = stat(path, &s);
 #endif
 
   return (result == 0);
