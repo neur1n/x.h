@@ -11,8 +11,8 @@ MERCHANTABILITY OR FIT FOR A PARTICULAR PURPOSE.
 See the Mulan PSL v2 for more details.
 
 
-Last update: 2022-09-09 14:36
-Version: v0.3.4
+Last update: 2022-09-13 18:18
+Version: v0.3.6
 ******************************************************************************/
 #ifndef N_H
 #define N_H
@@ -403,6 +403,26 @@ N_INLINE double n_duration(
   }
 }
 
+N_INLINE long long n_file_size(const char* file)
+{
+  int err = -1;
+
+#if N_IS_WINDOWS
+  struct _stat64 s;
+  err = _stat64(file, &s);
+#else
+  struct stat s;
+  err = stat(path, &s);
+#endif
+
+  if (err != 0)
+  {
+    return -1;
+  }
+
+  return s.st_size;
+}
+
 N_INLINE const char* n_full_path(char* dst, const char* src)
 {
   if (dst == NULL)
@@ -454,17 +474,17 @@ N_INLINE errno_t n_log_to(const char* file, const char* format, ...)
 
 N_INLINE bool n_path_exists(const char* path)
 {
-  int result = -1;
+  int err = -1;
 
 #if N_IS_WINDOWS
   struct _stat64 s;
-  result = _stat64(path, &s);
+  err = _stat64(path, &s);
 #else
   struct stat s;
-  result = stat(path, &s);
+  err = stat(path, &s);
 #endif
 
-  return (result == 0);
+  return (err == 0);
 }
 
 #if !N_IS_WINDOWS
@@ -633,7 +653,7 @@ typedef HANDLE thrd_t;
 typedef unsigned int (*thrd_start_t)(void*) ;
 #endif
 
-enum n_thrd_ctrl_code
+enum
 {
   THRD_NONE  = 0,
   THRD_JOIN  = 1,
@@ -649,7 +669,7 @@ struct n_mutex
 
 struct n_thread
 {
-  enum n_thrd_ctrl_code ctl;
+  int ctl;
   thrd_t thd;
   cnd_t cnd;
   struct n_mutex mtx;
@@ -946,7 +966,7 @@ N_INLINE int n_thrd_create(struct n_thread* thread, thrd_start_t fn, void* arg)
     return thrd_error;
   }
 
-  int result = thrd_success;
+  int err = thrd_success;
 
 #if N_IS_WINDOWS
   thread->thd = (thrd_t)_beginthreadex(NULL, 0, fn, arg, 0, NULL);
@@ -955,25 +975,25 @@ N_INLINE int n_thrd_create(struct n_thread* thread, thrd_start_t fn, void* arg)
     return thrd_error;
   }
 #else
-  result = thrd_create(&thread->thd, fn, arg);
-  if (result != thrd_success)
+  err = thrd_create(&thread->thd, fn, arg);
+  if (err != thrd_success)
   {
-    return result;
+    return err;
   }
 #endif
 
   thread->ctl = THRD_NONE;
 
-  result = n_cnd_init(&thread->cnd);
-  if (result != thrd_success)
+  err = n_cnd_init(&thread->cnd);
+  if (err != thrd_success)
   {
-    return result;
+    return err;
   }
 
-  result = n_mtx_init(&thread->mtx, mtx_plain);
-  if (result != thrd_success)
+  err = n_mtx_init(&thread->mtx, mtx_plain);
+  if (err != thrd_success)
   {
-    return result;
+    return err;
   }
 
   return thrd_success;
@@ -1002,10 +1022,10 @@ N_INLINE int n_thrd_detach(struct n_thread* thread)
     return thrd_error;
   }
 #else
-  int result = thrd_detach(thread->thd);
-  if (result != thrd_success)
+  int err = thrd_detach(thread->thd);
+  if (err != thrd_success)
   {
-    return result;
+    return err;
   }
 #endif
 
@@ -1042,15 +1062,15 @@ N_INLINE int n_thrd_join(struct n_thread* thread, int* exit_code)
     return thrd_error;
   }
 
-  DWORD result = 0UL;
-  if (GetExitCodeThread(thread->thd, &result) == 0)
+  DWORD err = 0UL;
+  if (GetExitCodeThread(thread->thd, &err) == 0)
   {
     return thrd_error;
   }
 
   if (exit_code != NULL)
   {
-    *exit_code = (int)result;
+    *exit_code = (int)err;
   }
 
   return n_thrd_detach(thread);
@@ -1111,7 +1131,7 @@ N_INLINE void n_cmem_destroy(struct n_cmem* cm)
 
 N_INLINE errno_t n_cmem_get(void* buffer, const size_t size, struct n_cmem* cm)
 {
-  if (cm == NULL || cm->buffer == NULL || size < 1)
+  if (cm == NULL || cm->buffer == NULL || size == 0)
   {
     return EINVAL;
   }
@@ -1165,16 +1185,19 @@ N_INLINE errno_t n_cmem_get(void* buffer, const size_t size, struct n_cmem* cm)
 
 N_INLINE errno_t n_cmem_init(struct n_cmem* cm, const size_t size)
 {
-  if (cm == NULL || size < 1)
+  if (cm == NULL || size == 0)
   {
     return EINVAL;
   }
 
-  cm->buffer = (uint8_t*)malloc(size);
-  if (cm->buffer == NULL)
+  // NOTE: If cmem::buffer is null, realloc is equivalent to malloc.
+  uint8_t* tmp = (uint8_t*)realloc(cm->buffer, size);
+  if (tmp == NULL)
   {
     return ENOMEM;
   }
+
+  cm->buffer = tmp;
 
   int err = n_mtx_init(&cm->mutex, mtx_plain);
   if (n_fail(err))
@@ -1204,7 +1227,7 @@ N_INLINE errno_t n_cmem_init(struct n_cmem* cm, const size_t size)
 
 N_INLINE errno_t n_cmem_put(struct n_cmem* cm, const void* buffer, const size_t size)
 {
-  if (cm == NULL || cm->buffer == NULL || size < 1)
+  if (cm == NULL || cm->buffer == NULL || size == 0)
   {
     return EINVAL;
   }
