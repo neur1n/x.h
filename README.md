@@ -55,6 +55,7 @@
         <li><a href="#x_sleep">x_sleep</a></li>
         <li><a href="#x_string_empty">x_string_empty</a></li>
         <li><a href="#x_timestamp">x_timestamp</a></li>
+        <li><a href="#x_err">x_err</a></li>
         <li><a href="#x_log">x_log</a></li>
       </ul>
     </li>
@@ -421,6 +422,83 @@ const char* x_timestamp(char* buffer, const size_t size)
 #### Returns
 - Same content of the input buffer. A empty string ("") will be returned if the
 operation failed.
+
+
+### x_err
+```c
+// Enumerations of error categories.
+enum
+{
+  x_err_posix  = 0,                    // POSIX errors.
+  x_err_winsa  = x_bit(1),             // Windows Socket API (WSA) errors.
+  x_err_win32  = x_bit(1) + x_bit(2),  // Win32 API errors, which also includes WSA errors.
+  x_err_custom = x_bit(3),             // Custom errors.
+#if X_IS_WINDOWS
+  x_err_system = x_err_win32,          // System errors, for Windows OS.
+#else
+  x_err_system = x_err_posix,          // System errors, for POSIX OS.
+#endif
+};
+
+#ifndef X_ERR_MSG_LIMIT
+#define X_ERR_MSG_LIMIT (128)
+#endif
+
+typedef struct _x_err_
+{
+  int cat;                    // Category of the error.
+  long long val;              // Numeric value of the error. Using 'long long' to make it more compatible across platforms.
+  char msg[X_ERR_MSG_LIMIT];  // Description of the error.
+} x_err;
+
+// return (err == 0)
+bool x_succ(const long long err);
+
+// return (err != 0)
+bool x_fail(const long long err);
+
+// Can be used to initialize x_err instances.
+x_err x_ok();
+
+// Retrieves the last error of specific category, via GetLastError() or
+// WSAGetLastError() from Win32 API or errno from POSIX.
+x_err x_get_err(const int cat);
+
+// Constructs an x_err instance. If cat(egory) is x_err_custom, an addtional
+// argument is needed for specifying the description of the error. Otherwish,
+// the description will be retrieved according to the value of the error via
+// FormatMessage from Win32 API or strerror from POSIX.
+x_err x_set_err(const int cat, const long long val, ...);
+```
+
+#### Examples
+```c
+x_err foo_function()
+{
+  x_err err = x_ok();
+
+  // One may need to define SOCKET and INVALID_SOCKET to make them work across platforms.
+  SOCKET s = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
+  if (s == INVALID_SOCKET)
+  {
+    // For Windows OS, the following x_get_err will call WSAGetLastError().
+    // For other OSs, the following x_get_err will retrieve errno.
+    err = x_get_err(x_err_winsa);
+    printf("Failed on socket: %lld - %s\n", err.val, err.msg);
+    return err;
+  }
+
+  // some operations...
+  err = x_set_err(x_err_posix, ERANGE);
+  return err;
+
+  // some other operations...
+  err = x_set_err(x_err_custom, -1, "unknown error");
+  return err;
+
+  return x_ok();
+}
+```
 
 
 ### x_log

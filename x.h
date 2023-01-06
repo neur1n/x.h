@@ -11,7 +11,7 @@ MERCHANTABILITY OR FIT FOR A PARTICULAR PURPOSE.
 See the Mulan PSL v2 for more details.
 
 
-Last update: 2023-01-05 18:25
+Last update: 2023-01-06 10:05
 Version: v0.4.0
 ******************************************************************************/
 #ifndef X_H
@@ -238,9 +238,9 @@ const char* x_timestamp(char* buffer, const size_t size);
 //******************************************************************** x_err{{{
 enum
 {
-  x_err_posix = 0,
-  x_err_winsa = x_bit(1),
-  x_err_win32 = x_bit(1) + x_bit(2),
+  x_err_posix  = 0,
+  x_err_winsa  = x_bit(1),
+  x_err_win32  = x_bit(1) + x_bit(2),
   x_err_custom = x_bit(3),
 #if X_IS_WINDOWS
   x_err_system = x_err_win32,
