@@ -430,7 +430,8 @@ x_log(char level, FILE* file, const char* format, ...)
 
 #### Parameters
 - `level`: Logging level specification, available values are `P` (Public),
-`F` (Fatal), `E` (Error), `W` (Warning), `I` (Info), `D` (Debug).
+`F` (Fatal), `E` (Error), `W` (Warning), `I` (Info), `D` (Debug) and they are
+**case insensitive**.
 - `file`: File stream for saving the loggings. If `NULL` provided, no loggings
 will be saved.
 - `format`: Same as that in [printf](https://www.cplusplus.com/reference/cstdio/printf/).
@@ -449,8 +450,7 @@ x_log('F', pf, "%s", "fatal");
 ```
 
 The formats of each level are almost identical. What differentiate them are the
-level prefixes and the colors. Additionally, fatal level will call
-`exit(EXIT_FAILURE)` to make the program exits.
+level prefixes and the colors.
 
 <table class="center" style="text-align:center">
 <thead>
