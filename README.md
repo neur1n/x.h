@@ -572,5 +572,5 @@ level prefixes and the colors.
 
 <!----------------------------------------------------------------- LICENSE -->
 ## License
-Distributed under the [Mulan PSL v2](http://license.coscl.org.cn/MulanPSL2/)
+Distributed under the [Mulan PSL v2](http://license.coscl.org.cn/MulanPSL2)
 license. See [LICENSE](LICENSE) for more information.
