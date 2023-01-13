@@ -11,8 +11,8 @@ MERCHANTABILITY OR FIT FOR A PARTICULAR PURPOSE.
 See the Mulan PSL v2 for more details.
 
 
-Last update: 2023-01-06 10:05
-Version: v0.4.0
+Last update: 2023-01-13 16:00
+Version: v0.4.1
 ******************************************************************************/
 #ifndef X_H
 #define X_H
@@ -95,6 +95,7 @@ Version: v0.4.0
 #include <process.h>
 #include <synchapi.h>
 #else
+#define _GNU_SOURCE
 #include <limits.h>
 #include <pthread.h>
 #include <semaphore.h>
@@ -157,24 +158,30 @@ Version: v0.4.0
 #ifdef __cplusplus  //******************************************** C++ Specific
 #define X_INLINE inline
 
-#define x_delete(ptr) do { \
-  if (ptr != nullptr) { \
-    delete ptr; \
-    ptr = nullptr; \
-  } \
-} while (false)
-
-#define x_delete_array(arr) do { \
-  if (arr != nullptr) { \
-    delete[] arr; \
-    arr = nullptr; \
-  } \
-} while (false)
-
 template<class T, size_t N>
 size_t x_count(const T (&array)[N])
 {
   return N;
+}
+
+template<class T>
+void x_delete(T*& ptr)
+{
+  if (ptr != nullptr)
+  {
+    delete ptr;
+    ptr = nullptr;
+  }
+}
+
+template<class T>
+void x_delete_array(T*& arr)
+{
+  if (arr != nullptr)
+  {
+    delete[] arr;
+    arr = nullptr;
+  }
 }
 #else  //*********************************************************** C Specific
 #define X_INLINE static inline
@@ -492,7 +499,7 @@ int _kbhit()
   static bool initialized = false;
   if (!initialized)
   {
-    struct termios settings;
+    struct termios settings = {0};
     tcgetattr(STDIN_FILENO, &settings);
     settings.c_lflag &= ~ICANON;
     tcsetattr(STDIN_FILENO, TCSANOW, &settings);
@@ -511,7 +518,7 @@ int _kbhit()
 size_t x_cpu_count()
 {
 #if X_IS_WINDOWS
-  SYSTEM_INFO info;
+  SYSTEM_INFO info = {0};
   GetSystemInfo(&info);
   return (size_t)info.dwNumberOfProcessors;
 #else
@@ -556,10 +563,10 @@ long long x_file_size(const char* file)
   int err = 0;
 
 #if X_IS_WINDOWS
-  struct _stat64 s;
+  struct _stat64 s = {0};
   err = _stat64(file, &s);
 #else
-  struct stat s;
+  struct stat s = {0};
   err = stat(file, &s);
 #endif
 
@@ -687,8 +694,14 @@ int x_getch()
 
 struct timespec x_now()
 {
-  struct timespec ts;
+  struct timespec ts = {0};
+
+#if X_IS_WINDOWS || __STDC_VERSION__ >= 201112L
   timespec_get(&ts, TIME_UTC);
+#else
+  clock_gettime(CLOCK_MONOTONIC, &ts);
+#endif
+
   return ts;
 }
 
@@ -697,10 +710,10 @@ bool x_path_exists(const char* path)
   int err = -1;
 
 #if X_IS_WINDOWS
-  struct _stat64 s;
+  struct _stat64 s = {0};
   err = _stat64(path, &s);
 #else
-  struct stat s;
+  struct stat s = {0};
   err = stat(path, &s);
 #endif
 
@@ -1208,7 +1221,7 @@ int x_toc_ex(
     const char* unit, const long long cycle, const char* title,
     char* echo, size_t* size)
 {
-  if (cycle <= 0LL || timestat == NULL)
+  if (timestat == NULL || cycle <= 0LL)
   {
     return EINVAL;
   }
@@ -1216,11 +1229,6 @@ int x_toc_ex(
   if (x_string_empty(unit))
   {
     unit = "ms";
-  }
-
-  if (x_string_empty(title))
-  {
-    title = "";
   }
 
   int err = x_toc(timestat, unit, false);
