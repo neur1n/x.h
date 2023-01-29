@@ -11,8 +11,8 @@ MERCHANTABILITY OR FIT FOR A PARTICULAR PURPOSE.
 See the Mulan PSL v2 for more details.
 
 
-Last update: 2023-01-13 16:00
-Version: v0.4.1
+Last update: 2023-01-28 16:55
+Version: v0.4.2
 ******************************************************************************/
 #ifndef X_H
 #define X_H
@@ -95,7 +95,9 @@ Version: v0.4.1
 #include <process.h>
 #include <synchapi.h>
 #else
+#ifndef _GNU_SOURCE
 #define _GNU_SOURCE
+#endif
 #include <limits.h>
 #include <pthread.h>
 #include <semaphore.h>
