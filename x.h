@@ -11,8 +11,8 @@ MERCHANTABILITY OR FIT FOR A PARTICULAR PURPOSE.
 See the Mulan PSL v2 for more details.
 
 
-Last update: 2023-01-28 16:55
-Version: v0.4.2
+Last update: 2022-01-30 16:16
+Version: v0.4.3
 ******************************************************************************/
 #ifndef X_H
 #define X_H
@@ -492,6 +492,10 @@ x_err x_thr_yield();
 //******************************************************************* C and C++
 #ifdef __cplusplus
 extern "C" {
+#endif
+
+#if X_IS_WINDOWS
+#pragma comment(lib, "Ws2_32")
 #endif
 
 //******************************************************************* Compat{{{
@@ -1619,7 +1623,7 @@ x_err x_sem_init(x_sem* sem, int pshared, unsigned int value)
   }
 
 #if X_IS_WINDOWS
-  HANDLE s = CreateSemaphore(NULL, value, X_SEM_VALUE_MAX, NULL);
+  HANDLE s = CreateSemaphoreA(NULL, value, X_SEM_VALUE_MAX, NULL);
   if (s == NULL)
   {
     return x_get_err(x_err_win32);
@@ -1651,12 +1655,12 @@ x_err x_sem_open(x_sem* sem, const char* name, int oflag, ...)
     va_start(args, oflag);
     int mode = va_arg(args, int);
     unsigned int value = va_arg(args, unsigned int);
-    s = CreateSemaphore(NULL, value, X_SEM_VALUE_MAX, name);
+    s = CreateSemaphoreA(NULL, value, X_SEM_VALUE_MAX, name);
     va_end(args);
   }
   else
   {
-    s = OpenSemaphore(STANDARD_RIGHTS_ALL, TRUE, name);
+    s = OpenSemaphoreA(STANDARD_RIGHTS_ALL, TRUE, name);
   }
 
   if (s == NULL)
@@ -1708,7 +1712,7 @@ x_err x_sem_post(x_sem* sem)
 x_err x_sem_unlink(const char* name)
 {
 #if X_IS_WINDOWS
-  HANDLE s = OpenSemaphore(STANDARD_RIGHTS_ALL, TRUE, name);
+  HANDLE s = OpenSemaphoreA(STANDARD_RIGHTS_ALL, TRUE, name);
   if (s == NULL)
   {
     return x_get_err(x_err_win32);
