@@ -11,8 +11,8 @@ MERCHANTABILITY OR FIT FOR A PARTICULAR PURPOSE.
 See the Mulan PSL v2 for more details.
 
 
-Last update: 2022-01-30 16:16
-Version: v0.4.3
+Last update: 2023-02-02 12:26
+Version: v0.4.4
 ******************************************************************************/
 #ifndef X_H
 #define X_H
@@ -936,12 +936,12 @@ void _x_err_msg(x_err *err, ...)
 #if X_IS_WINDOWS
   if (err->cat & x_err_win32)
   {
-    FormatMessage(
+    FormatMessageA(
         FORMAT_MESSAGE_FROM_SYSTEM
         | FORMAT_MESSAGE_IGNORE_INSERTS
         | FORMAT_MESSAGE_MAX_WIDTH_MASK,
-        NULL, (DWORD)err->val, MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT),
-        (LPTSTR)err->msg, sizeof(err->msg), NULL);
+        NULL, (DWORD)err->val, MAKELANGID(LANG_ENGLISH, SUBLANG_ENGLISH_US),
+        err->msg, sizeof(err->msg), NULL);
   }
   else if (err->cat == x_err_custom)
   {
