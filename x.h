@@ -11,8 +11,8 @@ MERCHANTABILITY OR FIT FOR A PARTICULAR PURPOSE.
 See the Mulan PSL v2 for more details.
 
 
-Last update: 2023-02-02 12:26
-Version: v0.4.4
+Last update: 2023-02-02 14:51
+Version: v0.4.5
 ******************************************************************************/
 #ifndef X_H
 #define X_H
@@ -80,6 +80,7 @@ Version: v0.4.4
 
 #include <assert.h>
 #include <errno.h>
+#include <fcntl.h>
 #include <float.h>
 #include <stdarg.h>
 #include <stdbool.h>
@@ -91,7 +92,6 @@ Version: v0.4.4
 #if X_IS_WINDOWS
 #include <Windows.h>
 #include <conio.h>
-#include <fcntl.h>
 #include <process.h>
 #include <synchapi.h>
 #else
