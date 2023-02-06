@@ -11,8 +11,8 @@ MERCHANTABILITY OR FIT FOR A PARTICULAR PURPOSE.
 See the Mulan PSL v2 for more details.
 
 
-Last update: 2023-02-02 14:51
-Version: v0.4.5
+Last update: 2023-02-06 15:55
+Version: v0.4.6
 ******************************************************************************/
 #ifndef X_H
 #define X_H
@@ -100,6 +100,7 @@ Version: v0.4.5
 #endif
 #include <limits.h>
 #include <pthread.h>
+#include <sched.h>
 #include <semaphore.h>
 #include <sys/ioctl.h>
 #include <termios.h>
@@ -368,18 +369,18 @@ typedef x_thr_rv (*x_thr_routine)(void*) ;
 typedef struct _x_cnd_
 {
 #if X_IS_WINDOWS
-  CONDITION_VARIABLE handle;
+  CONDITION_VARIABLE hndl;
 #else
-  pthread_cond_t handle;
+  pthread_cond_t hndl;
 #endif
 } x_cnd;
 
 typedef struct _x_mtx_
 {
 #if X_IS_WINDOWS
-  void* handle;
+  void* hndl;
 #else
-  pthread_mutex_t handle;
+  pthread_mutex_t hndl;
 #endif
   int type;
 } x_mtx;
@@ -393,12 +394,12 @@ typedef sem_t x_sem;
 typedef struct _x_thr_
 {
 #if X_IS_WINDOWS
-  HANDLE handle;
+  HANDLE hndl;
 #else
-  pthread_t handle;
+  pthread_t hndl;
 #endif
-  x_thr_rv (*fn)(void*);
-  void* arg;
+  x_thr_rv (*func)(void*);
+  void* data;
   bool exit;
 } x_thr;
 
@@ -408,7 +409,7 @@ typedef struct _x_thr_
 #define X_CND_INIT {NULL}
 #define X_MTX_INIT {NULL, x_mtx_plain}
 #define X_SEM_INIT INVALID_HANDLE_VALUE
-#define X_THR_INIT {NULL, NULL, NULL, false}
+#define X_THR_INIT {NULL, NULL, NULL, {0}, false}
 #else
 #define X_SEM_VALUE_MAX SEM_VALUE_MAX
 
@@ -474,9 +475,13 @@ bool x_thr_equal(x_thr lhs, x_thr rhs);
 
 void x_thr_exit(int exit_code);
 
-x_err x_thr_init(x_thr* thr, x_thr_routine fn, void* arg);
+x_err x_thr_get_name(char* name, const size_t size, const x_thr* thr);
+
+x_err x_thr_init(x_thr* thr, x_thr_routine func, void* data);
 
 x_err x_thr_join(x_thr* thr, int* exit_code);
+
+x_err x_thr_set_name(x_thr* thr, const char* name);
 
 x_err x_thr_yield();
 // Concurrency}}}
@@ -536,7 +541,7 @@ double x_duration(
     const struct timespec start, const struct timespec end, const char* unit)
 {
   double diff = (double)(
-      (end.tv_sec - start.tv_sec) * 1000000000LL + end.tv_nsec - start.tv_nsec);
+      (end.tv_sec - start.tv_sec) * 1000000000 + end.tv_nsec - start.tv_nsec);
 
   if (strcmp(unit, "h") == 0)
   {
@@ -880,7 +885,7 @@ void x_sleep(const unsigned long ms)
 #else
   struct timespec duration;
   duration.tv_sec = 0;
-  duration.tv_nsec = (long)(ms * 1000000UL);
+  duration.tv_nsec = (long)(ms * 1000000);
   nanosleep(&duration, NULL);
 #endif
 }
@@ -1043,16 +1048,14 @@ void _x_log_prefix(
     const char* function, const long line)
 {
   static char lvl[] = {'P', 'F', 'E', 'W', 'I', 'D'};
-  static char timestamp[26] = {0};
-
-  x_timestamp(timestamp, 26);
+  char timestamp[26] = {0};
 
 #ifdef NDEBUG
-  (void)snprintf(buffer, size, "[%c %s] ", lvl[level], timestamp);
+  (void)snprintf(buffer, size, "[%c %s] ", lvl[level], x_timestamp(timestamp, 26));
 #else
   (void)snprintf(
       buffer, size, "[%c %s | %s - %s - %ld] ",
-      lvl[level], timestamp, filename, function, line);
+      lvl[level], x_timestamp(timestamp, 26), filename, function, line);
 #endif
 }
 
@@ -1080,8 +1083,8 @@ void _x_log_impl(
     const char* filename, const char* function, const long line,
     const char level, FILE* file, const char* format, ...)
 {
-  static char color_level[8] = {0};
-  static char color_reset[8] = {0};
+  char color_level[8] = {0};
+  char color_reset[8] = {0};
 
   int lvl = _x_log_level(level);
 
@@ -1140,10 +1143,10 @@ void _x_log_impl(
 
   snprintf(color_reset, 8, _X_COLOR_RESET);
 
-  static char prefix[X_LOG_PREFIX_LIMIT] = {0};
+  char prefix[X_LOG_PREFIX_LIMIT] = {0};
   _x_log_prefix(prefix, X_LOG_PREFIX_LIMIT, lvl, filename, function, line);
 
-  static char msg[X_LOG_MSG_LIMIT] = {0};
+  char msg[X_LOG_MSG_LIMIT] = {0};
   va_list args;
   va_start(args, format);
   (void)vsnprintf(msg, X_LOG_MSG_LIMIT, format, args);
@@ -1227,7 +1230,7 @@ int x_toc_ex(
     const char* unit, const long long cycle, const char* title,
     char* echo, size_t* size)
 {
-  if (timestat == NULL || cycle <= 0LL)
+  if (timestat == NULL || cycle <= 0)
   {
     return EINVAL;
   }
@@ -1255,10 +1258,10 @@ int x_toc_ex(
   }
 
   timestat->report.sum += timestat->elapsed;
-  timestat->report.cyc += 1LL;
+  timestat->report.cyc += 1;
   timestat->report.avg = timestat->report.sum / timestat->report.cyc;
 
-  if (timestat->report.cyc % cycle == 0LL)
+  if (timestat->report.cyc % cycle == 0)
   {
     timestat->report.ready = true;
 
@@ -1296,10 +1299,10 @@ x_err x_cnd_broadcast(x_cnd* cnd)
   }
 
 #if X_IS_WINDOWS
-  WakeAllConditionVariable(&cnd->handle);
+  WakeAllConditionVariable(&cnd->hndl);
   return x_ok();
 #else
-  return x_set_err(x_err_posix, (long long)pthread_cond_broadcast(&cnd->handle));
+  return x_set_err(x_err_posix, (long long)pthread_cond_broadcast(&cnd->hndl));
 #endif
 }
 
@@ -1313,7 +1316,7 @@ void x_cnd_destroy(x_cnd* cnd)
 #if X_IS_WINDOWS
   (void)cnd;
 #else
-  pthread_cond_destroy(&cnd->handle);
+  pthread_cond_destroy(&cnd->hndl);
 #endif
 }
 
@@ -1325,10 +1328,10 @@ x_err x_cnd_init(x_cnd* cnd)
   }
 
 #if X_IS_WINDOWS
-  InitializeConditionVariable(&cnd->handle);
+  InitializeConditionVariable(&cnd->hndl);
   return x_ok();
 #else
-  return x_set_err(x_err_posix, (long long)pthread_cond_init(&cnd->handle, NULL));
+  return x_set_err(x_err_posix, (long long)pthread_cond_init(&cnd->hndl, NULL));
 #endif
 }
 
@@ -1340,10 +1343,10 @@ x_err x_cnd_signal(x_cnd* cnd)
   }
 
 #if X_IS_WINDOWS
-  WakeConditionVariable(&cnd->handle);
+  WakeConditionVariable(&cnd->hndl);
   return x_ok();
 #else
-  return x_set_err(x_err_posix, (long long)pthread_cond_signal(&cnd->handle));
+  return x_set_err(x_err_posix, (long long)pthread_cond_signal(&cnd->hndl));
 #endif
 }
 
@@ -1359,19 +1362,19 @@ x_err x_cnd_timedwait(x_cnd* cnd, x_mtx* mtx, const struct timespec* time_point)
   if (mtx->type & x_mtx_recursive)
   {
     return (
-        SleepConditionVariableCS(&cnd->handle, (CRITICAL_SECTION*)mtx->handle, d)
+        SleepConditionVariableCS(&cnd->hndl, (CRITICAL_SECTION*)mtx->hndl, d)
         ? x_ok() : x_get_err(x_err_win32));
   }
   else
   {
     return (
-        SleepConditionVariableSRW(&cnd->handle, (SRWLOCK*)mtx->handle, d, 0UL)
+        SleepConditionVariableSRW(&cnd->hndl, (SRWLOCK*)mtx->hndl, d, 0)
         ? x_ok() : x_get_err(x_err_win32));
   }
 #else
   return x_set_err(
       x_err_posix,
-      (long long)pthread_cond_timedwait(&cnd->handle, &mtx->handle, time_point));
+      (long long)pthread_cond_timedwait(&cnd->hndl, &mtx->hndl, time_point));
 #endif
 }
 
@@ -1385,19 +1388,17 @@ x_err x_cnd_wait(x_cnd* cnd, x_mtx* mtx)
 #if X_IS_WINDOWS
   if (mtx->type & x_mtx_recursive)
   {
-    SleepConditionVariableCS(
-        &cnd->handle, (CRITICAL_SECTION*)mtx->handle, INFINITE);
+    SleepConditionVariableCS(&cnd->hndl, (CRITICAL_SECTION*)mtx->hndl, INFINITE);
   }
   else
   {
-    SleepConditionVariableSRW(
-        &cnd->handle, (SRWLOCK*)mtx->handle, INFINITE, 0UL);
+    SleepConditionVariableSRW(&cnd->hndl, (SRWLOCK*)mtx->hndl, INFINITE, 0);
   }
 
   return x_ok();
 #else
   return x_set_err(
-      x_err_posix, (long long)pthread_cond_wait(&cnd->handle, &mtx->handle));
+      x_err_posix, (long long)pthread_cond_wait(&cnd->hndl, &mtx->hndl));
 #endif
 }
 
@@ -1411,17 +1412,17 @@ void x_mtx_destroy(x_mtx* mtx)
 #if X_IS_WINDOWS
   if (mtx->type & x_mtx_recursive)
   {
-    CRITICAL_SECTION* m = (CRITICAL_SECTION*)mtx->handle;
+    CRITICAL_SECTION* m = (CRITICAL_SECTION*)mtx->hndl;
     DeleteCriticalSection(m);
     free(m);
   }
   else
   {
-    SRWLOCK* m = (SRWLOCK*)mtx->handle;
+    SRWLOCK* m = (SRWLOCK*)mtx->hndl;
     free(m);
   }
 #else
-  pthread_mutex_destroy(&mtx->handle);
+  pthread_mutex_destroy(&mtx->hndl);
 #endif
 }
 
@@ -1435,21 +1436,21 @@ x_err x_mtx_init(x_mtx* mtx, int type)
 #if X_IS_WINDOWS
   if (type & x_mtx_recursive)
   {
-    mtx->handle = malloc(sizeof(CRITICAL_SECTION));
-    if (mtx->handle == NULL)
+    mtx->hndl = malloc(sizeof(CRITICAL_SECTION));
+    if (mtx->hndl == NULL)
     {
       return x_set_err(x_err_posix, ENOMEM);
     }
-    InitializeCriticalSection((CRITICAL_SECTION*)mtx->handle);
+    InitializeCriticalSection((CRITICAL_SECTION*)mtx->hndl);
   }
   else
   {
-    mtx->handle = malloc(sizeof(SRWLOCK));
-    if (mtx->handle == NULL)
+    mtx->hndl = malloc(sizeof(SRWLOCK));
+    if (mtx->hndl == NULL)
     {
       return x_set_err(x_err_posix, ENOMEM);
     }
-    InitializeSRWLock((SRWLOCK*)mtx->handle);
+    InitializeSRWLock((SRWLOCK*)mtx->hndl);
   }
 
   mtx->type = type;
@@ -1470,7 +1471,7 @@ x_err x_mtx_init(x_mtx* mtx, int type)
 
   mtx->type = type;
 
-  return x_set_err(x_err_posix, (long long)pthread_mutex_init(&mtx->handle, &attr));
+  return x_set_err(x_err_posix, (long long)pthread_mutex_init(&mtx->hndl, &attr));
 #endif
 }
 
@@ -1484,16 +1485,16 @@ x_err x_mtx_lock(x_mtx* mtx)
 #if X_IS_WINDOWS
   if (mtx->type & x_mtx_recursive)
   {
-    EnterCriticalSection((CRITICAL_SECTION*)mtx->handle);
+    EnterCriticalSection((CRITICAL_SECTION*)mtx->hndl);
   }
   else
   {
-    AcquireSRWLockExclusive((SRWLOCK*)mtx->handle);
+    AcquireSRWLockExclusive((SRWLOCK*)mtx->hndl);
   }
 
   return x_ok();
 #else
-  return x_set_err(x_err_posix, (long long)pthread_mutex_lock(&mtx->handle));
+  return x_set_err(x_err_posix, (long long)pthread_mutex_lock(&mtx->hndl));
 #endif
 }
 
@@ -1506,11 +1507,11 @@ x_err x_mtx_timedlock(x_mtx* mtx, const struct timespec* time_point)
 
 #if X_IS_WINDOWS
   DWORD ms = (DWORD)x_duration(x_now(), *time_point, "ms");
-  return (WaitForSingleObject(mtx->handle, ms) == WAIT_OBJECT_0
+  return (WaitForSingleObject(mtx->hndl, ms) == WAIT_OBJECT_0
       ? x_ok() : x_get_err(x_err_win32));
 #else
   return x_set_err(
-      x_err_posix, (long long)pthread_mutex_timedlock(&mtx->handle, time_point));
+      x_err_posix, (long long)pthread_mutex_timedlock(&mtx->hndl, time_point));
 #endif
 }
 
@@ -1524,16 +1525,16 @@ x_err x_mtx_trylock(x_mtx* mtx)
 #if X_IS_WINDOWS
   if (mtx->type & x_mtx_recursive)
   {
-    TryEnterCriticalSection((CRITICAL_SECTION*)mtx->handle);
+    TryEnterCriticalSection((CRITICAL_SECTION*)mtx->hndl);
   }
   else
   {
-    TryAcquireSRWLockExclusive((SRWLOCK*)mtx->handle);
+    TryAcquireSRWLockExclusive((SRWLOCK*)mtx->hndl);
   }
 
   return x_ok();
 #else
-  return x_set_err(x_err_posix, (long long)pthread_mutex_trylock(&mtx->handle));
+  return x_set_err(x_err_posix, (long long)pthread_mutex_trylock(&mtx->hndl));
 #endif
 }
 
@@ -1547,16 +1548,16 @@ x_err x_mtx_unlock(x_mtx* mtx)
 #if X_IS_WINDOWS
   if (mtx->type & x_mtx_recursive)
   {
-    LeaveCriticalSection((CRITICAL_SECTION*)mtx->handle);
+    LeaveCriticalSection((CRITICAL_SECTION*)mtx->hndl);
   }
   else
   {
-    ReleaseSRWLockExclusive((SRWLOCK*)mtx->handle);
+    ReleaseSRWLockExclusive((SRWLOCK*)mtx->hndl);
   }
 
   return x_ok();
 #else
-  return x_set_err(x_err_posix, (long long)pthread_mutex_unlock(&mtx->handle));
+  return x_set_err(x_err_posix, (long long)pthread_mutex_unlock(&mtx->hndl));
 #endif
 }
 
@@ -1792,15 +1793,15 @@ x_err x_thr_detach(x_thr* thr)
   thr->exit = true;
 
 #if X_IS_WINDOWS
-  return (CloseHandle(thr->handle) ? x_ok() : x_get_err(x_err_win32));
+  return (CloseHandle(thr->hndl) ? x_ok() : x_get_err(x_err_win32));
 #else
-  return (pthread_detach(thr->handle) == 0 ? x_ok() : x_get_err(x_err_posix));
+  return (pthread_detach(thr->hndl) == 0 ? x_ok() : x_get_err(x_err_posix));
 #endif
 }
 
 bool x_thr_equal(x_thr lhs, x_thr rhs)
 {
-  return lhs.handle == rhs.handle;
+  return lhs.hndl == rhs.hndl;
 }
 
 void x_thr_exit(int exit_code)
@@ -1812,7 +1813,38 @@ void x_thr_exit(int exit_code)
 #endif
 }
 
-x_err x_thr_init(x_thr* thr, x_thr_routine fn, void* arg)
+x_err x_thr_get_name(char* name, const size_t size, const x_thr* thr)
+{
+  if (name == NULL || size == 0 || thr == NULL)
+  {
+    return x_set_err(x_err_posix, EINVAL);
+  }
+
+#if X_IS_WINDOWS
+  wchar_t* src = NULL;
+  HRESULT hr = GetThreadDescription(thr->hndl, &src);
+  if (FAILED(hr))
+  {
+    return x_set_err(x_err_win32, (long long)hr);
+  }
+
+  size_t len = 0;
+  char dst[16] = {0};
+  errno_t err = wcstombs_s(&len, dst, 16, src, 15);
+  if (err == 0)
+  {
+    err = strcpy_s(name, size, dst);
+  }
+
+  (void)LocalFree(src);
+
+  return (err == 0 ? x_ok () : x_set_err(x_err_posix, (long long)err));
+#else
+  return x_set_err(x_err_posix, (long long)pthread_getname_np(thr->hndl, name, 16));
+#endif
+}
+
+x_err x_thr_init(x_thr* thr, x_thr_routine func, void* data)
 {
   if (thr == NULL)
   {
@@ -1820,16 +1852,16 @@ x_err x_thr_init(x_thr* thr, x_thr_routine fn, void* arg)
   }
 
 #if X_IS_WINDOWS
-  thr->handle = (HANDLE)_beginthreadex(NULL, 0, fn, arg, 0, NULL);
-  if (thr->handle == 0)
+  thr->hndl = (HANDLE)_beginthreadex(NULL, 0, func, data, 0, NULL);
+  if (thr->hndl == 0)
   {
     return x_get_err(x_err_posix);
   }
 #else
 #if __STDC_VERSION__ >= 201112L
-  int err = pthread_create(&thr->handle, ATTR_C11_THREAD, fn, arg);
+  int err = pthread_create(&thr->hndl, ATTR_C11_THREAD, func, data);
 #else
-  int err = pthread_create(&thr->handle, NULL, (void*(*)(void*))fn, arg);
+  int err = pthread_create(&thr->hndl, NULL, (void*(*)(void*))func, data);
 #endif
   if (err != 0)
   {
@@ -1837,8 +1869,8 @@ x_err x_thr_init(x_thr* thr, x_thr_routine fn, void* arg)
   }
 #endif
 
-  thr->fn = fn;
-  thr->arg = arg;
+  thr->func = func;
+  thr->data = data;
   thr->exit = false;
 
   return x_ok();
@@ -1852,13 +1884,13 @@ x_err x_thr_join(x_thr* thr, int* exit_code)
   }
 
 #if X_IS_WINDOWS
-  if (WaitForSingleObject(thr->handle, INFINITE) != WAIT_OBJECT_0)
+  if (WaitForSingleObject(thr->hndl, INFINITE) != WAIT_OBJECT_0)
   {
     return x_get_err(x_err_win32);
   }
 
-  DWORD err = 0UL;
-  if (GetExitCodeThread(thr->handle, &err) == 0)
+  DWORD err = 0;
+  if (GetExitCodeThread(thr->hndl, &err) == 0)
   {
     return x_get_err(x_err_win32);
   }
@@ -1871,7 +1903,7 @@ x_err x_thr_join(x_thr* thr, int* exit_code)
   return x_thr_detach(thr);
 #else
   void* rv = NULL;
-  int err = pthread_join(thr->handle, &rv);
+  int err = pthread_join(thr->hndl, &rv);
 
   if (exit_code != NULL)
   {
@@ -1882,12 +1914,41 @@ x_err x_thr_join(x_thr* thr, int* exit_code)
 #endif
 }
 
+x_err x_thr_set_name(x_thr* thr, const char* name)
+{
+  if (thr == NULL)
+  {
+    return x_set_err(x_err_posix, EINVAL);
+  }
+
+  if (strlen(name) > 16)
+  {
+    return x_set_err(x_err_posix, ENOBUFS);
+  }
+
+#if X_IS_WINDOWS
+  size_t len = 0;
+  wchar_t data[16] = {0};
+  errno_t err = mbstowcs_s(&len, data, 16, name, 15);
+  if (err != 0)
+  {
+    return x_set_err(x_err_posix, err);
+  }
+
+  HRESULT hr = SetThreadDescription(thr->hndl, data);
+
+  return (SUCCEEDED(hr) ? x_ok() : x_set_err(x_err_win32, hr));
+#else
+  return x_set_err(x_err_posix, (long long)pthread_setname_np(thr->hndl, name));
+#endif
+}
+
 x_err x_thr_yield()
 {
 #if X_IS_WINDOWS
   return (SwitchToThread() ? x_ok() : x_get_err(x_err_win32));
 #else
-  return x_set_err(x_err_posix, (long long)pthread_yield());
+  return (sched_yield() == 0 ? x_ok() : x_get_err(x_err_posix));
 #endif
 }
 // Concurrency}}}
