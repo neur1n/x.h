@@ -11,7 +11,7 @@ MERCHANTABILITY OR FIT FOR A PARTICULAR PURPOSE.
 See the Mulan PSL v2 for more details.
 
 
-Last update: 2023-02-06 15:55
+Last update: 2023-02-06 16:02
 Version: v0.4.6
 ******************************************************************************/
 #ifndef X_H
@@ -409,7 +409,7 @@ typedef struct _x_thr_
 #define X_CND_INIT {NULL}
 #define X_MTX_INIT {NULL, x_mtx_plain}
 #define X_SEM_INIT INVALID_HANDLE_VALUE
-#define X_THR_INIT {NULL, NULL, NULL, {0}, false}
+#define X_THR_INIT {NULL, NULL, NULL, false}
 #else
 #define X_SEM_VALUE_MAX SEM_VALUE_MAX
 
