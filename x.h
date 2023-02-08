@@ -11,8 +11,8 @@ MERCHANTABILITY OR FIT FOR A PARTICULAR PURPOSE.
 See the Mulan PSL v2 for more details.
 
 
-Last update: 2023-02-06 16:02
-Version: v0.4.6
+Last update: 2023-02-08 09:18
+Version: v0.4.7
 ******************************************************************************/
 #ifndef X_H
 #define X_H
@@ -969,7 +969,7 @@ void _x_err_msg(x_err *err, ...)
     strcpy(err->msg, msg);
     va_end(args);
   }
-  else  // x_err_posix, x_err_win32 has no effect
+  else  // everything else fallbacks to x_err_posix
   {
     strcpy(err->msg, strerror((int)err->val));
   }
@@ -1002,6 +1002,9 @@ x_err x_get_err(const int cat)
       err.val = (long long)errno;
       break;
   }
+#else
+  err.cat = x_err_posix;
+  err.val = (long long)errno;
 #endif
 
   _x_err_msg(&err);
