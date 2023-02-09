@@ -11,7 +11,7 @@ MERCHANTABILITY OR FIT FOR A PARTICULAR PURPOSE.
 See the Mulan PSL v2 for more details.
 
 
-Last update: 2023-02-08 09:18
+Last update: 2023-02-09 17:36
 Version: v0.4.7
 ******************************************************************************/
 #ifndef X_H
@@ -19,8 +19,8 @@ Version: v0.4.7
 
 //******************************************************* Compiler Detection{{{
 #define X_IS_CLANG (0)
-#define X_IS_GCC (0)
-#define X_IS_MSVC (0)
+#define X_IS_GCC   (0)
+#define X_IS_MSVC  (0)
 
 #if defined(__clang__)
 #  undef X_IS_CLANG
@@ -35,9 +35,9 @@ Version: v0.4.7
 // Compiler Detection}}}
 
 //************************************************************* OS Detection{{{
-#define X_IS_CYGWIN (0)
-#define X_IS_LINUX (0)
-#define X_IS_MACOS (0)
+#define X_IS_CYGWIN  (0)
+#define X_IS_LINUX   (0)
+#define X_IS_MACOS   (0)
 #define X_IS_WINDOWS (0)
 
 #if defined(__CYGWIX__)
