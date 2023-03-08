@@ -11,7 +11,7 @@ MERCHANTABILITY OR FIT FOR A PARTICULAR PURPOSE.
 See the Mulan PSL v2 for more details.
 
 
-Last update: 2023-02-28 16:12
+Last update: 2023-03-08 13:57
 Version: v0.5.0
 ******************************************************************************/
 #ifndef X_H
@@ -558,7 +558,7 @@ struct _x_thd_
 #define X_THD_INIT {INVALID_HANDLE_VALUE, false}
 typedef unsigned int x_thd_rv;
 #else
-#define X_THD_INIT {0, false}
+#define X_THD_INIT {{0}, false}
 typedef void* x_thd_rv;
 #endif
 typedef x_thd_rv (*x_thd_routine)(void*);

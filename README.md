@@ -58,7 +58,7 @@
         <li><a href="#x_path_exists">x_path_exists</a></li>
         <li><a href="#x_spli_tpath">x_split_path</a></li>
         <li><a href="#x_sleep">x_sleep</a></li>
-        <li><a href="#x_string_empty">x_string_empty</a></li>
+        <li><a href="#x_strmty">x_strmty</a></li>
         <li><a href="#x_timestamp">x_timestamp</a></li>
         <li><a href="#x_log">x_log</a></li>
         <li><a href="#x_err">x_err</a></li>
@@ -504,16 +504,16 @@ void x_sleep(const unsigned long ms)
 - `ms`: The length of the sleep duration in milliseconds.
 
 
-### x\_string\_empty
+### x\_strmty
 ```c
-bool x_string_empty(const char* string)
+bool x_strmty(const char* string)
 ```
 
 #### Parameters
 - `string`: The string.
 
 #### Returns
-- `true` if the string is NULL or '\0' is the only thing it contains.
+- `true` if the string is NULL or '\0' is the first character it contains.
 
 
 ### x\_timestamp
