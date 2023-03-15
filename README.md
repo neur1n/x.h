@@ -87,16 +87,14 @@ Put `x.h` into your project.
 
 
 ### Usage
-`x.h` is a single header file following the style of the
-[stb libraries](https://github.com/nothings/stb), which means users must define
-the macro `X_H_IMPL` in one and only one of their source files:
+`x.h` is a single-header library which mean users can simply use its
+functionalities by including it anywhere:
 
 ```c
-// in some foo.c file
-#define X_H_IMPL
+// in some foo.h file
 #include "x.h"
 
-// in some bar.h or bar.c file
+// in some foo.c file
 #include "x.h"
 ```
 

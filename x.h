@@ -11,11 +11,11 @@ MERCHANTABILITY OR FIT FOR A PARTICULAR PURPOSE.
 See the Mulan PSL v2 for more details.
 
 
-Last update: 2023-03-08 13:57
-Version: v0.5.0
+Last update: 2023-03-15 16:29
+Version: v0.5.1
 ******************************************************************************/
 #ifndef X_H
-#define X_H X_VER(0, 5, 0)
+#define X_H X_VER(0, 5, 1)
 
 
 /** Table of Contents
@@ -274,13 +274,13 @@ Version: v0.5.0
 #define X_INLINE inline
 
 template<class T, size_t N>
-size_t x_count(const T (&array)[N])
+X_INLINE size_t x_count(const T (&array)[N])
 {
   return N;
 }
 
 template<class T>
-void x_delete(T*& ptr)
+X_INLINE void x_delete(T*& ptr)
 {
   if (ptr != nullptr) {
     delete ptr;
@@ -289,7 +289,7 @@ void x_delete(T*& ptr)
 }
 
 template<class T>
-void x_delete_array(T*& arr)
+X_INLINE void x_delete_array(T*& arr)
 {
   if (arr != nullptr) {
     delete[] arr;
@@ -333,33 +333,33 @@ extern "C" {
 
 #define x_succ(err) ((err) == 0)
 
-size_t x_cpu_count();
+X_INLINE size_t x_cpu_count();
 
-double x_duration(
+X_INLINE double x_duration(
     const struct timespec start, const struct timespec end, const char* unit);
 
-long long x_file_size(const char* file);
+X_INLINE long long x_file_size(const char* file);
 
-const char* x_full_path(char* dst, const char* src);
+X_INLINE const char* x_full_path(char* dst, const char* src);
 
-int x_getch();
+X_INLINE int x_getch();
 
-struct timespec x_now();
+X_INLINE struct timespec x_now();
 
-bool x_path_exists(const char* path);
+X_INLINE bool x_path_exists(const char* path);
 
-int x_split_path(
+X_INLINE int x_split_path(
     const char* path,
     char* root, const size_t rsz, char* dir, const size_t dsz,
     char* file, const size_t fsz, char* ext, const size_t esz);
 
-void x_sleep(const unsigned long ms);
+X_INLINE void x_sleep(const unsigned long ms);
 
-int x_strcpy(char* dst, size_t dsz, const char* src);
+X_INLINE int x_strcpy(char* dst, size_t dsz, const char* src);
 
-bool x_strmty(const char* string);
+X_INLINE bool x_strmty(const char* string);
 
-const char* x_timestamp(char* buf, const size_t bsz);
+X_INLINE const char* x_timestamp(char* buf, const size_t bsz);
 // DECL_Gadget}}}
 
 //*************************************************************** DECL_x_log{{{
@@ -391,7 +391,7 @@ const char* x_timestamp(char* buf, const size_t bsz);
 #define X_LOG_MSG_LIMIT (256)
 #endif
 
-void _x_log_impl(
+X_INLINE void _x_log_impl(
     const char* filename, const char* function, const long line,
     const char level, FILE* file, const char* format, ...);
 
@@ -425,11 +425,16 @@ typedef struct _x_err_
   char msg[X_ERR_MSG_LIMIT];
 } x_err;
 
-x_err x_err_get(const int cat);
+X_INLINE x_err x_err_get(const int cat);
 
-x_err x_err_set(const int cat, const long long val, /*const char* msg*/ ...);
+X_INLINE x_err x_err_set(
+    const int cat, const long long val, /*const char* msg*/ ...);
 
-x_err x_ok();
+static x_err x_ok()
+{
+  static x_err err = {x_err_custom, 0, "ok"};
+  return err;
+}
 // DECL_x_err}}}
 
 typedef struct _x_cnd_ x_cnd;
@@ -454,17 +459,18 @@ struct _x_cnd_
 #define X_CND_INIT {PTHREAD_COND_INITIALIZER}
 #endif
 
-x_err x_cnd_init(x_cnd* cnd);
+X_INLINE x_err x_cnd_init(x_cnd* cnd);
 
-void x_cnd_dstr(x_cnd* cnd);
+X_INLINE void x_cnd_dstr(x_cnd* cnd);
 
-x_err x_cnd_broadcast(x_cnd* cnd);
+X_INLINE x_err x_cnd_broadcast(x_cnd* cnd);
 
-x_err x_cnd_signal(x_cnd* cnd);
+X_INLINE x_err x_cnd_signal(x_cnd* cnd);
 
-x_err x_cnd_timedwait(x_cnd* cnd, x_mtx* mtx, const struct timespec* time_point);
+X_INLINE x_err x_cnd_timedwait(
+    x_cnd* cnd, x_mtx* mtx, const struct timespec* time_point);
 
-x_err x_cnd_wait(x_cnd* cnd, x_mtx* mtx);
+X_INLINE x_err x_cnd_wait(x_cnd* cnd, x_mtx* mtx);
 // DECL_x_cnd}}}
 
 //*************************************************************** DECL_x_mtx{{{
@@ -491,17 +497,17 @@ enum
 #define X_MTX_INIT {PTHREAD_MUTEX_INITIALIZER, x_mtx_plain}
 #endif
 
-x_err x_mtx_init(x_mtx* mtx, int type);
+X_INLINE x_err x_mtx_init(x_mtx* mtx, int type);
 
-void x_mtx_dstr(x_mtx* mtx);
+X_INLINE void x_mtx_dstr(x_mtx* mtx);
 
-x_err x_mtx_lock(x_mtx* mtx);
+X_INLINE x_err x_mtx_lock(x_mtx* mtx);
 
-x_err x_mtx_timedlock(x_mtx* mtx, const struct timespec* time_point);
+X_INLINE x_err x_mtx_timedlock(x_mtx* mtx, const struct timespec* time_point);
 
-x_err x_mtx_trylock(x_mtx* mtx);
+X_INLINE x_err x_mtx_trylock(x_mtx* mtx);
 
-x_err x_mtx_unlock(x_mtx* mtx);
+X_INLINE x_err x_mtx_unlock(x_mtx* mtx);
 // DECL_x_mtx}}}
 
 //*************************************************************** DECL_x_sem{{{
@@ -522,25 +528,25 @@ struct _x_sem_
 #define X_SEM_VALUE_MAX SEM_VALUE_MAX
 #endif
 
-x_err x_sem_init(x_sem* sem, int pshared, unsigned int value);
+X_INLINE x_err x_sem_init(x_sem* sem, int pshared, unsigned int value);
 
-x_err x_sem_dstr(x_sem* sem);
+X_INLINE x_err x_sem_dstr(x_sem* sem);
 
-x_err x_sem_close(x_sem* sem);
+X_INLINE x_err x_sem_close(x_sem* sem);
 
-x_err x_sem_getvalue(x_sem* sem, int* sval);
+X_INLINE x_err x_sem_getvalue(x_sem* sem, int* sval);
 
-x_err x_sem_open(x_sem* sem, const char* name, int oflag, ...);
+X_INLINE x_err x_sem_open(x_sem* sem, const char* name, int oflag, ...);
 
-x_err x_sem_post(x_sem* sem);
+X_INLINE x_err x_sem_post(x_sem* sem);
 
-x_err x_sem_unlink(const char* name);
+X_INLINE x_err x_sem_unlink(const char* name);
 
-x_err x_sem_timedwait(x_sem* sem, const struct timespec* abs_timeout);
+X_INLINE x_err x_sem_timedwait(x_sem* sem, const struct timespec* abs_timeout);
 
-x_err x_sem_trywait(x_sem* sem);
+X_INLINE x_err x_sem_trywait(x_sem* sem);
 
-x_err x_sem_wait(x_sem* sem);
+X_INLINE x_err x_sem_wait(x_sem* sem);
 // DECL_x_sem}}}
 
 //*************************************************************** DECL_x_thd{{{
@@ -564,26 +570,26 @@ typedef void* x_thd_rv;
 typedef x_thd_rv (*x_thd_routine)(void*);
 
 #if X_WINDOWS
-HANDLE x_thd_current();
+X_INLINE HANDLE x_thd_current();
 #else
-pthread_t x_thd_current();
+X_INLINE pthread_t x_thd_current();
 #endif
 
-x_err x_thd_init(x_thd* thd, x_thd_routine func, void* data);
+X_INLINE x_err x_thd_init(x_thd* thd, x_thd_routine func, void* data);
 
-x_err x_thd_detach(x_thd* thd);
+X_INLINE x_err x_thd_detach(x_thd* thd);
 
-bool x_thd_equal(x_thd lhs, x_thd rhs);
+X_INLINE bool x_thd_equal(x_thd lhs, x_thd rhs);
 
-void x_thd_exit(x_thd_rv exit_code);
+X_INLINE void x_thd_exit(x_thd_rv exit_code);
 
-x_err x_thd_getname(x_thd* thd, char* name, const size_t size);
+X_INLINE x_err x_thd_getname(x_thd* thd, char* name, const size_t size);
 
-x_err x_thd_join(x_thd* thd, x_thd_rv* exit_code);
+X_INLINE x_err x_thd_join(x_thd* thd, x_thd_rv* exit_code);
 
-x_err x_thd_setname(x_thd* thd, const char* name);
+X_INLINE x_err x_thd_setname(x_thd* thd, const char* name);
 
-x_err x_thd_yield();
+X_INLINE x_err x_thd_yield();
 // DECL_x_thd}}}
 
 //************************************************************ DECL_x_atomic{{{
@@ -707,17 +713,17 @@ struct _x_atomic_flag_
 };
 
 #define _X_DECL_ATOMIC_FUNCTION(T, bit) \
-  void x_atomic_init_##bit(volatile x_atomic_##bit*, T); \
-  void x_atomic_store_##bit(volatile x_atomic_##bit*, T, x_memory_order); \
-  T x_atomic_load_##bit(volatile x_atomic_##bit*, x_memory_order); \
-  T x_atomic_exchange_##bit(volatile x_atomic_##bit*, T, x_memory_order); \
-  bool x_atomic_compare_exchange_##bit( \
+  X_INLINE void x_atomic_init_##bit(volatile x_atomic_##bit*, T); \
+  X_INLINE void x_atomic_store_##bit(volatile x_atomic_##bit*, T, x_memory_order); \
+  X_INLINE T x_atomic_load_##bit(volatile x_atomic_##bit*, x_memory_order); \
+  X_INLINE T x_atomic_exchange_##bit(volatile x_atomic_##bit*, T, x_memory_order); \
+  X_INLINE bool x_atomic_compare_exchange_##bit( \
     volatile x_atomic_##bit*, T*, T, x_memory_order, x_memory_order); \
-  T x_atomic_fetch_add_##bit(volatile x_atomic_##bit*, T, x_memory_order); \
-  T x_atomic_fetch_sub_##bit(volatile x_atomic_##bit*, T, x_memory_order); \
-  T x_atomic_fetch_Or_##bit(volatile x_atomic_##bit*, T, x_memory_order); \
-  T x_atomic_fetch_Xor_##bit(volatile x_atomic_##bit*, T, x_memory_order); \
-  T x_atomic_fetch_And_##bit(volatile x_atomic_##bit*, T, x_memory_order);
+  X_INLINE T x_atomic_fetch_add_##bit(volatile x_atomic_##bit*, T, x_memory_order); \
+  X_INLINE T x_atomic_fetch_sub_##bit(volatile x_atomic_##bit*, T, x_memory_order); \
+  X_INLINE T x_atomic_fetch_Or_##bit(volatile x_atomic_##bit*, T, x_memory_order); \
+  X_INLINE T x_atomic_fetch_Xor_##bit(volatile x_atomic_##bit*, T, x_memory_order); \
+  X_INLINE T x_atomic_fetch_And_##bit(volatile x_atomic_##bit*, T, x_memory_order);
 
 _X_DECL_ATOMIC_STRUCT(uint8_t, 8)
 _X_DECL_ATOMIC_STRUCT(uint16_t, 16)
@@ -737,23 +743,22 @@ _X_DECL_ATOMIC_FUNCTION(bool, bool)
 
 #define x_atomic_is_lock_free(T) _x_is_size_lock_free(sizeof(T))
 
-bool x_atomic_flag_test_and_set(volatile x_atomic_flag*, x_memory_order);
+X_INLINE bool x_atomic_flag_test_and_set(volatile x_atomic_flag*, x_memory_order);
 
-void x_atomic_flag_clear(volatile x_atomic_flag*, x_memory_order);
+X_INLINE void x_atomic_flag_clear(volatile x_atomic_flag*, x_memory_order);
 
-void x_atomic_signal_fence(const x_memory_order order);
+X_INLINE void x_atomic_signal_fence(const x_memory_order order);
 
-void x_atomic_thread_fence(const x_memory_order order);
+X_INLINE void x_atomic_thread_fence(const x_memory_order order);
 // DECL_x_atomic}}}
 
 //*************************************************************** DECL_x_cks{{{
-#define X_CKS_INIT {x_cks_na, {0}}
+X_INLINE uint32_t x_cks_crc32(
+    const void* data, const size_t size, const uint32_t* prev);
 
-uint32_t x_cks_crc32(const void* data, const size_t size, const uint32_t* prev);
+X_INLINE uint16_t x_cks_rfc1071(const void* data, const size_t size);
 
-uint16_t x_cks_rfc1071(const void* data, const size_t size);
-
-uint8_t x_cks_xor(const void* data, const size_t size);
+X_INLINE uint8_t x_cks_xor(const void* data, const size_t size);
 // DECL_x_cks}}}
 
 //*************************************************************** DECL_x_pkt{{{
@@ -817,32 +822,34 @@ struct _x_skt_
 #define X_SKT_INIT {-1, {0}}
 #endif
 
-x_err x_skt_init(x_skt* skt, const int type);
+X_INLINE x_err x_skt_init(x_skt* skt, const int type);
 
-x_err x_skt_accpet(x_skt* skt, x_skt* acceptee);
+X_INLINE x_err x_skt_accpet(x_skt* skt, x_skt* acceptee);
 
-x_err x_skt_addr(x_skt* skt, char* ip, uint16_t* port);
+X_INLINE x_err x_skt_addr(x_skt* skt, char* ip, uint16_t* port);
 
-x_err x_skt_close(x_skt* skt);
+X_INLINE x_err x_skt_close(x_skt* skt);
 
-x_err x_skt_connect(x_skt* skt, const char* ip, const uint16_t port);
+X_INLINE x_err x_skt_connect(x_skt* skt, const char* ip, const uint16_t port);
 
-x_err x_skt_getopt(
+X_INLINE x_err x_skt_getopt(
     x_skt* skt, const int lvl, const int opt, void* val, socklen_t* len);
 
-x_err x_skt_listen(x_skt* skt, const char* ip, const uint16_t port);
+X_INLINE x_err x_skt_listen(x_skt* skt, const char* ip, const uint16_t port);
 
-x_err x_skt_recv(x_skt* skt, void* buf, const size_t size, const int flags);
+X_INLINE x_err x_skt_recv(
+    x_skt* skt, void* buf, const size_t size, const int flags);
 
-x_err x_skt_recvv(x_skt* skt, x_iov* iov, const size_t count, const int flags);
+X_INLINE x_err x_skt_recvv(
+    x_skt* skt, x_iov* iov, const size_t count, const int flags);
 
-x_err x_skt_send(
+X_INLINE x_err x_skt_send(
     x_skt* skt, const void* buf, const size_t size, const int flags);
 
-x_err x_skt_sendv(
+X_INLINE x_err x_skt_sendv(
     x_skt* skt, const x_iov* iov, const size_t count, const int flags);
 
-x_err x_skt_setopt(
+X_INLINE x_err x_skt_setopt(
     x_skt* skt, const int lvl, const int opt, const void* val,
     const socklen_t len);
 // DECL_x_skt}}}
@@ -868,9 +875,9 @@ struct _x_anode_
 #define X_NODE_INIT  {NULL, NULL, NULL}
 #define X_ANODE_INIT {NULL, X_ATOMIC_VAR_INIT(ptr), X_ATOMIC_VAR_INIT(ptr)}
 
-x_node* x_node_create(void* data, x_node* prev, x_node* next);
+X_INLINE x_node* x_node_create(void* data, x_node* prev, x_node* next);
 
-x_anode* x_anode_create(void* data, void* prev, void* next);
+X_INLINE x_anode* x_anode_create(void* data, void* prev, void* next);
 // DECL_x_node}}}
 
 typedef struct _x_deque_ x_deque;
@@ -891,35 +898,35 @@ struct _x_deque_
 
 #define X_DEQUE_INIT {X_QUE_CAP_INF, 0, NULL, NULL}
 
-x_err x_deque_init(x_deque* que, const uint64_t capacity);
+X_INLINE x_err x_deque_init(x_deque* que, const uint64_t capacity);
 
-void x_deque_dstr(x_deque* que, void (*dealloc)(void*));
+X_INLINE void x_deque_dstr(x_deque* que, void (*dealloc)(void*));
 
-void x_deque_clear(x_deque* que, void (*dealloc)(void*));
+X_INLINE void x_deque_clear(x_deque* que, void (*dealloc)(void*));
 
-x_node* x_deque_deq_back(x_deque* que);
+X_INLINE x_node* x_deque_deq_back(x_deque* que);
 
-x_node* x_deque_deq_front(x_deque* que);
+X_INLINE x_node* x_deque_deq_front(x_deque* que);
 
-x_err x_deque_enq_back(x_deque* que, x_node* const node);
+X_INLINE x_err x_deque_enq_back(x_deque* que, x_node* const node);
 
-x_err x_deque_enq_front(x_deque* que, x_node* const node);
+X_INLINE x_err x_deque_enq_front(x_deque* que, x_node* const node);
 
-bool x_deque_empty(x_deque* que);
+X_INLINE bool x_deque_empty(x_deque* que);
 
-bool x_deque_full(x_deque* que);
+X_INLINE bool x_deque_full(x_deque* que);
 
-void* x_deque_pop_back(x_deque* que);
+X_INLINE void* x_deque_pop_back(x_deque* que);
 
-void* x_deque_pop_front(x_deque* que);
+X_INLINE void* x_deque_pop_front(x_deque* que);
 
-x_err x_deque_push_back(x_deque* que, void* const data);
+X_INLINE x_err x_deque_push_back(x_deque* que, void* const data);
 
-x_err x_deque_push_front(x_deque* que, void* const data);
+X_INLINE x_err x_deque_push_front(x_deque* que, void* const data);
 
-x_err x_deque_reserve(x_deque* que, const uint64_t capacity);
+X_INLINE x_err x_deque_reserve(x_deque* que, const uint64_t capacity);
 
-uint64_t x_deque_size(x_deque* que);
+X_INLINE uint64_t x_deque_size(x_deque* que);
 // DECL_x_deque}}}
 
 //************************************************************* DECL_x_nbque{{{
@@ -954,23 +961,23 @@ struct _x_nbque_
   X_ATOMIC_VAR_INIT(ptr), X_ATOMIC_VAR_INIT(ptr)}
 #endif
 
-x_err x_nbque_init(x_nbque* que, const uint64_t capacity);
+X_INLINE x_err x_nbque_init(x_nbque* que, const uint64_t capacity);
 
-void x_nbque_dstr(x_nbque* que, void (*dealloc)(void*));
+X_INLINE void x_nbque_dstr(x_nbque* que, void (*dealloc)(void*));
 
-x_err x_nbque_clear(x_nbque* que, void (*dealloc)(void*));
+X_INLINE x_err x_nbque_clear(x_nbque* que, void (*dealloc)(void*));
 
-bool x_nbque_empty(x_nbque* que);
+X_INLINE bool x_nbque_empty(x_nbque* que);
 
-bool x_nbque_full(x_nbque* que);
+X_INLINE bool x_nbque_full(x_nbque* que);
 
-void* x_nbque_pop(x_nbque* que);
+X_INLINE void* x_nbque_pop(x_nbque* que);
 
-x_err x_nbque_push(x_nbque* que, void* const data);
+X_INLINE x_err x_nbque_push(x_nbque* que, void* const data);
 
-x_err x_nbque_reserve(x_nbque* que, const uint64_t capacity);
+X_INLINE x_err x_nbque_reserve(x_nbque* que, const uint64_t capacity);
 
-uint64_t x_nbque_size(x_nbque* que);
+X_INLINE uint64_t x_nbque_size(x_nbque* que);
 // DECL_x_nbque}}}
 
 //************************************************************* DECL_x_tlque{{{
@@ -1009,23 +1016,23 @@ struct _x_tlque_
   X_CND_INIT, X_CND_INIT, X_MTX_INIT, X_MTX_INIT}
 #endif
 
-x_err x_tlque_init(x_tlque* que, const uint64_t capacity);
+X_INLINE x_err x_tlque_init(x_tlque* que, const uint64_t capacity);
 
-void x_tlque_dstr(x_tlque* que, void (*dealloc)(void*));
+X_INLINE void x_tlque_dstr(x_tlque* que, void (*dealloc)(void*));
 
-x_err x_tlque_clear(x_tlque* que, void (*dealloc)(void*));
+X_INLINE x_err x_tlque_clear(x_tlque* que, void (*dealloc)(void*));
 
-bool x_tlque_empty(x_tlque* que);
+X_INLINE bool x_tlque_empty(x_tlque* que);
 
-bool x_tlque_full(x_tlque* que);
+X_INLINE bool x_tlque_full(x_tlque* que);
 
-void* x_tlque_pop(x_tlque* que);
+X_INLINE void* x_tlque_pop(x_tlque* que);
 
-x_err x_tlque_push(x_tlque* que, void* const data);
+X_INLINE x_err x_tlque_push(x_tlque* que, void* const data);
 
-x_err x_tlque_reserve(x_tlque* que, const uint64_t capacity);
+X_INLINE x_err x_tlque_reserve(x_tlque* que, const uint64_t capacity);
 
-uint64_t x_tlque_size(x_tlque* que);
+X_INLINE uint64_t x_tlque_size(x_tlque* que);
 // DECL_x_tlque}}}
 
 //************************************************************ DECL_x_tictoc{{{
@@ -1048,13 +1055,13 @@ typedef struct _x_tictoc_
   } report;
 } x_tictoc;
 
-int x_tictoc_init(x_tictoc* tictoc);
+X_INLINE int x_tictoc_init(x_tictoc* tictoc);
 
-int x_tic(x_tictoc* tictoc, const bool echo);
+X_INLINE int x_tic(x_tictoc* tictoc, const bool echo);
 
-int x_toc(x_tictoc* tictoc, const char* unit, const bool echo);
+X_INLINE int x_toc(x_tictoc* tictoc, const char* unit, const bool echo);
 
-int x_toc_ex(
+X_INLINE int x_toc_ex(
     x_tictoc* tictoc,
     const char* unit, const long long cycle, const char* title,
     char* echo, size_t* size);
@@ -1064,10 +1071,7 @@ int x_toc_ex(
 }
 #endif
 
-#endif  // X_H
 
-
-#ifdef X_H_IMPL
 //******************************************************************* C and C++
 #ifdef __cplusplus
 extern "C" {
@@ -1099,7 +1103,7 @@ extern "C" {
 
 //************************************************************** IMPL_Compat{{{
 #if !X_WINDOWS
-int _kbhit()
+X_INLINE int _kbhit()
 {
   static bool initialized = false;
   if (!initialized) {
@@ -1253,9 +1257,9 @@ struct timespec x_now()
   struct timespec ts = {0};
 
 #if X_WINDOWS || __STDC_VERSION__ >= 201112L
-  timespec_get(&ts, TIME_UTC);
+  (void)timespec_get(&ts, TIME_UTC);
 #else
-  clock_gettime(CLOCK_MONOTONIC, &ts);
+  (void)clock_gettime(CLOCK_MONOTONIC, &ts);
 #endif
 
   return ts;
@@ -1481,7 +1485,7 @@ const char* x_timestamp(char* buf, const size_t bsz)
 #define _X_LOG_COLOR_I _X_COLOR_GREEN
 #define _X_LOG_COLOR_D _X_COLOR_CYAN
 
-void _x_log_prefix(
+X_INLINE void _x_log_prefix(
     char* buf, size_t bsz,
     const int level, const char* filename, const char* function, const long line)
 {
@@ -1497,7 +1501,7 @@ void _x_log_prefix(
 #endif
 }
 
-int _x_log_level(char level)
+X_INLINE int _x_log_level(char level)
 {
   switch (tolower(level)) {
     case 'p':
@@ -1586,7 +1590,7 @@ void _x_log_impl(
 // IMPL_x_log}}}
 
 //*************************************************************** IMPL_x_err{{{
-void _x_err_msg(x_err* err, /*const char* msg*/ ...)
+X_INLINE void _x_err_msg(x_err* err, /*const char* msg*/ ...)
 {
   if (err == NULL) {
     return;
@@ -1660,12 +1664,6 @@ x_err x_err_set(const int cat, const long long val, /*const char* msg*/ ...)
   _x_err_msg(&err, args);
   va_end(args);
 
-  return err;
-}
-
-x_err x_ok()
-{
-  static x_err err = {x_err_custom, 0, "ok"};
   return err;
 }
 // IMPL_x_err}}}
@@ -2271,7 +2269,7 @@ x_err x_thd_getname(x_thd* thd, char* name, const size_t size)
 
   (void)LocalFree(src);
 
-  return (err == 0 ? x_ok () : x_err_set(x_err_posix, (long long)err));
+  return (err == 0 ? x_ok() : x_err_set(x_err_posix, (long long)err));
 #else
   return x_err_set(
       x_err_posix, (long long)pthread_getname_np(thd->hndl, name, 16));
@@ -2709,7 +2707,7 @@ _X_IMPL_ATOMIC_LOGIC_BOOL(Or , bool, bool, X_EMPTINESS, X_EMPTINESS)
 _X_IMPL_ATOMIC_LOGIC_BOOL(Xor, bool, bool, X_EMPTINESS, X_EMPTINESS)
 _X_IMPL_ATOMIC_LOGIC_BOOL(And, bool, bool, X_EMPTINESS, X_EMPTINESS)
 
-bool _x_is_size_lock_free(const size_t size)
+X_INLINE bool _x_is_size_lock_free(const size_t size)
 {
 #if X_64BIT
   return (size <= 8 && (size & (size - 1)) == 0);
@@ -2855,10 +2853,10 @@ uint16_t x_cks_rfc1071(const void* data, const size_t size)
 
 uint8_t x_cks_xor(const void* data, const size_t size)
 {
-  uint8_t* d8 = (uint8_t*)data;
-  uint64_t* d64 = (uint64_t*)data;
-  size_t dsz = sizeof(uint64_t);
-  size_t cnt = size / dsz;
+  const uint8_t* d8 = (const uint8_t*)data;
+  const uint64_t* d64 = (const uint64_t*)data;
+  const size_t dsz = sizeof(uint64_t);
+  const size_t cnt = size / dsz;
 
   union {
     uint8_t u8[8];
@@ -2866,21 +2864,17 @@ uint8_t x_cks_xor(const void* data, const size_t size)
   } cks = {0};
 
   size_t i = 0;
-  for (i = 0; i < cnt; ++i) {
-    cks.u64 ^= d64[i];
+  for (i = 0; i < (cnt & (~0x07)); i += 8) {
+    cks.u64 ^= d64[i] ^ d64[i + 1] ^ d64[i + 2] ^ d64[i + 3]
+      ^ d64[i + 4] ^ d64[i + 5] ^ d64[i + 6] ^ d64[i + 7];
   }
 
   for (size_t j = i * dsz; j < size; ++j) {
     cks.u8[0] ^= d8[j];
   }
 
-  cks.u8[0] ^= cks.u8[1];
-  cks.u8[0] ^= cks.u8[2];
-  cks.u8[0] ^= cks.u8[3];
-  cks.u8[0] ^= cks.u8[4];
-  cks.u8[0] ^= cks.u8[5];
-  cks.u8[0] ^= cks.u8[6];
-  cks.u8[0] ^= cks.u8[7];
+  cks.u8[0] ^= cks.u8[1] ^ cks.u8[2] ^ cks.u8[3]
+    ^ cks.u8[4] ^ cks.u8[5] ^ cks.u8[6] ^ cks.u8[7];
 
   return cks.u8[0];
 }
@@ -3742,7 +3736,7 @@ void x_tlque_dstr(x_tlque* que, void (*dealloc)(void*))
   x_node* node = NULL;
   while (!x_deque_empty(&que->pool)) {
     node = x_deque_deq_front(&que->pool);
-    if (dealloc != NULL && node->data != NULL) {
+    if (dealloc != NULL && node != NULL && node->data != NULL) {
       dealloc(node->data);
       node->data = NULL;
     }
@@ -4038,4 +4032,5 @@ int x_toc_ex(
 }
 #endif
 
-#endif  // X_H_IMPL
+
+#endif  // X_H
