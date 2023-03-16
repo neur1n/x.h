@@ -11,11 +11,11 @@ MERCHANTABILITY OR FIT FOR A PARTICULAR PURPOSE.
 See the Mulan PSL v2 for more details.
 
 
-Last update: 2023-03-15 16:29
-Version: v0.5.1
+Last update: 2023-03-16 17:59
+Version: v0.5.2
 ******************************************************************************/
 #ifndef X_H
-#define X_H X_VER(0, 5, 1)
+#define X_H X_VER(0, 5, 2)
 
 
 /** Table of Contents
@@ -319,6 +319,9 @@ extern "C" {
 #endif
 
 #define x_bit(bit) (1 << (bit))
+
+#define x_buffer_valid(buffer, size) \
+  (((buffer) == NULL && (size) == 0) || ((buffer) != NULL && (size) != 0))
 
 #define x_fail(err) ((err) != 0)
 
@@ -1295,10 +1298,8 @@ int x_split_path(
 #if X_WINDOWS
   return _splitpath_s(full, root, rsz, dir, dsz, file, fsz, ext, esz);
 #else
-  if ((root == NULL && rsz != 0) || (root != NULL && rsz == 0)
-      || (dir == NULL && dsz != 0) || (dir != NULL && dsz == 0)
-      || (file == NULL && fsz != 0) || (file != NULL && fsz == 0)
-      || (ext == NULL && esz != 0) || (ext != NULL && esz == 0)) {
+  if (!x_buffer_valid(root, rsz) || !x_buffer_valid(dir, dsz)
+      || !x_buffer_valid(file, fsz) || !x_buffer_valid(ext, esz)) {
     return EINVAL;
   }
 
@@ -2927,7 +2928,7 @@ x_err x_skt_init(x_skt* skt, const int type)
 
 x_err x_skt_accpet(x_skt* skt, x_skt* acceptee)
 {
-  if (acceptee == NULL) {
+  if (skt == NULL || acceptee == NULL) {
     return x_err_set(x_err_posix, EINVAL);
   }
 
@@ -3009,7 +3010,7 @@ x_err x_skt_connect(x_skt* skt, const char* ip, const uint16_t port)
 x_err x_skt_getopt(
     x_skt* skt, const int lvl, const int opt, void* val, socklen_t* len)
 {
-  if (val == NULL || len == NULL || skt == NULL) {
+  if (skt == NULL || val == NULL || len == NULL) {
     return x_err_set(x_err_posix, EINVAL);
   }
 
@@ -3019,7 +3020,7 @@ x_err x_skt_getopt(
 
 x_err x_skt_listen(x_skt* skt, const char* ip, const uint16_t port)
 {
-  if (ip == NULL) {
+  if (skt == NULL) {
     return x_err_set(x_err_posix, EINVAL);
   }
 
@@ -3045,17 +3046,18 @@ x_err x_skt_listen(x_skt* skt, const char* ip, const uint16_t port)
 
 x_err x_skt_recv(x_skt* skt, void* buf, const size_t size, const int flags)
 {
-  if (skt == NULL) {
+  if (skt == NULL || !x_buffer_valid(buf, size)) {
     return x_err_set(x_err_posix, EINVAL);
   }
 
 #if X_WINDOWS
   int remain = (int)size;
+  int bytes = 0;
 #else
   size_t remain = size;
+  ssize_t bytes = 0;
 #endif
   size_t offset = 0;
-  int bytes = 0;
 
   while (remain > 0) {
     bytes = recv(skt->hndl, (char*)buf + offset, remain, flags);
@@ -3072,14 +3074,13 @@ x_err x_skt_recv(x_skt* skt, void* buf, const size_t size, const int flags)
 
 x_err x_skt_recvv(x_skt* skt, x_iov* iov, const size_t count, const int flags)
 {
-  if (iov == NULL || count == 0 || skt == NULL) {
+  if (skt == NULL || !x_buffer_valid(iov, count)) {
     return x_err_set(x_err_posix, EINVAL);
   }
 
   size_t total = 0;
   for (size_t i = 0; i < count; ++i) {
-    if ((iov[i].buf == NULL && iov[i].len != 0)
-        || (iov[i].buf != NULL && iov[i].len == 0)) {
+    if (!x_buffer_valid(iov[i].buf, iov[i].len)) {
       return x_err_set(x_err_posix, EINVAL);
     }
 
@@ -3148,8 +3149,7 @@ x_err x_skt_sendv(
 
   size_t total = 0;
   for (size_t i = 0; i < count; ++i) {
-    if ((iov[i].buf == NULL && iov[i].len != 0)
-        || (iov[i].buf != NULL && iov[i].len == 0)) {
+    if (!x_buffer_valid(iov[i].buf, iov[i].len)) {
       return x_err_set(x_err_posix, EINVAL);
     }
 

@@ -43,6 +43,7 @@
         <li><a href="#x_export-x_import">X_EXPORT, X_IMPORT</a></li>
         <li><a href="#x_key">X_KEY</a></li>
         <li><a href="#x_assert">x_assert</a></li>
+        <li><a href="#x_buffer_valid">x_buffer_valid</a></li>
         <li><a href="#x_bit">x_bit</a></li>
         <li><a href="#x_count">x_count</a></li>
         <li><a href="#x_fail">x_fail</a></li>
@@ -227,6 +228,9 @@ T x_bit(bit)  // In this document, T indicats a return type from a macro.
 #### Parameters
 - `bit`: Specification for which bit of the integer should be set to 1.
 
+#### Returns
+- The generated integer, may be `int`, `long`, etc.
+
 #### Examples
 ```c
 enum
@@ -239,8 +243,38 @@ enum
 int read_and_write = FLAG_READ | FLAG_WRITE;
 ```
 
+
+### x\_buffer\_valid
+The definition of this macro should have explained itself well:
+
+```c
+#define x_buffer_valid(buffer, size) \
+  (((buffer) == NULL && (size) == 0) || ((buffer) != NULL && (size) != 0))
+```
+
+It is not implemented as function since `size` can be `int`, `size_t` etc. So
+please pass arguments carefully.
+
+#### Parameters
+- `buffer`: The pointer to a buffer.
+- `size`: The size of the contents in the pointer.
+
 #### Returns
-- The generated integer, may be `int`, `long`, etc.
+- `true` if the buffer is valid.
+
+#### Examples
+```c
+int read_file(const char* file, void* buffer, size_t size)
+{
+  if (!x_buffer_valid(buffer, size)) {
+    return EINVAL;
+  }
+
+  // operations
+
+  return 0;
+}
+```
 
 
 ### x\_count
