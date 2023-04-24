@@ -11,7 +11,7 @@ MERCHANTABILITY OR FIT FOR A PARTICULAR PURPOSE.
 See the Mulan PSL v2 for more details.
 
 
-Last update: 2023-04-24 17:00
+Last update: 2023-04-24 17:59
 Version: v0.5.3
 ******************************************************************************/
 #ifndef X_H
@@ -310,7 +310,7 @@ extern "C" {
 #ifdef NDEBUG
 #define x_assert(expr) do { \
   if (!(expr)) { \
-    fprintf(stderr, "%s:%s: %s: Assertion '%s' failed.\n", \
+    fprintf(stderr, "%s:%ld: %s: Assertion '%s' failed.\n", \
         __FILENAME__, __LINE__, __PRETTY_FUNCTION__, #expr); \
     abort(); } \
 } while (false)
