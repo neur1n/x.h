@@ -11,11 +11,11 @@ MERCHANTABILITY OR FIT FOR A PARTICULAR PURPOSE.
 See the Mulan PSL v2 for more details.
 
 
-Last update: 2023-03-16 17:59
-Version: v0.5.2
+Last update: 2023-04-24 17:00
+Version: v0.5.3
 ******************************************************************************/
 #ifndef X_H
-#define X_H X_VER(0, 5, 2)
+#define X_H X_VER(0, 5, 3)
 
 
 /** Table of Contents
@@ -311,7 +311,7 @@ extern "C" {
 #define x_assert(expr) do { \
   if (!(expr)) { \
     fprintf(stderr, "%s:%s: %s: Assertion '%s' failed.\n", \
-        __FILENAME__, __LINE__, __PRETTY__FUNCTION__, #expr); \
+        __FILENAME__, __LINE__, __PRETTY_FUNCTION__, #expr); \
     abort(); } \
 } while (false)
 #else
