@@ -63,7 +63,6 @@
         <li><a href="#x_timestamp">x_timestamp</a></li>
         <li><a href="#x_log">x_log</a></li>
         <li><a href="#x_err">x_err</a></li>
-        <li><a href="#x_err">x_err</a></li>
         <li><a href="#concurrency">Concurrency</a></li>
         <li><a href="#x_cks">x_cks</a></li>
         <li><a href="#x_pkt">x_pkt</a></li>
