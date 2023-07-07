@@ -11,11 +11,11 @@ MERCHANTABILITY OR FIT FOR A PARTICULAR PURPOSE.
 See the Mulan PSL v2 for more details.
 
 
-Last update: 2023-04-24 17:59
-Version: v0.5.3
+Last update: 2023-07-07 09:48
+Version: v0.5.4
 ******************************************************************************/
 #ifndef X_H
-#define X_H X_VER(0, 5, 3)
+#define X_H X_VER(0, 5, 4)
 
 
 /** Table of Contents
@@ -2192,11 +2192,7 @@ x_err x_thd_init(x_thd* thd, x_thd_routine func, void* data)
     return x_err_get(x_err_posix);
   }
 #else
-#if __STDC_VERSION__ >= 201112L
-  int err = pthread_create(&thd->hndl, ATTR_C11_THREAD, func, data);
-#else
   int err = pthread_create(&thd->hndl, NULL, func, data);
-#endif
   if (err != 0) {
     return x_err_set(x_err_posix, (long long)err);
   }
