@@ -11,11 +11,11 @@ MERCHANTABILITY OR FIT FOR A PARTICULAR PURPOSE.
 See the Mulan PSL v2 for more details.
 
 
-Last update: 2023-09-07 19:43
-Version: v0.5.5
+Last update: 2023-09-15 11:12
+Version: v0.5.6
 ******************************************************************************/
 #ifndef X_H
-#define X_H X_VER(0, 5, 5)
+#define X_H X_VER(0, 5, 6)
 
 
 /** Table of Contents
@@ -423,15 +423,15 @@ enum
 
 typedef struct _x_err_
 {
-  int cat;
-  long long val;
+  int32_t cat;
+  int32_t val;
   char msg[X_ERR_MSG_LIMIT];
 } x_err;
 
-X_INLINE x_err x_err_get(const int cat);
+X_INLINE x_err x_err_get(const int32_t cat);
 
 X_INLINE x_err x_err_set(
-    const int cat, const long long val, /*const char* msg*/ ...);
+    const int32_t cat, const int32_t val, /*const char* msg*/ ...);
 
 static x_err x_ok()
 {
@@ -1627,7 +1627,7 @@ X_INLINE void _x_err_msg(x_err* err, /*const char* msg*/ ...)
 #endif
 }
 
-x_err x_err_get(const int cat)
+x_err x_err_get(const int32_t cat)
 {
   x_err err = {x_err_custom, 0, {0}};
 
@@ -1635,20 +1635,20 @@ x_err x_err_get(const int cat)
   switch (cat) {
     case x_err_win32:
       err.cat = cat;
-      err.val = (long long)GetLastError();
+      err.val = (int32_t)GetLastError();
       break;
     case x_err_socket:
       err.cat = cat;
-      err.val = (long long)WSAGetLastError();
+      err.val = (int32_t)WSAGetLastError();
       break;
     default:
       err.cat = x_err_posix;
-      err.val = (long long)errno;
+      err.val = (int32_t)errno;
       break;
   }
 #else
   err.cat = x_err_posix;
-  err.val = (long long)errno;
+  err.val = (int32_t)errno;
 #endif
 
   _x_err_msg(&err);
@@ -1656,7 +1656,7 @@ x_err x_err_get(const int cat)
   return err;
 }
 
-x_err x_err_set(const int cat, const long long val, /*const char* msg*/ ...)
+x_err x_err_set(const int32_t cat, const int32_t val, /*const char* msg*/ ...)
 {
   x_err err = {cat, val, {0}};
 
@@ -1680,7 +1680,7 @@ x_err x_cnd_init(x_cnd* cnd)
   InitializeConditionVariable(&cnd->hndl);
   return x_ok();
 #else
-  return x_err_set(x_err_posix, (long long)pthread_cond_init(&cnd->hndl, NULL));
+  return x_err_set(x_err_posix, (int32_t)pthread_cond_init(&cnd->hndl, NULL));
 #endif
 }
 
@@ -1707,7 +1707,7 @@ x_err x_cnd_broadcast(x_cnd* cnd)
   WakeAllConditionVariable(&cnd->hndl);
   return x_ok();
 #else
-  return x_err_set(x_err_posix, (long long)pthread_cond_broadcast(&cnd->hndl));
+  return x_err_set(x_err_posix, (int32_t)pthread_cond_broadcast(&cnd->hndl));
 #endif
 }
 
@@ -1721,7 +1721,7 @@ x_err x_cnd_signal(x_cnd* cnd)
   WakeConditionVariable(&cnd->hndl);
   return x_ok();
 #else
-  return x_err_set(x_err_posix, (long long)pthread_cond_signal(&cnd->hndl));
+  return x_err_set(x_err_posix, (int32_t)pthread_cond_signal(&cnd->hndl));
 #endif
 }
 
@@ -1748,7 +1748,7 @@ x_err x_cnd_timedwait(
 #else
   return x_err_set(
       x_err_posix,
-      (long long)pthread_cond_timedwait(&cnd->hndl, &mtx->hndl, time_point));
+      (int32_t)pthread_cond_timedwait(&cnd->hndl, &mtx->hndl, time_point));
 #endif
 }
 
@@ -1772,7 +1772,7 @@ x_err x_cnd_wait(x_cnd* cnd, x_mtx* mtx)
   return x_ok();
 #else
   return x_err_set(
-      x_err_posix, (long long)pthread_cond_wait(&cnd->hndl, &mtx->hndl));
+      x_err_posix, (int32_t)pthread_cond_wait(&cnd->hndl, &mtx->hndl));
 #endif
 }
 // IMPL_x_cnd}}}
@@ -1819,7 +1819,7 @@ x_err x_mtx_init(x_mtx* mtx, int type)
   mtx->type = type;
 
   return x_err_set(
-      x_err_posix, (long long)pthread_mutex_init(&mtx->hndl, &attr));
+      x_err_posix, (int32_t)pthread_mutex_init(&mtx->hndl, &attr));
 #endif
 }
 
@@ -1866,7 +1866,7 @@ x_err x_mtx_lock(x_mtx* mtx)
     return x_err_set(x_err_posix, EINVAL);
   }
 
-  return x_err_set(x_err_posix, (long long)pthread_mutex_lock(&mtx->hndl));
+  return x_err_set(x_err_posix, (int32_t)pthread_mutex_lock(&mtx->hndl));
 #endif
 }
 
@@ -1887,7 +1887,7 @@ x_err x_mtx_timedlock(x_mtx* mtx, const struct timespec* time_point)
   }
 
   return x_err_set(
-      x_err_posix, (long long)pthread_mutex_timedlock(&mtx->hndl, time_point));
+      x_err_posix, (int32_t)pthread_mutex_timedlock(&mtx->hndl, time_point));
 #endif
 }
 
@@ -1910,7 +1910,7 @@ x_err x_mtx_trylock(x_mtx* mtx)
     return x_err_set(x_err_posix, EINVAL);
   }
 
-  return x_err_set(x_err_posix, (long long)pthread_mutex_trylock(&mtx->hndl));
+  return x_err_set(x_err_posix, (int32_t)pthread_mutex_trylock(&mtx->hndl));
 #endif
 }
 
@@ -1933,7 +1933,7 @@ x_err x_mtx_unlock(x_mtx* mtx)
     return x_err_set(x_err_posix, EINVAL);
   }
 
-  return x_err_set(x_err_posix, (long long)pthread_mutex_unlock(&mtx->hndl));
+  return x_err_set(x_err_posix, (int32_t)pthread_mutex_unlock(&mtx->hndl));
 #endif
 }
 // IMPL_x_mtx}}}
@@ -2194,7 +2194,7 @@ x_err x_thd_init(x_thd* thd, x_thd_routine func, void* data)
 #else
   int err = pthread_create(&thd->hndl, NULL, func, data);
   if (err != 0) {
-    return x_err_set(x_err_posix, (long long)err);
+    return x_err_set(x_err_posix, (int32_t)err);
   }
 #endif
 
@@ -2254,7 +2254,7 @@ x_err x_thd_getname(x_thd* thd, char* name, const size_t size)
   wchar_t* src = NULL;
   HRESULT hr = GetThreadDescription(thd->hndl, &src);
   if (FAILED(hr)) {
-    return x_err_set(x_err_win32, (long long)hr);
+    return x_err_set(x_err_win32, (int32_t)hr);
   }
 
   size_t len = 0;
@@ -2266,10 +2266,10 @@ x_err x_thd_getname(x_thd* thd, char* name, const size_t size)
 
   (void)LocalFree(src);
 
-  return (err == 0 ? x_ok() : x_err_set(x_err_posix, (long long)err));
+  return (err == 0 ? x_ok() : x_err_set(x_err_posix, (int32_t)err));
 #else
   return x_err_set(
-      x_err_posix, (long long)pthread_getname_np(thd->hndl, name, 16));
+      x_err_posix, (int32_t)pthread_getname_np(thd->hndl, name, 16));
 #endif
 }
 
@@ -2302,7 +2302,7 @@ x_err x_thd_join(x_thd* thd, x_thd_rv* exit_code)
     *exit_code = (x_thd_rv)(intptr_t)err;  // intptr_t to avoid a warning.
   }
 
-  return x_err_set(x_err_posix, (long long)err);
+  return x_err_set(x_err_posix, (int32_t)err);
 #endif
 }
 
@@ -2328,7 +2328,7 @@ x_err x_thd_setname(x_thd* thd, const char* name)
 
   return (SUCCEEDED(hr) ? x_ok() : x_err_set(x_err_win32, hr));
 #else
-  return x_err_set(x_err_posix, (long long)pthread_setname_np(thd->hndl, name));
+  return x_err_set(x_err_posix, (int32_t)pthread_setname_np(thd->hndl, name));
 #endif
 }
 

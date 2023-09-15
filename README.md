@@ -681,20 +681,20 @@ enum
 
 typedef struct _x_err_
 {
-  int cat;                    // Category of the error.
-  long long val;              // Numeric value of the error. Using 'long long' to make it more compatible across platforms.
+  int32_t cat;                // Category of the error.
+  int32_t val;                // Numeric value of the error.
   char msg[X_ERR_MSG_LIMIT];  // Description of the error.
 } x_err;
 
 // Retrieves the last error of specific category, via GetLastError() or
 // WSAGetLastError() from Win32 API or errno from POSIX.
-x_err x_err_get(const int cat);
+x_err x_err_get(const int32_t cat);
 
 // Constructs an x_err instance. If cat(egory) is x_err_custom, an addtional
 // argument is needed for specifying the description of the error. Otherwish,
 // the description will be retrieved according to the value of the error via
 // FormatMessage from Win32 API or strerror from POSIX.
-x_err x_err_set(const int cat, const long long val, /*const char*/...);
+x_err x_err_set(const int32_t cat, const int32_t val, /*const char*/...);
 
 // Can be used to initialize x_err instances.
 x_err x_ok();
