@@ -11,11 +11,11 @@ MERCHANTABILITY OR FIT FOR A PARTICULAR PURPOSE.
 See the Mulan PSL v2 for more details.
 
 
-Last update: 2023-09-15 11:12
-Version: v0.5.6
+Last update: 2023-09-15 14:59
+Version: v0.5.7
 ******************************************************************************/
 #ifndef X_H
-#define X_H X_VER(0, 5, 6)
+#define X_H X_VER(0, 5, 7)
 
 
 /** Table of Contents
@@ -3879,7 +3879,7 @@ x_err x_tlque_push(x_tlque* que, void* const data)
   que->tail = node;
 
   uint64_t oldc = que->count.fetch_add(&que->count, 1, x_mo_release);
-  if (oldc >= 0) {
+  if (oldc > 0) {
     x_cnd_signal(&que->nmty);
   }
 
