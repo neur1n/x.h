@@ -694,11 +694,11 @@ level prefixes and the colors.
 enum
 {
   x_err_custom = 0,           // Custom errors.
-  x_err_posix  = x_bit(1),    // POSIX errors.
-  x_err_win32  = x_bit(2),    // Win32 API errors, which also includes WSA errors.
-  x_err_socket = x_bit(3),    // WSA errors (on Windows) or POSIX errors.
+  x_err_posix  = 1,           // POSIX errors.
+  x_err_win32  = 2,           // Win32 API errors, which also includes WSA errors.
+  x_err_socket = 3,           // WSA errors (on Windows) or POSIX errors.
 #if X_ENABLE_CUDA
-  x_err_cuda   = x_bit(4),    // CUDA errors.
+  x_err_cuda   = 4,           // CUDA errors.
 #endif
 #if X_WINDOWS
   x_err_system = x_err_win32, // System errors, for Windows OS.

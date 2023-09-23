@@ -11,11 +11,11 @@ MERCHANTABILITY OR FIT FOR A PARTICULAR PURPOSE.
 See the Mulan PSL v2 for more details.
 
 
-Last update: 2023-09-23 15:11
-Version: v0.6.0
+Last update: 2023-09-23 15:39
+Version: v0.6.1
 ******************************************************************************/
 #ifndef X_H
-#define X_H X_VER(0, 6, 0)
+#define X_H X_VER(0, 6, 1)
 
 
 /** Table of Contents
@@ -438,11 +438,11 @@ X_INLINE void _x_log_impl(
 enum
 {
   x_err_custom = 0,
-  x_err_posix  = x_bit(1),
-  x_err_win32  = x_bit(2),
-  x_err_socket = x_bit(3),
+  x_err_posix  = 1,
+  x_err_win32  = 2,
+  x_err_socket = 3,
 #if X_ENABLE_CUDA
-  x_err_cuda   = x_bit(4),
+  x_err_cuda   = 4,
 #endif
 #if X_WINDOWS
   x_err_system = x_err_win32,
