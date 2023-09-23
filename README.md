@@ -23,7 +23,7 @@
 
 
 <!------------------------------------------------------- TABLE OF CONTENTS -->
-<details open="open">
+<details>
   <summary>Table of Contents</summary>
   <ol>
     <li>
@@ -35,6 +35,7 @@
     </li>
     <li><a href="#documentation">Documentation</a>
       <ul>
+        <li><a href="#toggling-features">Toggling Features</a></li>
         <li><a href="#version-number-generator">Version Number Generator</a></li>
         <li><a href="#architecture-detection">Architecture Detection</a></li>
         <li><a href="#compiler-detection">Compiler Detection</a></li>
@@ -70,8 +71,8 @@
         <li><a href="#x_skt">x_skt</a></li>
         <li><a href="#x_node">x_node</a></li>
         <li><a href="#x_deque">x_deque</a></li>
+        <li><a href="#x_lfque">x_lfque</a></li>
         <li><a href="#x_tlque">x_tlque</a></li>
-        <li><a href="#x_nbque">x_nbque</a></li>
         <li><a href="#x_tictoc">x_tictoc</a></li>
       </ul>
     </li>
@@ -101,6 +102,34 @@ functionalities by including it anywhere:
 
 <!----------------------------------------------------------- DOCUMENTATION -->
 ## Documentation
+### Toggling Features
+Several macros are provided for toggling features, some of which may be used to
+avoid redundant build dependencies in some cases.
+
+```c
+#ifndef X_ENABLE_ATOMIC
+#define X_ENABLE_ATOMIC (0)
+#endif
+
+#ifndef X_ENABLE_CONCURRENCY
+#define X_ENABLE_CONCURRENCY (0)
+#endif
+
+#ifndef X_ENABLE_CUDA
+#define X_ENABLE_CUDA (0)
+#endif
+
+#ifndef X_ENABLE_SOCKET
+#define X_ENABLE_SOCKET (0)
+#endif
+
+#ifndef X_ENABLE_STRUCT_FUNCTION
+#define X_ENABLE_STRUCT_FUNCTION (1)
+#endif
+```
+
+---
+
 ### Version Number Generator
 X\_VER: Combines `major`, `minor`, `patch` numbers into a version number. The
 ranges of each component is:
@@ -661,10 +690,6 @@ level prefixes and the colors.
 
 ### x\_err
 ```c
-#ifndef X_ERR_MSG_LIMIT
-#define X_ERR_MSG_LIMIT (128)
-#endif
-
 // Enumerations of error categories.
 enum
 {
@@ -672,6 +697,9 @@ enum
   x_err_posix  = x_bit(1),    // POSIX errors.
   x_err_win32  = x_bit(2),    // Win32 API errors, which also includes WSA errors.
   x_err_socket = x_bit(3),    // WSA errors (on Windows) or POSIX errors.
+#if X_ENABLE_CUDA
+  x_err_cuda   = x_bit(4),    // CUDA errors.
+#endif
 #if X_WINDOWS
   x_err_system = x_err_win32, // System errors, for Windows OS.
 #else
@@ -679,59 +707,44 @@ enum
 #endif
 };
 
+// Enumerations of error message querying method.
+enum
+{
+  x_err_msg_literal = 0,
+  x_err_msg_lookup  = 1,
+};
+
 typedef struct _x_err_
 {
-  int32_t cat;                // Category of the error.
-  int32_t val;                // Numeric value of the error.
-  char msg[X_ERR_MSG_LIMIT];  // Description of the error.
+  int32_t cat; // Category of the error.
+  int32_t val; // Numeric value of the error.
 } x_err;
+
+// Error message lookup function API.
+typedef const char* (*x_err_msg_fn)(char* msg, const size_t msz, const int32_t val);
 
 // Retrieves the last error of specific category, via GetLastError() or
 // WSAGetLastError() from Win32 API or errno from POSIX.
 x_err x_err_get(const int32_t cat);
 
-// Constructs an x_err instance. If cat(egory) is x_err_custom, an addtional
-// argument is needed for specifying the description of the error. Otherwish,
-// the description will be retrieved according to the value of the error via
-// FormatMessage from Win32 API or strerror from POSIX.
-x_err x_err_set(const int32_t cat, const int32_t val, /*const char*/...);
+// If err.cat is x_err_custom, two additional arguments are required for
+// specifying the error message querying method and the method itself. Please
+// checkout test/test_x_err.c, which should be self explained.
+//
+// Otherwish, the description will be retrieved according to the value of the
+// error via FormatMessage from Win32 API or strerror from POSIX.
+const char* x_err_msg(char* msg, const size_t msz, const x_err err, ...
+    /* const int method, const char* generator*/);
 
-// Can be used to initialize x_err instances.
+// Constructs an x_err instance.
+x_err x_err_set(const int32_t cat, const int32_t val);
+
+// Can be used to initialize an x_err instance.
 x_err x_ok();
 ```
 
 #### Examples
-```c
-x_err foo_function()
-{
-  x_err err = x_ok();
-
-  // One may need to define SOCKET and INVALID_SOCKET to make them work across platforms.
-  SOCKET s = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
-  if (s == INVALID_SOCKET)
-  {
-    // For Windows OS, the following x_get_err will call WSAGetLastError().
-    // For other OSs, the following x_get_err will retrieve errno.
-    err = x_err_get(x_err_socket);
-    printf("Failed on socket: %s\n", x_err_msg(err));
-    return err;
-  }
-
-  /*
-    some operations...
-  */
-
-  err = x_set_err(x_err_posix, ERANGE);
-
-  /*
-    some other operations...
-  */
-
-  err = x_set_err(x_err_custom, -1, "unknown error");
-
-  return err;
-}
-```
+Please checkout *test/test_x_err.c* and *test/test_x_err.cu*.
 
 ---
 
@@ -906,13 +919,13 @@ Simple double ended queue without synchronization.
 
 ---
 
-### x\_tlque
-**T**wo **l**ock queue.
+### x\_lfque
+**L**ock-**f**ree queue.
 
 ---
 
-### x\_nbque
-**N**on-**b**locking queue.
+### x\_tlque
+**T**wo-**l**ock queue.
 
 ---
 

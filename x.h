@@ -11,11 +11,11 @@ MERCHANTABILITY OR FIT FOR A PARTICULAR PURPOSE.
 See the Mulan PSL v2 for more details.
 
 
-Last update: 2023-09-15 14:59
-Version: v0.5.7
+Last update: 2023-09-23 15:11
+Version: v0.6.0
 ******************************************************************************/
 #ifndef X_H
-#define X_H X_VER(0, 5, 7)
+#define X_H X_VER(0, 6, 0)
 
 
 /** Table of Contents
@@ -35,12 +35,28 @@ Version: v0.5.7
  * DECL_x_skt     IMPL_x_skt
  * DECL_x_node    IMPL_x_node
  * DECL_x_deque   IMPL_x_deque
- * DECL_x_nbque   IMPL_x_nbque
+ * DECL_x_lfque   IMPL_x_lfque
  * DECL_x_tlque   IMPL_x_tlque
  * DECL_x_tictoc  IMPL_x_tictoc
  */
 
 #define X_EMPTINESS
+
+#ifndef X_ENABLE_ATOMIC
+#define X_ENABLE_ATOMIC (0)
+#endif
+
+#ifndef X_ENABLE_CONCURRENCY
+#define X_ENABLE_CONCURRENCY (0)
+#endif
+
+#ifndef X_ENABLE_CUDA
+#define X_ENABLE_CUDA (0)
+#endif
+
+#ifndef X_ENABLE_SOCKET
+#define X_ENABLE_SOCKET (0)
+#endif
 
 #ifndef X_ENABLE_STRUCT_FUNCTION
 #define X_ENABLE_STRUCT_FUNCTION (1)
@@ -191,31 +207,46 @@ Version: v0.5.7
 #include <time.h>
 
 #if X_WINDOWS && X_MSVC
-#include <winsock2.h>
-#include <ws2tcpip.h>
-#include <windows.h>
-#include <conio.h>
+#if X_ENABLE_ATOMIC
 #include <intrin.h>
+#endif
+
+#if X_ENABLE_CONCURRENCY
 #include <process.h>
 #include <processthreadsapi.h>
 #include <synchapi.h>
+#endif
+
+#if X_ENABLE_SOCKET
+#include <winsock2.h>
+#include <ws2tcpip.h>
+#endif
+
+#include <windows.h>
+#include <conio.h>
 #elif X_GCC || (!X_MINGW && X_CLANG)
+#if X_ENABLE_CONCURRENCY
+#include <pthread.h>
+#include <semaphore.h>
+#endif
+
+#if X_ENABLE_SOCKET
 #include <arpa/inet.h>
+#include <sys/socket.h>
+#endif
+
 #include <ctype.h>
 #include <limits.h>
-#include <netinet/in.h>
-#include <pthread.h>
-#include <sched.h>
-#include <semaphore.h>
 #include <stdlib.h>
 #include <sys/ioctl.h>
-#include <sys/socket.h>
-#include <sys/uio.h>
 #include <termios.h>
 #include <unistd.h>
-#include <sched.h>
 #else
 #error "Unsupported build environment."
+#endif
+
+#if X_ENABLE_CUDA
+#include <cuda_runtime.h>
 #endif
 // Headers}}}
 
@@ -410,6 +441,9 @@ enum
   x_err_posix  = x_bit(1),
   x_err_win32  = x_bit(2),
   x_err_socket = x_bit(3),
+#if X_ENABLE_CUDA
+  x_err_cuda   = x_bit(4),
+#endif
 #if X_WINDOWS
   x_err_system = x_err_win32,
 #else
@@ -417,29 +451,31 @@ enum
 #endif
 };
 
-#ifndef X_ERR_MSG_LIMIT
-#define X_ERR_MSG_LIMIT (128)
-#endif
+enum
+{
+  x_err_msg_literal = 0,
+  x_err_msg_lookup  = 1,
+};
 
 typedef struct _x_err_
 {
   int32_t cat;
   int32_t val;
-  char msg[X_ERR_MSG_LIMIT];
 } x_err;
+
+typedef const char* (*x_err_msg_fn)(char* msg, const size_t msz, const int32_t val);
 
 X_INLINE x_err x_err_get(const int32_t cat);
 
-X_INLINE x_err x_err_set(
-    const int32_t cat, const int32_t val, /*const char* msg*/ ...);
+X_INLINE const char* x_err_msg(char* msg, const size_t msz, const x_err err, ...
+    /* const int method, const char* generator*/);
 
-static x_err x_ok()
-{
-  static x_err err = {x_err_custom, 0, "ok"};
-  return err;
-}
+X_INLINE x_err x_err_set(const int32_t cat, const int32_t val);
+
+X_INLINE x_err x_ok();
 // DECL_x_err}}}
 
+#if X_ENABLE_CONCURRENCY
 typedef struct _x_cnd_ x_cnd;
 typedef struct _x_mtx_ x_mtx;
 typedef struct _x_sem_ x_sem;
@@ -594,7 +630,9 @@ X_INLINE x_err x_thd_setname(x_thd* thd, const char* name);
 
 X_INLINE x_err x_thd_yield();
 // DECL_x_thd}}}
+#endif  // X_ENABLE_CONCURRENCY
 
+#if X_ENABLE_ATOMIC
 //************************************************************ DECL_x_atomic{{{
 typedef struct _x_atomic_8_ x_atomic_8;
 typedef struct _x_atomic_16_ x_atomic_16;
@@ -754,6 +792,7 @@ X_INLINE void x_atomic_signal_fence(const x_memory_order order);
 
 X_INLINE void x_atomic_thread_fence(const x_memory_order order);
 // DECL_x_atomic}}}
+#endif  // X_ENABLE_ATOMIC
 
 //*************************************************************** DECL_x_cks{{{
 X_INLINE uint32_t x_cks_crc32(
@@ -807,6 +846,7 @@ typedef struct _x_iov_
 #define X_IOV_INIT {NULL, 0}
 // DECL_x_iov}}}
 
+#if X_ENABLE_SOCKET
 //*************************************************************** DECL_x_skt{{{
 typedef struct _x_skt_ x_skt;
 struct _x_skt_
@@ -856,6 +896,7 @@ X_INLINE x_err x_skt_setopt(
     x_skt* skt, const int lvl, const int opt, const void* val,
     const socklen_t len);
 // DECL_x_skt}}}
+#endif  // X_ENABLE_SOCKET
 
 //************************************************************** DECL_x_node{{{
 typedef struct _x_node_ x_node;
@@ -868,6 +909,11 @@ struct _x_node_
   x_node* next;
 };
 
+#define X_NODE_INIT  {NULL, NULL, NULL}
+
+X_INLINE x_node* x_node_create(void* data, x_node* prev, x_node* next);
+
+#if X_ENABLE_ATOMIC
 struct _x_anode_
 {
   void* data;
@@ -875,16 +921,14 @@ struct _x_anode_
   x_atomic_ptr next;
 };
 
-#define X_NODE_INIT  {NULL, NULL, NULL}
 #define X_ANODE_INIT {NULL, X_ATOMIC_VAR_INIT(ptr), X_ATOMIC_VAR_INIT(ptr)}
 
-X_INLINE x_node* x_node_create(void* data, x_node* prev, x_node* next);
-
 X_INLINE x_anode* x_anode_create(void* data, void* prev, void* next);
+#endif  // X_ENABLE_ATOMIC
 // DECL_x_node}}}
 
 typedef struct _x_deque_ x_deque;
-typedef struct _x_nbque_ x_nbque;
+typedef struct _x_lfque_ x_lfque;
 typedef struct _x_tlque_ x_tlque;
 #ifndef X_QUE_CAP_INF
 #define X_QUE_CAP_INF UINT64_MAX
@@ -932,8 +976,9 @@ X_INLINE x_err x_deque_reserve(x_deque* que, const uint64_t capacity);
 X_INLINE uint64_t x_deque_size(x_deque* que);
 // DECL_x_deque}}}
 
-//************************************************************* DECL_x_nbque{{{
-struct _x_nbque_
+#if X_ENABLE_ATOMIC
+//************************************************************* DECL_x_lfque{{{
+struct _x_lfque_
 {
   volatile x_atomic_64 capacity;
   volatile x_atomic_64 ocnt;
@@ -941,48 +986,50 @@ struct _x_nbque_
   volatile x_atomic_ptr head;
   volatile x_atomic_ptr tail;
 #if X_ENABLE_STRUCT_FUNCTION
-  x_err (*init)(x_nbque*, const uint64_t);
-  void (*dstr)(x_nbque*, void (*dealloc)(void*));
-  x_err (*clear)(x_nbque*, void (*dealloc)(void*));
-  bool (*empty)(x_nbque*);
-  bool (*full)(x_nbque*);
-  void* (*pop)(x_nbque*);
-  x_err (*push)(x_nbque*, void* const);
-  x_err (*reserve)(x_nbque*, const uint64_t);
-  uint64_t (*size)(x_nbque*);
+  x_err (*init)(x_lfque*, const uint64_t);
+  void (*dstr)(x_lfque*, void (*dealloc)(void*));
+  x_err (*clear)(x_lfque*, void (*dealloc)(void*));
+  bool (*empty)(x_lfque*);
+  bool (*full)(x_lfque*);
+  void* (*pop)(x_lfque*);
+  x_err (*push)(x_lfque*, void* const);
+  x_err (*reserve)(x_lfque*, const uint64_t);
+  uint64_t (*size)(x_lfque*);
 #endif
 };
 
 #if X_ENABLE_STRUCT_FUNCTION
-#define X_NBQUE_INIT { \
+#define X_LFQUE_INIT { \
   X_ATOMIC_VAR_INIT(64), X_ATOMIC_VAR_INIT(64), X_ATOMIC_VAR_INIT(64), \
   X_ATOMIC_VAR_INIT(ptr), X_ATOMIC_VAR_INIT(ptr), \
-  x_nbque_init, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL}
+  x_lfque_init, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL}
 #else
-#define X_NBQUE_INIT { \
+#define X_LFQUE_INIT { \
   X_ATOMIC_VAR_INIT(64), X_ATOMIC_VAR_INIT(64), X_ATOMIC_VAR_INIT(64), \
   X_ATOMIC_VAR_INIT(ptr), X_ATOMIC_VAR_INIT(ptr)}
 #endif
 
-X_INLINE x_err x_nbque_init(x_nbque* que, const uint64_t capacity);
+X_INLINE x_err x_lfque_init(x_lfque* que, const uint64_t capacity);
 
-X_INLINE void x_nbque_dstr(x_nbque* que, void (*dealloc)(void*));
+X_INLINE void x_lfque_dstr(x_lfque* que, void (*dealloc)(void*));
 
-X_INLINE x_err x_nbque_clear(x_nbque* que, void (*dealloc)(void*));
+X_INLINE x_err x_lfque_clear(x_lfque* que, void (*dealloc)(void*));
 
-X_INLINE bool x_nbque_empty(x_nbque* que);
+X_INLINE bool x_lfque_empty(x_lfque* que);
 
-X_INLINE bool x_nbque_full(x_nbque* que);
+X_INLINE bool x_lfque_full(x_lfque* que);
 
-X_INLINE void* x_nbque_pop(x_nbque* que);
+X_INLINE void* x_lfque_pop(x_lfque* que);
 
-X_INLINE x_err x_nbque_push(x_nbque* que, void* const data);
+X_INLINE x_err x_lfque_push(x_lfque* que, void* const data);
 
-X_INLINE x_err x_nbque_reserve(x_nbque* que, const uint64_t capacity);
+X_INLINE x_err x_lfque_reserve(x_lfque* que, const uint64_t capacity);
 
-X_INLINE uint64_t x_nbque_size(x_nbque* que);
-// DECL_x_nbque}}}
+X_INLINE uint64_t x_lfque_size(x_lfque* que);
+// DECL_x_lfque}}}
+#endif  // X_ENABLE_ATOMIC
 
+#if X_ENABLE_CONCURRENCY
 //************************************************************* DECL_x_tlque{{{
 struct _x_tlque_
 {
@@ -1037,6 +1084,7 @@ X_INLINE x_err x_tlque_reserve(x_tlque* que, const uint64_t capacity);
 
 X_INLINE uint64_t x_tlque_size(x_tlque* que);
 // DECL_x_tlque}}}
+#endif  // X_ENABLE_CONCURRENCY
 
 //************************************************************ DECL_x_tictoc{{{
 typedef struct _x_tictoc_
@@ -1080,9 +1128,7 @@ X_INLINE int x_toc_ex(
 extern "C" {
 #endif
 
-#if X_WINDOWS && X_MSVC
-#pragma comment(lib, "Ws2_32")
-
+#if X_ENABLE_ATOMIC
 #pragma intrinsic(_ReadBarrier, _ReadWriteBarrier, _WriteBarrier, \
     _InterlockedExchange8, _InterlockedExchange16, \
     _InterlockedExchange, _InterlockedExchange64, \
@@ -1102,7 +1148,13 @@ extern "C" {
     _InterlockedAnd8, _InterlockedAnd16, \
     _InterlockedAnd, _InterlockedAnd64, \
     )
-#endif
+#endif  // X_ENABLE_ATOMIC
+
+#if X_ENABLE_SOCKET
+#if X_WINDOWS && X_MSVC
+#pragma comment(lib, "Ws2_32")
+#endif  // X_ENABLE_SOCKET
+#endif  // X_WINDOWS && X_MSVC
 
 //************************************************************** IMPL_Compat{{{
 #if !X_WINDOWS
@@ -1591,84 +1643,103 @@ void _x_log_impl(
 // IMPL_x_log}}}
 
 //*************************************************************** IMPL_x_err{{{
-X_INLINE void _x_err_msg(x_err* err, /*const char* msg*/ ...)
-{
-  if (err == NULL) {
-    return;
-  }
-
-#if X_WINDOWS
-  if (err->cat == x_err_win32 || err->cat == x_err_socket) {
-    FormatMessageA(
-        FORMAT_MESSAGE_FROM_SYSTEM
-        | FORMAT_MESSAGE_IGNORE_INSERTS
-        | FORMAT_MESSAGE_MAX_WIDTH_MASK,
-        NULL, (DWORD)err->val, MAKELANGID(LANG_ENGLISH, SUBLANG_ENGLISH_US),
-        err->msg, sizeof(err->msg), NULL);
-  } else if (err->cat == x_err_custom) {
-    va_list args;
-    va_start(args, err);
-    const char* msg = va_arg(args, const char*);
-    strcpy_s(err->msg, sizeof(err->msg), msg);
-    va_end(args);
-  } else {  // x_err_posix
-    strerror_s(err->msg, sizeof(err->msg), (int)err->val);
-  }
-#else
-  if (err->cat == x_err_custom) {
-    va_list args;
-    va_start(args, err);
-    const char* msg = va_arg(args, const char*);
-    strcpy(err->msg, msg);
-    va_end(args);
-  } else {  // everything else fallbacks to x_err_posix
-    strcpy(err->msg, strerror((int)err->val));
-  }
-#endif
-}
-
 x_err x_err_get(const int32_t cat)
 {
-  x_err err = {x_err_custom, 0, {0}};
+  x_err err = x_ok();
 
 #if X_WINDOWS
-  switch (cat) {
-    case x_err_win32:
-      err.cat = cat;
-      err.val = (int32_t)GetLastError();
-      break;
-    case x_err_socket:
-      err.cat = cat;
-      err.val = (int32_t)WSAGetLastError();
-      break;
-    default:
-      err.cat = x_err_posix;
-      err.val = (int32_t)errno;
-      break;
+  if (cat == x_err_win32) {
+    err.cat = cat;
+    err.val = (int32_t)GetLastError();
+  } else if (cat == x_err_socket) {
+    err.cat = cat;
+    err.val = (int32_t)WSAGetLastError();
+#if X_ENABLE_CUDA
+  } else if (cat == x_err_cuda) {
+    err.cat = cat;
+    err.val = (int32_t)cudaGetLastError();
+#endif
+  } else {
+    err.cat = x_err_posix;
+    err.val = (int32_t)errno;
   }
 #else
-  err.cat = x_err_posix;
-  err.val = (int32_t)errno;
+#if X_ENABLE_CUDA
+  if (cat == x_err_cuda) {
+    err.cat = cat;
+    err.val = (int32_t)cudaGetLastError();
+  } else
 #endif
-
-  _x_err_msg(&err);
+  {
+    err.cat = x_err_posix;
+    err.val = (int32_t)errno;
+  }
+#endif
 
   return err;
 }
 
-x_err x_err_set(const int32_t cat, const int32_t val, /*const char* msg*/ ...)
+const char* x_err_msg(char* msg, const size_t msz, const x_err err, ...)
 {
-  x_err err = {cat, val, {0}};
+  if (msg == NULL) {
+    return "";
+  }
 
-  va_list args;
-  va_start(args, val);
-  _x_err_msg(&err, args);
-  va_end(args);
+  if (err.cat == x_err_custom) {
+    va_list args;
+    va_start(args, err);
 
+    int method = va_arg(args, int);
+
+    if (method == x_err_msg_literal) {
+      const char* str = va_arg(args, const char*);
+      strcpy(msg, str);
+    } else if (method == x_err_msg_lookup) {
+      x_err_msg_fn fn = va_arg(args, x_err_msg_fn);
+      if (fn != NULL) {
+        strcpy(msg, fn(msg, msz, err.val));
+      }
+    }
+
+    va_end(args);
+#if X_ENABLE_CUDA
+  } else if (err.cat == x_err_cuda) {
+    strcpy(msg, cudaGetErrorString((cudaError_t)err.val));
+#endif
+  } else {
+#if X_WINDOWS
+    if (err.cat == x_err_win32 || err.cat == x_err_socket) {
+      FormatMessageA(
+          FORMAT_MESSAGE_FROM_SYSTEM
+          | FORMAT_MESSAGE_IGNORE_INSERTS
+          | FORMAT_MESSAGE_MAX_WIDTH_MASK,
+          NULL, (DWORD)err.val, MAKELANGID(LANG_ENGLISH, SUBLANG_ENGLISH_US),
+          msg, msz, NULL);
+    } else {  // x_err_posix
+      strerror_s(msg, msz, (int)err.val);
+    }
+#else
+    strcpy(msg, strerror((int)err.val));  // x_err_posix
+#endif
+  }
+
+  return msg;
+}
+
+x_err x_err_set(const int32_t cat, const int32_t val)
+{
+  x_err err = {cat, val};
+  return err;
+}
+
+x_err x_ok()
+{
+  static x_err err = {x_err_posix, 0};
   return err;
 }
 // IMPL_x_err}}}
 
+#if X_ENABLE_CONCURRENCY
 //*************************************************************** IMPL_x_cnd{{{
 x_err x_cnd_init(x_cnd* cnd)
 {
@@ -2341,7 +2412,9 @@ x_err x_thd_yield()
 #endif
 }
 // IMPL_x_thd}}}
+#endif  // X_ENABLE_CONCURRENCY
 
+#if X_ENABLE_ATOMIC
 //************************************************************ IMPL_x_atomic{{{
 #if X_MSVC
 #ifdef __cplusplus
@@ -2805,6 +2878,7 @@ void x_atomic_thread_fence(const x_memory_order order)
 #endif
 }
 // IMPL_x_atomic}}}
+#endif  // X_ENABLE_ATOMIC
 
 //*************************************************************** IMPL_x_cks{{{
 uint32_t x_cks_crc32(const void* data, const size_t size, const uint32_t* prev)
@@ -2877,6 +2951,7 @@ uint8_t x_cks_xor(const void* data, const size_t size)
 }
 // IMPL_x_cks}}}
 
+#if X_ENABLE_SOCKET
 //*************************************************************** IMPL_x_skt{{{
 x_err x_skt_init(x_skt* skt, const int type)
 {
@@ -3187,6 +3262,7 @@ x_err x_skt_setopt(
       ? x_ok() : x_err_get(x_err_socket));
 }
 // IMPL_x_skt}}}
+#endif  // X_ENABLE_SOCKET
 
 //************************************************************** IMPL_x_node{{{
 x_node* x_node_create(void* data, x_node* prev, x_node* next)
@@ -3203,6 +3279,7 @@ x_node* x_node_create(void* data, x_node* prev, x_node* next)
   return node;
 }
 
+#if X_ENABLE_ATOMIC
 x_anode* x_anode_create(void* data, void* prev, void* next)
 {
   x_anode* node = (x_anode*)malloc(sizeof(x_anode));
@@ -3216,6 +3293,7 @@ x_anode* x_anode_create(void* data, void* prev, void* next)
 
   return node;
 }
+#endif  // X_ENABLE_ATOMIC
 // IMPL_x_node}}}
 
 //************************************************************* IMPL_x_deque{{{
@@ -3442,8 +3520,9 @@ uint64_t x_deque_size(x_deque* que)
 }
 // IMPL_x_deque}}}
 
-//************************************************************* IMPL_x_nbque{{{
-x_err x_nbque_init(x_nbque* que, const uint64_t capacity)
+#if X_ENABLE_ATOMIC
+//************************************************************* IMPL_x_lfque{{{
+x_err x_lfque_init(x_lfque* que, const uint64_t capacity)
 {
   if (que == NULL) {
     return x_err_set(x_err_posix, EINVAL);
@@ -3461,27 +3540,27 @@ x_err x_nbque_init(x_nbque* que, const uint64_t capacity)
   x_atomic_init_ptr(&que->tail, node);
 
 #if X_ENABLE_STRUCT_FUNCTION
-  que->init = x_nbque_init;
-  que->dstr = x_nbque_dstr;
-  que->clear = x_nbque_clear;
-  que->empty = x_nbque_empty;
-  que->full = x_nbque_full;
-  que->pop = x_nbque_pop;
-  que->push = x_nbque_push;
-  que->reserve = x_nbque_reserve;
-  que->size = x_nbque_size;
+  que->init = x_lfque_init;
+  que->dstr = x_lfque_dstr;
+  que->clear = x_lfque_clear;
+  que->empty = x_lfque_empty;
+  que->full = x_lfque_full;
+  que->pop = x_lfque_pop;
+  que->push = x_lfque_push;
+  que->reserve = x_lfque_reserve;
+  que->size = x_lfque_size;
 #endif
 
   return x_ok();
 }
 
-void x_nbque_dstr(x_nbque* que, void (*dealloc)(void*))
+void x_lfque_dstr(x_lfque* que, void (*dealloc)(void*))
 {
   if (que == NULL) {
     return;
   }
 
-  x_nbque_clear(que, dealloc);
+  x_lfque_clear(que, dealloc);
 
   x_anode* head = (x_anode*)que->head.load(&que->head, x_mo_acquire);
   if (head != NULL) {
@@ -3493,7 +3572,7 @@ void x_nbque_dstr(x_nbque* que, void (*dealloc)(void*))
   }
 }
 
-x_err x_nbque_clear(x_nbque* que, void (*dealloc)(void*))
+x_err x_lfque_clear(x_lfque* que, void (*dealloc)(void*))
 {
   if (que == NULL) {
     return x_err_set(x_err_posix, EINVAL);
@@ -3523,14 +3602,14 @@ x_err x_nbque_clear(x_nbque* que, void (*dealloc)(void*))
   return x_ok();
 }
 
-bool x_nbque_empty(x_nbque* que)
+bool x_lfque_empty(x_lfque* que)
 {
   x_assert(que != NULL);
   return que->icnt.load(&que->icnt, x_mo_acquire)
     == que->ocnt.load(&que->ocnt, x_mo_acquire);
 }
 
-bool x_nbque_full(x_nbque* que)
+bool x_lfque_full(x_lfque* que)
 {
   x_assert(que != NULL);
   if (que->capacity.load(&que->capacity, x_mo_acquire) == X_QUE_CAP_INF) {
@@ -3542,13 +3621,13 @@ bool x_nbque_full(x_nbque* que)
   }
 }
 
-void* x_nbque_pop(x_nbque* que)
+void* x_lfque_pop(x_lfque* que)
 {
   if (que == NULL) {
     return NULL;
   }
 
-  while (x_nbque_empty(que)) {
+  while (x_lfque_empty(que)) {
     x_sleep(10);
   }
 
@@ -3592,13 +3671,13 @@ void* x_nbque_pop(x_nbque* que)
   return data;
 }
 
-x_err x_nbque_push(x_nbque* que, void* const data)
+x_err x_lfque_push(x_lfque* que, void* const data)
 {
   if (que == NULL) {
     return x_err_set(x_err_posix, EINVAL);
   }
 
-  while (x_nbque_full(que)) {
+  while (x_lfque_full(que)) {
     x_sleep(10);
   }
 
@@ -3635,7 +3714,7 @@ x_err x_nbque_push(x_nbque* que, void* const data)
   return x_ok();
 }
 
-x_err x_nbque_reserve(x_nbque* que, const uint64_t capacity)
+x_err x_lfque_reserve(x_lfque* que, const uint64_t capacity)
 {
   if (que == NULL) {
     return x_err_set(x_err_posix, EINVAL);
@@ -3650,17 +3729,19 @@ x_err x_nbque_reserve(x_nbque* que, const uint64_t capacity)
   return x_ok();
 }
 
-uint64_t x_nbque_size(x_nbque* que)
+uint64_t x_lfque_size(x_lfque* que)
 {
-  if (que == NULL || x_nbque_empty(que)) {
+  if (que == NULL || x_lfque_empty(que)) {
     return 0;
   }
 
   return que->icnt.load(&que->icnt, x_mo_acquire)
     - que->ocnt.load(&que->ocnt, x_mo_acquire);
 }
-// IMPL_x_nbque}}}
+// IMPL_x_lfque}}}
+#endif  // X_ENABLE_ATOMIC
 
+#if X_ENABLE_CONCURRENCY
 //************************************************************* IMPL_x_tlque{{{
 x_err x_tlque_init(x_tlque* que, const uint64_t capacity)
 {
@@ -3908,6 +3989,7 @@ uint64_t x_tlque_size(x_tlque* que)
   return que->count.load(&que->count, x_mo_acquire);
 }
 // IMPL_x_tlque}}}
+#endif  // X_ENABLE_CONCURRENCY
 
 //************************************************************ IMPL_x_tictoc{{{
 int x_tictoc_init(x_tictoc* tictoc)

@@ -1,0 +1,7 @@
+.cache/
+.clangd/
+.idea/
+
+build/
+
+compile_commands.json
