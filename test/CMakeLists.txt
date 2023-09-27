@@ -11,6 +11,8 @@ ADD_COMPILE_DEFINITIONS(X_ENABLE_SOCKET=1)
 
 ####################################################################### CPU {{{
 ADD_EXECUTABLE(test_x_err test_x_err.c)
+
+ADD_EXECUTABLE(test_x_tictoc test_x_tictoc.c)
 # CPU}}}
 
 ####################################################################### GPU {{{

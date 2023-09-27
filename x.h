@@ -11,8 +11,8 @@ MERCHANTABILITY OR FIT FOR A PARTICULAR PURPOSE.
 See the Mulan PSL v2 for more details.
 
 
-Last update: 2023-09-23 15:39
-Version: v0.6.1
+Last update: 2023-09-27 20:32
+Version: v0.6.2
 ******************************************************************************/
 #ifndef X_H
 #define X_H X_VER(0, 6, 1)
@@ -1466,10 +1466,15 @@ void x_sleep(const unsigned long ms)
 #if X_WINDOWS
   Sleep(ms);
 #else
-  struct timespec duration;
-  duration.tv_sec = 0;
-  duration.tv_nsec = (long)(ms * 1000000);
-  nanosleep(&duration, NULL);
+  struct timespec req = {0};
+  struct timespec rem = {0};
+
+  req.tv_sec = ms / 1000;
+  req.tv_nsec = (long)((ms % 1000) * 1000000);
+
+  if (nanosleep(&req, &rem) == EINTR) {
+    nanosleep(&rem, NULL);
+  }
 #endif
 }
 
