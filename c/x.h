@@ -11,7 +11,7 @@ MERCHANTABILITY OR FIT FOR A PARTICULAR PURPOSE.
 See the Mulan PSL v2 for more details.
 
 
-Last update: 2023-10-26 11:41
+Last update: 2023-10-26 14:03
 Version: v0.6.3
 ******************************************************************************/
 #ifndef X_H
@@ -337,6 +337,24 @@ X_INLINE void x_delete_array(T*& arr)
 extern "C" {
 #endif
 //************************************************************** DECL_Gadget{{{
+// NOTE: Put here to avoid warning about returning incomplete type.
+typedef struct _x_err_
+{
+  int32_t cat;
+  int32_t val;
+} x_err;
+
+#if X_ENABLE_CUDA
+#define x_cu_free(ptr) do { \
+  if (ptr != NULL) { \
+    cudaFree(ptr); \
+    ptr = NULL; \
+  } \
+} while (false)
+
+X_INLINE x_err x_cu_malloc(void** ptr, const size_t size);
+#endif  // X_ENABLE_CUDA
+
 #ifdef NDEBUG
 #define x_assert(expr) do { \
   if (!(expr)) { \
@@ -347,6 +365,8 @@ extern "C" {
 #else
 #define x_assert(expr) do {assert(expr);} while (false)
 #endif
+
+#define x_Pi(T) ((T)3.141592653589793238462643383279502884197169399375)
 
 #define x_KiB(T, n) ((T)n * (T)1024)
 
@@ -359,8 +379,6 @@ extern "C" {
 #define x_TiB(T, n) ((T)n * (T)1099511627776)
 
 #define x_PiB(T, n) ((T)n * (T)1125899906842620)
-
-#define x_Pi(T) ((T)3.141592653589793238462643383279502884197169399375)
 
 #define x_bit(bit) (1 << (bit))
 
@@ -386,6 +404,8 @@ X_INLINE long long x_file_size(const char* file);
 X_INLINE const char* x_full_path(char* dst, const char* src);
 
 X_INLINE int x_getch();
+
+X_INLINE x_err x_malloc(void** ptr, const size_t size);
 
 X_INLINE struct timespec x_now();
 
@@ -462,11 +482,11 @@ enum
 #endif
 };
 
-typedef struct _x_err_
-{
-  int32_t cat;
-  int32_t val;
-} x_err;
+// typedef struct _x_err_
+// {
+//   int32_t cat;
+//   int32_t val;
+// } x_err;
 
 X_INLINE x_err x_err_get(const int32_t cat);
 
@@ -1169,6 +1189,22 @@ X_INLINE int _kbhit()
 // IMPL_Compat}}}
 
 //************************************************************** IMPL_Gadget{{{
+#if X_ENABLE_CUDA
+x_err x_cu_malloc(void** ptr, const size_t size)
+{
+  if (*ptr != NULL) {
+    return x_err_set(x_err_posix, EINVAL);
+  }
+
+  cudaError_t cerr = cudaMalloc(ptr, size);
+  if (cerr != cudaSuccess) {
+    return x_err_set(x_err_cuda, cerr);
+  }
+
+  return x_ok();
+}
+#endif  // X_ENABLE_CUDA
+
 size_t x_cpu_count()
 {
 #if X_WINDOWS
@@ -1296,6 +1332,20 @@ int x_getch()
 
   return (isalpha(key) ? toupper(key) : key);
 #endif
+}
+
+x_err x_malloc(void** ptr, const size_t size)
+{
+  if (*ptr != NULL) {
+    return x_err_set(x_err_posix, EINVAL);
+  }
+
+  *ptr = malloc(size);
+  if (*ptr == NULL) {
+    return x_err_set(x_err_posix, ENOMEM);
+  }
+
+  return x_ok();
 }
 
 struct timespec x_now()

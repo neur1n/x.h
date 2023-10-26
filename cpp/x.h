@@ -11,7 +11,7 @@ MERCHANTABILITY OR FIT FOR A PARTICULAR PURPOSE.
 See the Mulan PSL v2 for more details.
 
 
-Last update: 2023-10-26 11:27
+Last update: 2023-10-26 2023-10-26 14:00
 Version: v0.1.0
 ******************************************************************************/
 #ifndef X_H
@@ -282,6 +282,16 @@ Version: v0.1.0
 #define X_INLINE inline
 
 //************************************************************** DECL_Gadget{{{
+class x_err;
+
+#if X_ENABLE_CUDA
+template<typename T>
+X_INLINE void x_cu_free(T*& ptr);
+
+template<typename T>
+X_INLINE x_err x_cu_malloc(T*& ptr, const size_t size);
+#endif  // X_ENABLE_CUDA
+
 #ifdef NDEBUG
 #define x_assert(expr) do { \
   if (!(expr)) { \
@@ -342,6 +352,9 @@ X_INLINE void x_free(T*& ptr);
 X_INLINE const char* x_full_path(char* dst, const char* src);
 
 X_INLINE int x_getch();
+
+template<typename T>
+X_INLINE x_err x_malloc(T*& ptr, const size_t size);
 
 X_INLINE struct timespec x_now();
 
@@ -651,6 +664,32 @@ X_INLINE int _kbhit()
 // IMPL_Compat}}}
 
 //************************************************************** IMPL_Gadget{{{
+#if X_ENABLE_CUDA
+template<typename T>
+void x_cu_free(T*& ptr)
+{
+  if (ptr != nullptr) {
+    cudaFree(ptr);
+    ptr = nullptr;
+  }
+}
+
+template<typename T>
+x_err x_cu_malloc(T*& ptr, const size_t size)
+{
+  if (ptr != nullptr) {
+    return x_err(x_err_posix, EINVAL);
+  }
+
+  cudaError_t cerr = cudaMalloc(ptr, size);
+  if (cerr != cudaSuccess) {
+    return x_err(x_err_cuda, cerr);
+  }
+
+  return x_err();
+}
+#endif  // X_ENABLE_CUDA
+
 template<typename T>
 constexpr T x_KiB(const T n)
 {
@@ -860,6 +899,21 @@ int x_getch()
 
   return (isalpha(key) ? toupper(key) : key);
 #endif
+}
+
+template<typename T>
+x_err x_malloc(T*& ptr, const size_t size)
+{
+  if (ptr != nullptr) {
+    return x_err(x_err_posix, EINVAL);
+  }
+
+  ptr = static_cast<T*>(malloc(size));
+  if (ptr == nullptr) {
+    return x_err(x_err_posix, ENOMEM);
+  }
+
+  return x_err();
 }
 
 struct timespec x_now()
