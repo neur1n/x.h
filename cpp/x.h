@@ -11,7 +11,7 @@ MERCHANTABILITY OR FIT FOR A PARTICULAR PURPOSE.
 See the Mulan PSL v2 for more details.
 
 
-Last update: 2023-10-26 2023-10-26 14:00
+Last update: 2023-10-26 2023-10-26 14:48
 Version: v0.1.0
 ******************************************************************************/
 #ifndef X_H
@@ -681,7 +681,7 @@ x_err x_cu_malloc(T*& ptr, const size_t size)
     return x_err(x_err_posix, EINVAL);
   }
 
-  cudaError_t cerr = cudaMalloc(ptr, size);
+  cudaError_t cerr = cudaMalloc(&ptr, size);
   if (cerr != cudaSuccess) {
     return x_err(x_err_cuda, cerr);
   }
