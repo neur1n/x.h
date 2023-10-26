@@ -2,23 +2,15 @@ CMAKE_MINIMUM_REQUIRED(VERSION 3.18 FATAL_ERROR)
 PROJECT(x_test LANGUAGES C CUDA)
 
 INCLUDE_DIRECTORIES(
-  ..
+  ../..
 )
 
 ADD_COMPILE_DEFINITIONS(X_ENABLE_ATOMIC=1)
 ADD_COMPILE_DEFINITIONS(X_ENABLE_CONCURRENCY=1)
 ADD_COMPILE_DEFINITIONS(X_ENABLE_SOCKET=1)
 
-####################################################################### CPU {{{
-ADD_EXECUTABLE(test_x_err test_x_err.c)
-
-ADD_EXECUTABLE(test_x_tictoc test_x_tictoc.c)
-# CPU}}}
-
-####################################################################### GPU {{{
 ADD_EXECUTABLE(test_x_err_cu test_x_err.cu)
 SET_TARGET_PROPERTIES(test_x_err_cu PROPERTIES
   COMPILE_DEFINITIONS "X_ENABLE_CUDA=1"
   CUDA_ARCHITECTURES 80  # Testing on 4060, but I'm not sure about the gencode.
 )
-# GPU}}}

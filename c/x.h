@@ -11,11 +11,11 @@ MERCHANTABILITY OR FIT FOR A PARTICULAR PURPOSE.
 See the Mulan PSL v2 for more details.
 
 
-Last update: 2023-09-27 20:32
-Version: v0.6.2
+Last update: 2023-10-26 11:41
+Version: v0.6.3
 ******************************************************************************/
 #ifndef X_H
-#define X_H X_VER(0, 6, 1)
+#define X_H X_VER(0, 6, 3)
 
 
 /** Table of Contents
@@ -37,7 +37,7 @@ Version: v0.6.2
  * DECL_x_deque   IMPL_x_deque
  * DECL_x_lfque   IMPL_x_lfque
  * DECL_x_tlque   IMPL_x_tlque
- * DECL_x_tictoc  IMPL_x_tictoc
+ * DECL_x_timing  IMPL_x_timing
  */
 
 #define X_EMPTINESS
@@ -333,11 +333,10 @@ X_INLINE void x_delete_array(T*& arr)
 #define x_count(a) ((sizeof(a) / sizeof(*(a))) / (size_t)(!(sizeof(a) % sizeof(*(a)))))
 #endif  // __cplusplus
 
-//************************************************************** DECL_Gadget{{{
 #ifdef __cplusplus
 extern "C" {
 #endif
-
+//************************************************************** DECL_Gadget{{{
 #ifdef NDEBUG
 #define x_assert(expr) do { \
   if (!(expr)) { \
@@ -349,12 +348,33 @@ extern "C" {
 #define x_assert(expr) do {assert(expr);} while (false)
 #endif
 
+#define x_KiB(T, n) ((T)n * (T)1024)
+
+#define x_MiB(T, n) ((T)n * (T)1048576)
+
+#define x_GiB(T, n) ((T)n * (T)1073741824)
+
+#define x_TiB(T, n) ((T)n * (T)1099511627776)
+
+#define x_TiB(T, n) ((T)n * (T)1099511627776)
+
+#define x_PiB(T, n) ((T)n * (T)1125899906842620)
+
+#define x_Pi(T) ((T)3.141592653589793238462643383279502884197169399375)
+
 #define x_bit(bit) (1 << (bit))
 
 #define x_buffer_valid(buffer, size) \
   (((buffer) == NULL && (size) == 0) || ((buffer) != NULL && (size) != 0))
 
+X_INLINE size_t x_cpu_count();
+
+X_INLINE double x_duration(
+    const char* unit, const struct timespec start, const struct timespec end);
+
 #define x_fail(err) ((err) != 0)
+
+X_INLINE long long x_file_size(const char* file);
 
 #define x_free(ptr) do { \
   if (ptr != NULL) { \
@@ -362,17 +382,6 @@ extern "C" {
     ptr = NULL; \
   } \
 } while (false)
-
-#define x_pi(T) (T)(3.141592653589793238462643383279502884197169399375)
-
-#define x_succ(err) ((err) == 0)
-
-X_INLINE size_t x_cpu_count();
-
-X_INLINE double x_duration(
-    const struct timespec start, const struct timespec end, const char* unit);
-
-X_INLINE long long x_file_size(const char* file);
 
 X_INLINE const char* x_full_path(char* dst, const char* src);
 
@@ -392,6 +401,8 @@ X_INLINE void x_sleep(const unsigned long ms);
 X_INLINE int x_strcpy(char* dst, size_t dsz, const char* src);
 
 X_INLINE bool x_strmty(const char* string);
+
+#define x_succ(err) ((err) == 0)
 
 X_INLINE const char* x_timestamp(char* buf, const size_t bsz);
 // DECL_Gadget}}}
@@ -451,24 +462,15 @@ enum
 #endif
 };
 
-enum
-{
-  x_err_msg_literal = 0,
-  x_err_msg_lookup  = 1,
-};
-
 typedef struct _x_err_
 {
   int32_t cat;
   int32_t val;
 } x_err;
 
-typedef const char* (*x_err_msg_fn)(char* msg, const size_t msz, const int32_t val);
-
 X_INLINE x_err x_err_get(const int32_t cat);
 
-X_INLINE const char* x_err_msg(char* msg, const size_t msz, const x_err err, ...
-    /* const int method, const char* generator*/);
+X_INLINE const char* x_err_msg(char* msg, const size_t msz, const x_err err);
 
 X_INLINE x_err x_err_set(const int32_t cat, const int32_t val);
 
@@ -634,6 +636,28 @@ X_INLINE x_err x_thd_yield();
 
 #if X_ENABLE_ATOMIC
 //************************************************************ DECL_x_atomic{{{
+#if X_WINDOWS && X_MSVC
+#pragma intrinsic(_ReadBarrier, _ReadWriteBarrier, _WriteBarrier, \
+    _InterlockedExchange8, _InterlockedExchange16, \
+    _InterlockedExchange, _InterlockedExchange64, \
+    \
+    _InterlockedCompareExchange8, _InterlockedCompareExchange16, \
+    _InterlockedCompareExchange, _InterlockedCompareExchange64, \
+    \
+    _InterlockedExchangeAdd8, _InterlockedExchangeAdd16, \
+    _InterlockedExchangeAdd, _InterlockedExchangeAdd64, \
+    \
+    _InterlockedOr8, _InterlockedOr16, \
+    _InterlockedOr, _InterlockedOr64, \
+    \
+    _InterlockedXor8, _InterlockedXor16, \
+    _InterlockedXor, _InterlockedXor64, \
+    \
+    _InterlockedAnd8, _InterlockedAnd16, \
+    _InterlockedAnd, _InterlockedAnd64, \
+    )
+#endif  // X_WINDOWS && X_MSVC
+
 typedef struct _x_atomic_8_ x_atomic_8;
 typedef struct _x_atomic_16_ x_atomic_16;
 typedef struct _x_atomic_32_ x_atomic_32;
@@ -848,6 +872,12 @@ typedef struct _x_iov_
 
 #if X_ENABLE_SOCKET
 //*************************************************************** DECL_x_skt{{{
+#if X_ENABLE_SOCKET
+#if X_WINDOWS && X_MSVC
+#pragma comment(lib, "Ws2_32")
+#endif  // X_ENABLE_SOCKET
+#endif  // X_WINDOWS && X_MSVC
+
 typedef struct _x_skt_ x_skt;
 struct _x_skt_
 {
@@ -1086,8 +1116,8 @@ X_INLINE uint64_t x_tlque_size(x_tlque* que);
 // DECL_x_tlque}}}
 #endif  // X_ENABLE_CONCURRENCY
 
-//************************************************************ DECL_x_tictoc{{{
-typedef struct _x_tictoc_
+//************************************************************ DECL_x_timing{{{
+typedef struct _x_timing_
 {
   struct timespec start;
   double elapsed;
@@ -1104,57 +1134,18 @@ typedef struct _x_tictoc_
       double val;
     } max, min;
   } report;
-} x_tictoc;
+} x_timing;
 
-X_INLINE int x_tictoc_init(x_tictoc* tictoc);
+X_INLINE int x_timing_init(x_timing* tm);
 
-X_INLINE int x_tic(x_tictoc* tictoc, const bool echo);
+X_INLINE int x_tic(x_timing* tm, const bool echo);
 
-X_INLINE int x_toc(x_tictoc* tictoc, const char* unit, const bool echo);
+X_INLINE int x_toc(x_timing* tm, const bool echo, const char* unit);
 
 X_INLINE int x_toc_ex(
-    x_tictoc* tictoc,
-    const char* unit, const long long cycle, const char* title,
-    char* echo, size_t* size);
-// DECL_x_tictoc}}}
-
-#ifdef __cplusplus
-}
-#endif
-
-
-//******************************************************************* C and C++
-#ifdef __cplusplus
-extern "C" {
-#endif
-
-#if X_ENABLE_ATOMIC
-#pragma intrinsic(_ReadBarrier, _ReadWriteBarrier, _WriteBarrier, \
-    _InterlockedExchange8, _InterlockedExchange16, \
-    _InterlockedExchange, _InterlockedExchange64, \
-    \
-    _InterlockedCompareExchange8, _InterlockedCompareExchange16, \
-    _InterlockedCompareExchange, _InterlockedCompareExchange64, \
-    \
-    _InterlockedExchangeAdd8, _InterlockedExchangeAdd16, \
-    _InterlockedExchangeAdd, _InterlockedExchangeAdd64, \
-    \
-    _InterlockedOr8, _InterlockedOr16, \
-    _InterlockedOr, _InterlockedOr64, \
-    \
-    _InterlockedXor8, _InterlockedXor16, \
-    _InterlockedXor, _InterlockedXor64, \
-    \
-    _InterlockedAnd8, _InterlockedAnd16, \
-    _InterlockedAnd, _InterlockedAnd64, \
-    )
-#endif  // X_ENABLE_ATOMIC
-
-#if X_ENABLE_SOCKET
-#if X_WINDOWS && X_MSVC
-#pragma comment(lib, "Ws2_32")
-#endif  // X_ENABLE_SOCKET
-#endif  // X_WINDOWS && X_MSVC
+    x_timing* tm, char* msg, size_t* msz,
+    const bool echo, const char* unit, const long long cycle, const char* title);
+// DECL_x_timing}}}
 
 //************************************************************** IMPL_Compat{{{
 #if !X_WINDOWS
@@ -1190,7 +1181,7 @@ size_t x_cpu_count()
 }
 
 double x_duration(
-    const struct timespec start, const struct timespec end, const char* unit)
+    const char* unit, const struct timespec start, const struct timespec end)
 {
   double diff = (double)(
       (end.tv_sec - start.tv_sec) * 1000000000 + end.tv_nsec - start.tv_nsec);
@@ -1684,29 +1675,14 @@ x_err x_err_get(const int32_t cat)
   return err;
 }
 
-const char* x_err_msg(char* msg, const size_t msz, const x_err err, ...)
+const char* x_err_msg(char* msg, const size_t msz, const x_err err)
 {
-  if (msg == NULL) {
+  if (msg == NULL || msz == 0) {
     return "";
   }
 
   if (err.cat == x_err_custom) {
-    va_list args;
-    va_start(args, err);
-
-    int method = va_arg(args, int);
-
-    if (method == x_err_msg_literal) {
-      const char* str = va_arg(args, const char*);
-      strcpy(msg, str);
-    } else if (method == x_err_msg_lookup) {
-      x_err_msg_fn fn = va_arg(args, x_err_msg_fn);
-      if (fn != NULL) {
-        strcpy(msg, fn(msg, msz, err.val));
-      }
-    }
-
-    va_end(args);
+    snprintf(msg, msz, "Custom error %d.", err.val);
 #if X_ENABLE_CUDA
   } else if (err.cat == x_err_cuda) {
     strcpy(msg, cudaGetErrorString((cudaError_t)err.val));
@@ -1813,7 +1789,7 @@ x_err x_cnd_timedwait(
   }
 
 #if X_WINDOWS
-  DWORD d = (DWORD)x_duration(x_now(), *time_point, "ms");
+  DWORD d = (DWORD)x_duration("ms", x_now(), *time_point);
   if (mtx->type & x_mtx_recursive) {
     return (SleepConditionVariableCS(&cnd->hndl, (CRITICAL_SECTION*)mtx->hndl, d)
         ? x_ok() : x_err_get(x_err_win32));
@@ -1954,7 +1930,7 @@ x_err x_mtx_timedlock(x_mtx* mtx, const struct timespec* time_point)
     return x_err_set(x_err_posix, EINVAL);
   }
 
-  DWORD ms = (DWORD)x_duration(x_now(), *time_point, "ms");
+  DWORD ms = (DWORD)x_duration("ms", x_now(), *time_point);
   return (WaitForSingleObject(mtx->hndl, ms) == WAIT_OBJECT_0
       ? x_ok() : x_err_get(x_err_win32));
 #else
@@ -2205,7 +2181,7 @@ x_err x_sem_timedwait(x_sem* sem, const struct timespec* abs_timeout)
     return x_err_set(x_err_posix, EINVAL);
   }
 
-  DWORD ms = (DWORD)x_duration(x_now(), *abs_timeout, "ms");
+  DWORD ms = (DWORD)x_duration("ms", x_now(), *abs_timeout);
   return (WaitForSingleObject(sem->hndl, ms) == WAIT_OBJECT_0
       ? x_ok() : x_err_get(x_err_win32));
 #else
@@ -2436,7 +2412,7 @@ x_err x_thd_yield()
 #define _InterlockedOr_Bool              _InterlockedOr8
 #define _InterlockedXor_Bool             _InterlockedXor8
 #define _InterlockedAnd_Bool             _InterlockedAnd8
-#endif
+#endif  // __cplusplus
 
 #if X_64BIT
 #define _InterlockedExchangeptr        _InterlockedExchange64
@@ -3996,46 +3972,46 @@ uint64_t x_tlque_size(x_tlque* que)
 // IMPL_x_tlque}}}
 #endif  // X_ENABLE_CONCURRENCY
 
-//************************************************************ IMPL_x_tictoc{{{
-int x_tictoc_init(x_tictoc* tictoc)
+//************************************************************ IMPL_x_timing{{{
+int x_timing_init(x_timing* tm)
 {
-  if (tictoc == NULL) {
+  if (tm == NULL) {
     return EINVAL;
   }
 
-  tictoc->start = x_now();
-  tictoc->elapsed = 0.0;
-  tictoc->report.ready = false;
-  tictoc->report.cyc = 0;
-  tictoc->report.sum = 0.0;
-  tictoc->report.avg = 0.0;
-  tictoc->report.max.idx = 0;
-  tictoc->report.max.val = DBL_MIN;
-  tictoc->report.min.idx = 0;
-  tictoc->report.min.val = DBL_MAX;
+  tm->start = x_now();
+  tm->elapsed = 0.0;
+  tm->report.ready = false;
+  tm->report.cyc = 0;
+  tm->report.sum = 0.0;
+  tm->report.avg = 0.0;
+  tm->report.max.idx = 0;
+  tm->report.max.val = DBL_MIN;
+  tm->report.min.idx = 0;
+  tm->report.min.val = DBL_MAX;
 
   return 0;
 }
 
-int x_tic(x_tictoc* tictoc, const bool echo)
+int x_tic(x_timing* tm, const bool echo)
 {
-  if (tictoc == NULL) {
+  if (tm == NULL) {
     return EINVAL;
   }
 
-  tictoc->start = x_now();
+  tm->start = x_now();
 
   if (echo) {
     char ts[26] = {0};
-    printf("Timing starts at: %s.\n", x_timestamp(ts, 26));
+    printf("Timing starts at: %s.\n", x_timestamp(ts, x_count(ts)));
   }
 
   return 0;
 }
 
-int x_toc(x_tictoc* tictoc, const char* unit, const bool echo)
+int x_toc(x_timing* tm, const bool echo, const char* unit)
 {
-  if (tictoc == NULL) {
+  if (tm == NULL) {
     return EINVAL;
   }
 
@@ -4043,23 +4019,22 @@ int x_toc(x_tictoc* tictoc, const char* unit, const bool echo)
     unit = "ms";
   }
 
-  tictoc->elapsed = x_duration(tictoc->start, x_now(), unit);
+  tm->elapsed = x_duration(unit, tm->start, x_now());
 
   if (echo) {
     char ts[26] = {0};
-    printf("Timing stops at:  %s.\n", x_timestamp(ts, 26));
-    printf("Time elapsed: %f%s.\n", tictoc->elapsed, unit);
+    printf("Timing stops at:  %s.\n", x_timestamp(ts, x_count(ts)));
+    printf("Time elapsed: %f%s.\n", tm->elapsed, unit);
   }
 
   return 0;
 }
 
 int x_toc_ex(
-    x_tictoc* tictoc,
-    const char* unit, const long long cycle, const char* title,
-    char* echo, size_t* size)
+    x_timing* tm, char* msg, size_t* msz,
+    const bool echo, const char* unit, const long long cycle, const char* title)
 {
-  if (tictoc == NULL || cycle <= 0) {
+  if (tm == NULL || cycle <= 0) {
     return EINVAL;
   }
 
@@ -4067,41 +4042,45 @@ int x_toc_ex(
     unit = "ms";
   }
 
-  int err = x_toc(tictoc, unit, false);
+  int err = x_toc(tm, false, unit);
   if (err < 0) {
     return err;
   }
 
-  if (tictoc->elapsed > tictoc->report.max.val) {
-    tictoc->report.max.idx = tictoc->report.cyc;
-    tictoc->report.max.val = tictoc->elapsed;
+  if (tm->elapsed > tm->report.max.val) {
+    tm->report.max.idx = tm->report.cyc;
+    tm->report.max.val = tm->elapsed;
   }
-  if (tictoc->elapsed < tictoc->report.min.val) {
-    tictoc->report.min.idx = tictoc->report.cyc;
-    tictoc->report.min.val = tictoc->elapsed;
+  if (tm->elapsed < tm->report.min.val) {
+    tm->report.min.idx = tm->report.cyc;
+    tm->report.min.val = tm->elapsed;
   }
 
-  tictoc->report.sum += tictoc->elapsed;
-  tictoc->report.cyc += 1;
-  tictoc->report.avg = tictoc->report.sum / tictoc->report.cyc;
+  tm->report.sum += tm->elapsed;
+  tm->report.cyc += 1;
+  tm->report.avg = tm->report.sum / tm->report.cyc;
 
-  if (tictoc->report.cyc % cycle == 0) {
-    tictoc->report.ready = true;
+  if (tm->report.cyc % cycle == 0) {
+    tm->report.ready = true;
 
-    if (echo != NULL && size != NULL && *size > 0) {
+    if (msg != NULL && msz != NULL && *msz > 0) {
       const char* ttl = x_strmty(title) ? "REPORT" : title;
 
-      size_t bytes = (size_t)snprintf(echo, *size,
+      size_t bytes = (size_t)snprintf(msg, *msz,
           "[%s] %f%s in %zu cycles - avg: %f%s, min(%zu): %f%s, max(%zu): %f%s",
           ttl,
-          tictoc->report.sum, unit,
-          tictoc->report.cyc,
-          tictoc->report.avg, unit,
-          tictoc->report.min.idx, tictoc->report.min.val, unit,
-          tictoc->report.max.idx, tictoc->report.max.val, unit);
+          tm->report.sum, unit,
+          tm->report.cyc,
+          tm->report.avg, unit,
+          tm->report.min.idx, tm->report.min.val, unit,
+          tm->report.max.idx, tm->report.max.val, unit);
 
-      if (bytes >= *size) {
-        *size = bytes + 1;
+      if (echo) {
+        printf("%s", msg);
+      }
+
+      if (bytes >= *msz) {
+        *msz = bytes + 1;
         return ERANGE;
       }
     }
@@ -4109,10 +4088,10 @@ int x_toc_ex(
 
   return 0;
 }
-// IMPL_x_tictoc}}}
+// IMPL_x_timing}}}
 
 #ifdef __cplusplus
-}
+}  // extern "C"
 #endif
 
 

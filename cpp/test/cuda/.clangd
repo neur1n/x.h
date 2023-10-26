@@ -1,0 +1,6 @@
+CompileFlags:
+  Add:
+    - -std=c99
+    - --cuda-path=/usr/local/cuda
+    - -L/usr/local/cuda/lib64
+    - -I/usr/local/cuda/include
