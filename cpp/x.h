@@ -11,11 +11,11 @@ MERCHANTABILITY OR FIT FOR A PARTICULAR PURPOSE.
 See the Mulan PSL v2 for more details.
 
 
-Last update: 2023-11-04 17:15
-Version: v0.1.1
+Last update: 2023-11-08 20:56
+Version: v0.1.2
 ******************************************************************************/
 #ifndef X_H
-#define X_H X_VER(0, 1, 1)
+#define X_H X_VER(0, 1, 2)
 
 
 /** Table of Contents
@@ -1271,6 +1271,10 @@ const char* x_err::msg()
       snprintf(msg, x_count(msg), "Custom error %d.", this->m_val);
       this->m_msg = msg;
     }
+#if X_ENABLE_CUDA
+  } else if (this->m_cat == x_err_cuda) {
+    this->m_msg = cudaGetErrorString(static_cast<cudaError_t>(this->m_val));
+#endif
   } else {
 #if X_WINDOWS
     if (this->m_cat == x_err_win32 || this->m_cat == x_err_socket) {
