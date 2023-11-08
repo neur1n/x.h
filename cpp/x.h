@@ -11,11 +11,11 @@ MERCHANTABILITY OR FIT FOR A PARTICULAR PURPOSE.
 See the Mulan PSL v2 for more details.
 
 
-Last update: 2023-10-26 2023-10-26 14:48
-Version: v0.1.0
+Last update: 2023-11-04 17:15
+Version: v0.1.1
 ******************************************************************************/
 #ifndef X_H
-#define X_H X_VER(0, 1, 0)
+#define X_H X_VER(0, 1, 1)
 
 
 /** Table of Contents
@@ -565,14 +565,6 @@ public:
 
   X_INLINE x_err setopt(
       const int lvl, const int opt, const void* val, const socklen_t len);
-
-  X_INLINE void set_address(struct sockaddr& address);
-
-#if X_WINDOWS
-  X_INLINE void set_handle(SOCKET& handle);
-#else
-  X_INLINE void set_handle(int& handle);
-#endif
 
 private:
 #if X_WINDOWS
@@ -1138,24 +1130,6 @@ const char* x_timestamp(char* buf, const size_t bsz)
 
   return buf;
 }
-
-template<char unit>
-static constexpr const char* x_time_unit()
-{
-  if constexpr (unit == 'H') {
-    return "h";
-  } else if constexpr (unit == 'M') {
-    return "m";
-  } else if constexpr (unit == 'S') {
-    return "s";
-  } else if constexpr (unit == 'm') {
-    return "ms";
-  } else if constexpr (unit == 'u') {
-    return "us";
-  } else {
-    return "ns";
-  }
-}
 // IMPL_Gadget}}}
 
 //*************************************************************** IMPL_x_log{{{
@@ -1532,8 +1506,8 @@ x_err x_skt::accept(x_skt* acceptee)
   struct sockaddr addr = {0};
   memcpy(&addr, &sin, len);
 
-  acceptee->set_address(addr);
-  acceptee->set_handle(hndl);
+  acceptee->m_addr = std::move(addr);
+  acceptee->m_hndl = std::move(hndl);
 
   return x_err();
 }
@@ -1757,20 +1731,6 @@ x_err x_skt::setopt(
 
   return (setsockopt(this->m_hndl, lvl, opt, (char*)val, len) == 0
       ? x_err() : x_err(x_err_socket));
-}
-
-void x_skt::set_address(struct sockaddr& address)
-{
-  this->m_addr = std::move(address);
-}
-
-#if X_WINDOWS
-void x_skt::set_handle(SOCKET& handle)
-#else
-void x_skt::set_handle(int& handle)
-#endif
-{
-  this->m_hndl = std::move(handle);
 }
 // IMPL_x_skt}}}
 #endif  // X_ENABLE_SOCKET
