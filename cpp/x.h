@@ -11,27 +11,28 @@ MERCHANTABILITY OR FIT FOR A PARTICULAR PURPOSE.
 See the Mulan PSL v2 for more details.
 
 
-Last update: 2023-11-08 20:56
-Version: v0.1.2
+Last update: 2023-11-12 16:15
+Version: v0.1.3
 ******************************************************************************/
 #ifndef X_H
-#define X_H X_VER(0, 1, 2)
+#define X_H X_VER(0, 1, 3)
 
 
 /** Table of Contents
  * Headers
- *                IMPL_Compat
- * DECL_Gadget    IMPL_Gadget
- * DECL_x_log     IMPL_x_log
- * DECL_x_err     IMPL_x_err
- * DECL_x_cks     IMPL_x_cks
+ *                  IMPL_Compat
+ * DECL_Gadget      IMPL_Gadget
+ * DECL_x_log       IMPL_x_log
+ * DECL_x_err       IMPL_x_err
+ * DECL_x_cks       IMPL_x_cks
  * DECL_x_pkt
  * DECL_x_iov
- * DECL_x_skt     IMPL_x_skt
- * DECL_x_node    IMPL_x_node
- * DECL_x_lfque   IMPL_x_lfque
- * DECL_x_tlque   IMPL_x_tlque
- * DECL_x_timing  IMPL_x_timing
+ * DECL_x_skt       IMPL_x_skt
+ * DECL_x_node      IMPL_x_node
+ * DECL_x_lfque     IMPL_x_lfque
+ * DECL_x_tlque     IMPL_x_tlque
+ * DECL_x_timing    IMPL_x_timing
+ * DECL_x_cu_timing IMPL_x_cu_timing
  */
 
 #define X_EMPTINESS
@@ -633,6 +634,36 @@ private:
   x_timing_report m_report;
 };
 // DECL_x_timing}}}
+
+//********************************************************* DECL_x_cu_timing{{{
+#if X_ENABLE_CUDA
+class x_cu_timing
+{
+public:
+  X_INLINE x_cu_timing();
+
+  X_INLINE ~x_cu_timing();
+
+  X_INLINE double elapsed() const;
+
+  template<bool echo = false>
+  X_INLINE void tic();
+
+  template<bool echo = false>
+  X_INLINE void toc(const char* unit);
+
+  template<bool echo = false>
+  X_INLINE x_timing_report toc(
+      const char* unit, const size_t cycle, const char* title = "");
+
+private:
+  cudaEvent_t m_start{nullptr};
+  cudaEvent_t m_stop{nullptr};
+  float m_elapsed{0.0f};
+  x_timing_report m_report;
+};
+#endif  // X_ENABLE_CUDA
+// DECL_x_cu_timing}}}
 
 //************************************************************** IMPL_Compat{{{
 #if !X_WINDOWS
@@ -1824,6 +1855,139 @@ x_timing_report x_timing::toc(
   return this->m_report;
 }
 // IMPL_x_timing}}}
+
+//********************************************************* IMPL_x_cu_timing{{{
+#if X_ENABLE_CUDA
+x_cu_timing::x_cu_timing()
+{
+  cudaError_t cerr = cudaEventCreate(&this->m_start);
+  if (cerr != cudaSuccess) {
+    throw std::runtime_error(
+        std::string("cudaEventCreate: ") + cudaGetErrorString(cerr));
+  }
+
+  cerr = cudaEventCreate(&this->m_stop);
+  if (cerr != cudaSuccess) {
+    throw std::runtime_error(
+        std::string("cudaEventCreate: ") + cudaGetErrorString(cerr));
+  }
+}
+
+x_cu_timing::~x_cu_timing()
+{
+  cudaEventDestroy(this->m_start);
+  cudaEventDestroy(this->m_stop);
+}
+
+double x_cu_timing::elapsed() const
+{
+  return static_cast<double>(this->m_elapsed);
+}
+
+template<bool echo>
+void x_cu_timing::tic()
+{
+  cudaError_t cerr = cudaEventRecord(this->m_start);
+  if (cerr != cudaSuccess) {
+    throw std::runtime_error(
+        std::string("cudaEventRecord: ") + cudaGetErrorString(cerr));
+  }
+
+  if constexpr (echo) {
+    char ts[26]{0};
+    printf("Timing starts at: %s.\n", x_timestamp(ts, x_count(ts)));
+  }
+}
+
+template<bool echo>
+void x_cu_timing::toc(const char* unit)
+{
+  cudaError_t cerr = cudaEventRecord(this->m_stop);
+  if (cerr != cudaSuccess) {
+    throw std::runtime_error(
+        std::string("cudaEventRecord: ") + cudaGetErrorString(cerr));
+  }
+
+  cerr = cudaEventSynchronize(this->m_stop);
+  if (cerr != cudaSuccess) {
+    throw std::runtime_error(
+        std::string("cudaEventSynchronize: ") + cudaGetErrorString(cerr));
+  }
+
+  cerr = cudaEventElapsedTime(&this->m_elapsed, this->m_start, this->m_stop);
+  if (cerr != cudaSuccess) {
+    throw std::runtime_error(
+        std::string("cudaEventElapsedTime: ") + cudaGetErrorString(cerr));
+  }
+
+  if (strcmp(unit, "h") == 0) {
+    this->m_elapsed /= 3600000.0f;
+  } else if (strcmp(unit, "m") == 0) {
+    this->m_elapsed /= 60000.0f;
+  } else if (strcmp(unit, "s") == 0) {
+    this->m_elapsed /= 1000.0f;
+  } else if (strcmp(unit, "us") == 0) {
+    this->m_elapsed *= 1000.0f;
+  } else if (strcmp(unit, "ns") == 0) {
+    this->m_elapsed *= 1000000.0f;
+  }
+
+  if constexpr (echo) {
+    char ts[26]{0};
+    printf("Timing stops at: %s (%f%s elapsed).\n",
+        x_timestamp(ts, x_count(ts)), this->m_elapsed, unit);
+  }
+}
+
+template<bool echo>
+x_timing_report x_cu_timing::toc(
+    const char* unit, const size_t cycle, const char* title)
+{
+  if (cycle == 0) {
+    this->m_report.reset();
+    return this->m_report;
+  }
+
+  this->toc<false>(unit);
+
+  if (this->m_elapsed > this->m_report.max.val) {
+    this->m_report.max.idx = this->m_report.cyc;
+    this->m_report.max.val = this->m_elapsed;
+  }
+  if (this->m_elapsed < this->m_report.min.val) {
+    this->m_report.min.idx = this->m_report.cyc;
+    this->m_report.min.val = this->m_elapsed;
+  }
+
+  this->m_report.sum += this->m_elapsed;
+  this->m_report.cyc += 1;
+  this->m_report.avg = this->m_report.sum / this->m_report.cyc;
+
+  if (this->m_report.cyc % cycle == 0) {
+    this->m_report.ready = true;
+
+    if constexpr (echo) {
+      const char* t = x_strmty(title) ? "REPORT" : title;
+
+      std::string msg(128, '\0');
+
+      msg = std::string("[") + t + std::string("] ")
+        + std::to_string(this->m_report.sum) + unit + " in "
+        + std::to_string(this->m_report.cyc) + " cycles - avg: "
+        + std::to_string(this->m_report.avg) + unit + ", min("
+        + std::to_string(this->m_report.min.idx) + "): "
+        + std::to_string(this->m_report.min.val) + unit + ", max("
+        + std::to_string(this->m_report.max.idx) + "): "
+        + std::to_string(this->m_report.max.val) + unit;
+
+      printf("%s\n", msg.c_str());
+    }
+  }
+
+  return this->m_report;
+}
+#endif  // X_ENABLE_CUDA
+// IMPL_x_cu_timing}}}
 
 
 #endif  // X_H
