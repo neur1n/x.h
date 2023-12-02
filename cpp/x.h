@@ -11,11 +11,11 @@ MERCHANTABILITY OR FIT FOR A PARTICULAR PURPOSE.
 See the Mulan PSL v2 for more details.
 
 
-Last update: 2023-11-12 16:15
-Version: v0.1.3
+Last update: 2023-12-02 15:35
+Version: v0.1.4
 ******************************************************************************/
 #ifndef X_H
-#define X_H X_VER(0, 1, 3)
+#define X_H X_VER(0, 1, 4)
 
 
 /** Table of Contents
@@ -618,6 +618,8 @@ public:
 
   X_INLINE double elapsed() const;
 
+  X_INLINE void reset();
+
   template<bool echo = false>
   X_INLINE void tic();
 
@@ -645,6 +647,8 @@ public:
   X_INLINE ~x_cu_timing();
 
   X_INLINE double elapsed() const;
+
+  X_INLINE void reset();
 
   template<bool echo = false>
   X_INLINE void tic();
@@ -1784,6 +1788,12 @@ double x_timing::elapsed() const
   return this->m_elapsed;
 }
 
+void x_timing::reset()
+{
+  this->m_elapsed = 0.0;
+  this->m_report.reset();
+}
+
 template<bool echo>
 void x_timing::tic()
 {
@@ -1882,6 +1892,12 @@ x_cu_timing::~x_cu_timing()
 double x_cu_timing::elapsed() const
 {
   return static_cast<double>(this->m_elapsed);
+}
+
+void x_cu_timing::reset()
+{
+  this->m_elapsed = 0.0;
+  this->m_report.reset();
 }
 
 template<bool echo>
