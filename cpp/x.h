@@ -11,11 +11,11 @@ MERCHANTABILITY OR FIT FOR A PARTICULAR PURPOSE.
 See the Mulan PSL v2 for more details.
 
 
-Last update: 2023-12-02 15:35
-Version: v0.1.4
+Last update: 2023-12-03 21:06
+Version: v0.1.5
 ******************************************************************************/
 #ifndef X_H
-#define X_H X_VER(0, 1, 4)
+#define X_H X_VER(0, 1, 5)
 
 
 /** Table of Contents
@@ -407,9 +407,10 @@ X_INLINE const char* x_timestamp(char* buf, const size_t bsz);
 #define X_LOG_MSG_LIMIT (256)
 #endif
 
+template<char level>
 X_INLINE void _x_log_impl(
-    const char* filename, const char* function, const long line,
-    const char level, FILE* file, const char* format, ...);
+    const char* filename, const char* function, const long line, FILE* file,
+    const char* format, ...);
 
 #define x_log(level, file, format, ...) do { \
   _x_log_impl<level>(__FILENAME__, __FUNCTION__, __LINE__, file, format, ##__VA_ARGS__); \
