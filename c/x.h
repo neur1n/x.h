@@ -11,11 +11,11 @@ MERCHANTABILITY OR FIT FOR A PARTICULAR PURPOSE.
 See the Mulan PSL v2 for more details.
 
 
-Last update: 2023-10-26 14:03
-Version: v0.6.3
+Last update: 2023-12-05 12:43
+Version: v0.6.4
 ******************************************************************************/
 #ifndef X_H
-#define X_H X_VER(0, 6, 3)
+#define X_H X_VER(0, 6, 4)
 
 
 /** Table of Contents
@@ -366,6 +366,46 @@ X_INLINE x_err x_cu_malloc(void** ptr, const size_t size);
 #define x_assert(expr) do {assert(expr);} while (false)
 #endif
 
+#define _x_arg_n( \
+      _1,   _2,   _3,   _4,   _5,   _6,   _7,   _8, \
+      _9,  _10,  _11,  _12,  _13,  _14,  _15,  _16, \
+     _17,  _18,  _19,  _20,  _21,  _22,  _23,  _24, \
+     _25,  _26,  _27,  _28,  _29,  _30,  _31,  _32, \
+     _33,  _34,  _35,  _36,  _37,  _38,  _39,  _40, \
+     _41,  _42,  _43,  _44,  _45,  _46,  _47,  _48, \
+     _49,  _50,  _51,  _52,  _53,  _54,  _55,  _56, \
+     _57,  _58,  _59,  _60,  _61,  _62,  _63,  _64, \
+     _65,  _66,  _67,  _68,  _69,  _70,  _71,  _72, \
+     _73,  _74,  _75,  _76,  _77,  _78,  _79,  _80, \
+     _81,  _82,  _83,  _84,  _85,  _86,  _87,  _88, \
+     _89,  _90,  _91,  _92,  _93,  _94,  _95,  _96, \
+     _97,  _98,  _99, _100, _101, _102, _103, _104, \
+    _105, _106, _107, _108, _109, _110, _111, _112, \
+    _113, _114, _115, _116, _117, _118, _119, _120, \
+    _121, _122, _123, _124, _125, _126, _127,    N, ...) N
+
+#define _x_seq_n() \
+  127, 126, 125, 124, 123, 122, 121, 120, \
+  119, 118, 117, 116, 115, 114, 113, 112, \
+  111, 110, 109, 108, 107, 106, 105, 104, \
+  103, 102, 101, 100,  99,  98,  97,  96, \
+   95,  94,  93,  92,  91,  90,  89,  88, \
+   87,  86,  85,  84,  83,  82,  81,  80, \
+   79,  78,  77,  76,  75,  74,  73,  72, \
+   71,  70,  69,  68,  67,  66,  65,  64, \
+   63,  62,  61,  60,  59,  58,  57,  56, \
+   55,  54,  53,  52,  51,  50,  49,  48, \
+   47,  46,  45,  44,  43,  42,  41,  40, \
+   39,  38,  37,  36,  35,  34,  33,  32, \
+   31,  30,  29,  28,  27,  26,  25,  24, \
+   23,  22,  21,  20,  19,  18,  17,  16, \
+   15,  14,  13,  12,  11,  10,   9,   8, \
+    7,   6,   5,   4,   3,   2,   1,   0
+
+#define _x_narg(...) _x_arg_n(__VA_ARGS__)
+
+#define x_narg(...) _x_narg(__VA_ARGS__, _x_seq_n())
+
 #define x_Pi(T) ((T)3.141592653589793238462643383279502884197169399375)
 
 #define x_KiB(T, n) ((T)n * (T)1024)
@@ -482,19 +522,22 @@ enum
 #endif
 };
 
+// NOTE: See DECL_Gadget.
 // typedef struct _x_err_
 // {
 //   int32_t cat;
 //   int32_t val;
 // } x_err;
 
-X_INLINE x_err x_err_get(const int32_t cat);
-
 X_INLINE const char* x_err_msg(char* msg, const size_t msz, const x_err err);
 
-X_INLINE x_err x_err_set(const int32_t cat, const int32_t val);
-
 X_INLINE x_err x_ok();
+
+X_INLINE x_err _x_err_get(const int32_t cat);
+X_INLINE x_err _x_err_set(const int32_t cat, ...);
+
+#define x_err_set(/*const int32_t*/ cat, /*const int32_t val*/ ...) \
+  x_narg(cat, ##__VA_ARGS__) == 1 ? _x_err_get(cat) : _x_err_set(cat, ##__VA_ARGS__)
 // DECL_x_err}}}
 
 #if X_ENABLE_CONCURRENCY
@@ -1689,7 +1732,7 @@ void _x_log_impl(
 // IMPL_x_log}}}
 
 //*************************************************************** IMPL_x_err{{{
-x_err x_err_get(const int32_t cat)
+x_err _x_err_get(const int32_t cat)
 {
   x_err err = x_ok();
 
@@ -1725,6 +1768,18 @@ x_err x_err_get(const int32_t cat)
   return err;
 }
 
+x_err _x_err_set(const int32_t cat, ...)
+{
+  va_list args;
+  va_start(args, cat);
+  int32_t val = va_arg(args, int32_t);
+  va_end(args);
+
+  x_err err = {cat, val};
+
+  return err;
+}
+
 const char* x_err_msg(char* msg, const size_t msz, const x_err err)
 {
   if (msg == NULL || msz == 0) {
@@ -1755,12 +1810,6 @@ const char* x_err_msg(char* msg, const size_t msz, const x_err err)
   }
 
   return msg;
-}
-
-x_err x_err_set(const int32_t cat, const int32_t val)
-{
-  x_err err = {cat, val};
-  return err;
 }
 
 x_err x_ok()
@@ -1842,10 +1891,10 @@ x_err x_cnd_timedwait(
   DWORD d = (DWORD)x_duration("ms", x_now(), *time_point);
   if (mtx->type & x_mtx_recursive) {
     return (SleepConditionVariableCS(&cnd->hndl, (CRITICAL_SECTION*)mtx->hndl, d)
-        ? x_ok() : x_err_get(x_err_win32));
+        ? x_ok() : x_err_set(x_err_win32));
   } else {
     return (SleepConditionVariableSRW(&cnd->hndl, (SRWLOCK*)mtx->hndl, d, 0)
-        ? x_ok() : x_err_get(x_err_win32));
+        ? x_ok() : x_err_set(x_err_win32));
   }
 #else
   return x_err_set(
@@ -1982,7 +2031,7 @@ x_err x_mtx_timedlock(x_mtx* mtx, const struct timespec* time_point)
 
   DWORD ms = (DWORD)x_duration("ms", x_now(), *time_point);
   return (WaitForSingleObject(mtx->hndl, ms) == WAIT_OBJECT_0
-      ? x_ok() : x_err_get(x_err_win32));
+      ? x_ok() : x_err_set(x_err_win32));
 #else
   if (mtx == NULL || (mtx->type & x_mtx_timed) == 0 || time_point == NULL) {
     return x_err_set(x_err_posix, EINVAL);
@@ -2050,7 +2099,7 @@ x_err x_sem_init(x_sem* sem, int pshared, unsigned int value)
 
   HANDLE s = CreateSemaphoreA(NULL, value, X_SEM_VALUE_MAX, NULL);
   if (s == NULL) {
-    return x_err_get(x_err_win32);
+    return x_err_set(x_err_win32);
   }
 
   sem->hndl = s;
@@ -2067,7 +2116,7 @@ x_err x_sem_init(x_sem* sem, int pshared, unsigned int value)
   }
 
   return (sem_init(sem->hndl, pshared, value) == 0
-      ? x_ok() : x_err_get(x_err_posix));
+      ? x_ok() : x_err_set(x_err_posix));
 #endif
 }
 
@@ -2078,7 +2127,7 @@ x_err x_sem_dstr(x_sem* sem)
     return x_err_set(x_err_posix, EINVAL);
   }
 
-  return (CloseHandle(sem->hndl) ? x_ok() : x_err_get(x_err_win32));
+  return (CloseHandle(sem->hndl) ? x_ok() : x_err_set(x_err_win32));
 #else
   if (sem == NULL || sem->hndl == NULL) {
     return x_err_set(x_err_posix, EINVAL);
@@ -2087,7 +2136,7 @@ x_err x_sem_dstr(x_sem* sem)
   x_err err = x_ok();
 
   if (sem_destroy(sem->hndl) != 0) {
-    err = x_err_get(x_err_posix);
+    err = x_err_set(x_err_posix);
   }
 
   x_free(sem->hndl);
@@ -2103,13 +2152,13 @@ x_err x_sem_close(x_sem* sem)
     return x_err_set(x_err_posix, EINVAL);
   }
 
-  return (CloseHandle(sem->hndl) ? x_ok() : x_err_get(x_err_win32));
+  return (CloseHandle(sem->hndl) ? x_ok() : x_err_set(x_err_win32));
 #else
   if (sem == NULL || sem->hndl == NULL) {
     return x_err_set(x_err_posix, EINVAL);
   }
 
-  return (sem_close(sem->hndl) == 0 ? x_ok() : x_err_get(x_err_posix));
+  return (sem_close(sem->hndl) == 0 ? x_ok() : x_err_set(x_err_posix));
 #endif
 }
 
@@ -2121,12 +2170,12 @@ x_err x_sem_getvalue(x_sem* sem, int* sval)
   }
 
   if (WaitForSingleObject(sem->hndl, 0) != WAIT_OBJECT_0) {
-    return x_err_get(x_err_win32);
+    return x_err_set(x_err_win32);
   }
 
   long value = 0;
   if (!ReleaseSemaphore(sem->hndl, 1, &value)) {
-    return x_err_get(x_err_win32);
+    return x_err_set(x_err_win32);
   }
 
   *sval = (int)value;
@@ -2137,7 +2186,7 @@ x_err x_sem_getvalue(x_sem* sem, int* sval)
     return x_err_set(x_err_posix, EINVAL);
   }
 
-  return (sem_getvalue(sem->hndl, sval) == 0 ? x_ok() : x_err_get(x_err_posix));
+  return (sem_getvalue(sem->hndl, sval) == 0 ? x_ok() : x_err_set(x_err_posix));
 #endif
 }
 
@@ -2162,7 +2211,7 @@ x_err x_sem_open(x_sem* sem, const char* name, int oflag, ...)
   }
 
   if (s == NULL) {
-    return x_err_get(x_err_win32);
+    return x_err_set(x_err_win32);
   }
 
   sem->hndl = s;
@@ -2183,7 +2232,7 @@ x_err x_sem_open(x_sem* sem, const char* name, int oflag, ...)
   }
 
   if (s == SEM_FAILED) {
-    return x_err_get(x_err_posix);
+    return x_err_set(x_err_posix);
   }
 
   sem->hndl = s;
@@ -2200,13 +2249,13 @@ x_err x_sem_post(x_sem* sem)
   }
 
   return (ReleaseSemaphore(sem->hndl, 1, NULL)
-      ? x_ok() : x_err_get(x_err_win32));
+      ? x_ok() : x_err_set(x_err_win32));
 #else
   if (sem == NULL || sem->hndl != NULL) {
     return x_err_set(x_err_posix, EINVAL);
   }
 
-  return (sem_post(sem->hndl) == 0 ? x_ok() : x_err_get(x_err_posix));
+  return (sem_post(sem->hndl) == 0 ? x_ok() : x_err_set(x_err_posix));
 #endif
 }
 
@@ -2215,12 +2264,12 @@ x_err x_sem_unlink(const char* name)
 #if X_WINDOWS
   HANDLE s = OpenSemaphoreA(STANDARD_RIGHTS_ALL, TRUE, name);
   if (s == NULL) {
-    return x_err_get(x_err_win32);
+    return x_err_set(x_err_win32);
   }
 
-  return (CloseHandle(s) ? x_ok() : x_err_get(x_err_win32));
+  return (CloseHandle(s) ? x_ok() : x_err_set(x_err_win32));
 #else
-  return (sem_unlink(name) == 0 ? x_ok() : x_err_get(x_err_posix));
+  return (sem_unlink(name) == 0 ? x_ok() : x_err_set(x_err_posix));
 #endif
 }
 
@@ -2233,14 +2282,14 @@ x_err x_sem_timedwait(x_sem* sem, const struct timespec* abs_timeout)
 
   DWORD ms = (DWORD)x_duration("ms", x_now(), *abs_timeout);
   return (WaitForSingleObject(sem->hndl, ms) == WAIT_OBJECT_0
-      ? x_ok() : x_err_get(x_err_win32));
+      ? x_ok() : x_err_set(x_err_win32));
 #else
   if (sem == NULL || sem->hndl != NULL) {
     return x_err_set(x_err_posix, EINVAL);
   }
 
   return (sem_timedwait(sem->hndl, abs_timeout) == 0
-      ? x_ok() : x_err_get(x_err_posix));
+      ? x_ok() : x_err_set(x_err_posix));
 #endif
 }
 
@@ -2252,13 +2301,13 @@ x_err x_sem_trywait(x_sem* sem)
   }
 
   return (WaitForSingleObject(sem->hndl, 0) == WAIT_OBJECT_0
-      ? x_ok() : x_err_get(x_err_win32));
+      ? x_ok() : x_err_set(x_err_win32));
 #else
   if (sem == NULL || sem->hndl != NULL) {
     return x_err_set(x_err_posix, EINVAL);
   }
 
-  return (sem_trywait(sem->hndl) == 0 ? x_ok() : x_err_get(x_err_posix));
+  return (sem_trywait(sem->hndl) == 0 ? x_ok() : x_err_set(x_err_posix));
 #endif
 }
 
@@ -2270,13 +2319,13 @@ x_err x_sem_wait(x_sem* sem)
   }
 
   return (WaitForSingleObject(sem->hndl, INFINITE) == WAIT_OBJECT_0
-      ? x_ok() : x_err_get(x_err_win32));
+      ? x_ok() : x_err_set(x_err_win32));
 #else
   if (sem == NULL || sem->hndl != NULL) {
     return x_err_set(x_err_posix, EINVAL);
   }
 
-  return (sem_wait(sem->hndl) == 0 ? x_ok() : x_err_get(x_err_posix));
+  return (sem_wait(sem->hndl) == 0 ? x_ok() : x_err_set(x_err_posix));
 #endif
 }
 // IMPL_x_sem}}}
@@ -2291,7 +2340,7 @@ x_err x_thd_init(x_thd* thd, x_thd_routine func, void* data)
 #if X_WINDOWS
   thd->hndl = (HANDLE)_beginthreadex(NULL, 0, func, data, 0, NULL);
   if (thd->hndl == 0) {
-    return x_err_get(x_err_posix);
+    return x_err_set(x_err_posix);
   }
 #else
   int err = pthread_create(&thd->hndl, NULL, func, data);
@@ -2326,9 +2375,9 @@ x_err x_thd_detach(x_thd* thd)
   thd->exit = true;
 
 #if X_WINDOWS
-  return (CloseHandle(thd->hndl) ? x_ok() : x_err_get(x_err_win32));
+  return (CloseHandle(thd->hndl) ? x_ok() : x_err_set(x_err_win32));
 #else
-  return (pthread_detach(thd->hndl) == 0 ? x_ok() : x_err_get(x_err_posix));
+  return (pthread_detach(thd->hndl) == 0 ? x_ok() : x_err_set(x_err_posix));
 #endif
 }
 
@@ -2383,12 +2432,12 @@ x_err x_thd_join(x_thd* thd, x_thd_rv* exit_code)
 
 #if X_WINDOWS
   if (WaitForSingleObject(thd->hndl, INFINITE) != WAIT_OBJECT_0) {
-    return x_err_get(x_err_win32);
+    return x_err_set(x_err_win32);
   }
 
   DWORD err = 0;
   if (GetExitCodeThread(thd->hndl, &err) == 0) {
-    return x_err_get(x_err_win32);
+    return x_err_set(x_err_win32);
   }
 
   if (exit_code != NULL) {
@@ -2437,9 +2486,9 @@ x_err x_thd_setname(x_thd* thd, const char* name)
 x_err x_thd_yield()
 {
 #if X_WINDOWS
-  return (SwitchToThread() ? x_ok() : x_err_get(x_err_win32));
+  return (SwitchToThread() ? x_ok() : x_err_set(x_err_win32));
 #else
-  return (sched_yield() == 0 ? x_ok() : x_err_get(x_err_posix));
+  return (sched_yield() == 0 ? x_ok() : x_err_set(x_err_posix));
 #endif
 }
 // IMPL_x_thd}}}
@@ -2993,7 +3042,7 @@ x_err x_skt_init(x_skt* skt, const int type)
 #if X_WINDOWS
   WSADATA data = {0};
   if (WSAStartup(MAKEWORD(2, 2), &data) != 0) {
-    return x_err_get(x_err_socket);
+    return x_err_set(x_err_socket);
   }
 #endif
 
@@ -3007,11 +3056,11 @@ x_err x_skt_init(x_skt* skt, const int type)
 
 #if X_WINDOWS
   if (skt->hndl == INVALID_SOCKET) {
-    return x_err_get(x_err_socket);
+    return x_err_set(x_err_socket);
   }
 #else
   if (skt->hndl == -1) {
-    return x_err_get(x_err_socket);
+    return x_err_set(x_err_socket);
   }
 #endif
 
@@ -3043,7 +3092,7 @@ x_err x_skt_accpet(x_skt* skt, x_skt* acceptee)
 #else
   if (acceptee->hndl == -1) {
 #endif
-    return x_err_get(x_err_socket);
+    return x_err_set(x_err_socket);
   }
 
   memcpy(&acceptee->addr, &sin, len);
@@ -3060,7 +3109,7 @@ x_err x_skt_addr(x_skt* skt, char* ip, uint16_t* port)
   struct sockaddr_in* sin = (struct sockaddr_in*)&skt->addr;
 
   if (inet_ntop(AF_INET, &sin->sin_addr, ip, 16) == NULL) {
-    return x_err_get(x_err_socket);
+    return x_err_set(x_err_socket);
   }
 
   *port = sin->sin_port;
@@ -3078,12 +3127,12 @@ x_err x_skt_close(x_skt* skt)
 #if X_WINDOWS
   if (closesocket(skt->hndl) != 0)
   {
-    return x_err_get(x_err_socket);
+    return x_err_set(x_err_socket);
   }
 
-  return (WSACleanup() == 0 ? x_ok() : x_err_get(x_err_socket));
+  return (WSACleanup() == 0 ? x_ok() : x_err_set(x_err_socket));
 #else
-  return (close(skt->hndl) == 0 ? x_ok() : x_err_get(x_err_posix));
+  return (close(skt->hndl) == 0 ? x_ok() : x_err_set(x_err_posix));
 #endif
 }
 
@@ -3100,13 +3149,13 @@ x_err x_skt_connect(x_skt* skt, const char* ip, const uint16_t port)
   if (err == 0) {
     return x_err_set(x_err_posix, EFAULT);
   } else if (err == -1) {
-    return x_err_get(x_err_socket);
+    return x_err_set(x_err_socket);
   }
 
   memcpy(&skt->addr, &sin, sizeof(struct sockaddr));
 
   return (connect(skt->hndl, &skt->addr, sizeof(struct sockaddr_in)) == 0
-      ? x_ok() : x_err_get(x_err_socket));
+      ? x_ok() : x_err_set(x_err_socket));
 }
 
 x_err x_skt_getopt(
@@ -3117,7 +3166,7 @@ x_err x_skt_getopt(
   }
 
   return (getsockopt(skt->hndl, lvl, opt, (char*)val, len) == 0
-      ? x_ok() : x_err_get(x_err_socket));
+      ? x_ok() : x_err_set(x_err_socket));
 }
 
 x_err x_skt_listen(x_skt* skt, const char* ip, const uint16_t port)
@@ -3133,7 +3182,7 @@ x_err x_skt_listen(x_skt* skt, const char* ip, const uint16_t port)
   if (err == 0) {
     return x_err_set(x_err_posix, EFAULT);
   } else if (err == -1) {
-    return x_err_get(x_err_socket);
+    return x_err_set(x_err_socket);
   }
 
   memcpy(&skt->addr, &sin, sizeof(struct sockaddr));
@@ -3143,7 +3192,7 @@ x_err x_skt_listen(x_skt* skt, const char* ip, const uint16_t port)
     err = listen(skt->hndl, SOMAXCONN);
   }
 
-  return (err == 0 ? x_ok() : x_err_get(x_err_socket));
+  return (err == 0 ? x_ok() : x_err_set(x_err_socket));
 }
 
 x_err x_skt_recv(x_skt* skt, void* buf, const size_t size, const int flags)
@@ -3164,7 +3213,7 @@ x_err x_skt_recv(x_skt* skt, void* buf, const size_t size, const int flags)
   while (remain > 0) {
     bytes = recv(skt->hndl, (char*)buf + offset, remain, flags);
     if (bytes <= 0) {
-      return x_err_get(x_err_posix);
+      return x_err_set(x_err_posix);
     }
 
     offset += bytes;
@@ -3232,7 +3281,7 @@ x_err x_skt_send(
   {
     bytes = send(skt->hndl, (char*)buf + offset, remain, flags);
     if (bytes <= 0) {
-      return x_err_get(x_err_posix);
+      return x_err_set(x_err_posix);
     }
 
     offset += bytes;
@@ -3290,7 +3339,7 @@ x_err x_skt_setopt(
   }
 
   return (setsockopt(skt->hndl, lvl, opt, (char*)val, len) == 0
-      ? x_ok() : x_err_get(x_err_socket));
+      ? x_ok() : x_err_set(x_err_socket));
 }
 // IMPL_x_skt}}}
 #endif  // X_ENABLE_SOCKET

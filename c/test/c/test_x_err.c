@@ -19,7 +19,7 @@ int main()
     x_log('d', NULL, "succ");
   }
 
-  err = x_err_get(x_err_posix);
+  err = x_err_set(x_err_posix);
   x_log('i', NULL, "%s", x_err_msg(msg, msz, err));
 
   err = x_err_set(x_err_posix, EINVAL);
