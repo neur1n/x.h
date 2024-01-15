@@ -11,11 +11,11 @@ MERCHANTABILITY OR FIT FOR A PARTICULAR PURPOSE.
 See the Mulan PSL v2 for more details.
 
 
-Last update: 2023-12-05 12:43
-Version: v0.6.4
+Last update: 2024-01-15 16:21
+Version: v0.6.5
 ******************************************************************************/
 #ifndef X_H
-#define X_H X_VER(0, 6, 4)
+#define X_H X_VER(0, 6, 5)
 
 
 /** Table of Contents
@@ -198,6 +198,7 @@ Version: v0.6.4
 #include <errno.h>
 #include <fcntl.h>
 #include <float.h>
+#include <math.h>
 #include <stdarg.h>
 #include <stdbool.h>
 #include <stdint.h>
@@ -447,9 +448,13 @@ X_INLINE int x_getch();
 
 X_INLINE x_err x_malloc(void** ptr, const size_t size);
 
+X_INLINE uint64_t x_next_exp(const uint64_t base, const uint64_t src);
+
 X_INLINE struct timespec x_now();
 
 X_INLINE bool x_path_exists(const char* path);
+
+X_INLINE uint64_t x_prev_exp(const uint64_t base, const uint64_t src);
 
 X_INLINE int x_split_path(
     const char* path,
@@ -1391,6 +1396,34 @@ x_err x_malloc(void** ptr, const size_t size)
   return x_ok();
 }
 
+uint64_t x_next_exp(const uint64_t base, const uint64_t src)
+{
+  if (src <= 0) {
+    return 0;
+  }
+
+  uint64_t b = base;
+  size_t bits = 0;
+  while (b != 0) {
+    bits += b & 1;
+    b >>= 1;
+  }
+
+  if (bits > 1) {
+    double exp = ceil(log((double)src) / log((double)base));
+    return (uint64_t)pow((double)base, exp);
+  } else {
+    uint64_t s = src;
+    size_t count = 0;
+    while (s != 0) {
+      s >>= 1;
+      count += 1;
+    }
+
+    return 1 << count;
+  }
+}
+
 struct timespec x_now()
 {
   struct timespec ts = {0};
@@ -1417,6 +1450,34 @@ bool x_path_exists(const char* path)
 #endif
 
   return (err == 0);
+}
+
+uint64_t x_prev_exp(const uint64_t base, const uint64_t src)
+{
+  if (src <= 0) {
+    return 0;
+  }
+
+  uint64_t b = base;
+  size_t bits = 0;
+  while (b != 0) {
+    bits += b & 1;
+    b >>= 1;
+  }
+
+  if (bits > 1) {
+    double exp = floor(log((double)src) / log((double)base));
+    return (uint64_t)pow((double)base, exp);
+  } else {
+    uint64_t s = src;
+    size_t count = 0;
+    while (s != 0) {
+      s >>= 1;
+      count += 1;
+    }
+
+    return 1 << (count - 1);
+  }
 }
 
 int x_split_path(

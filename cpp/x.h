@@ -11,11 +11,11 @@ MERCHANTABILITY OR FIT FOR A PARTICULAR PURPOSE.
 See the Mulan PSL v2 for more details.
 
 
-Last update: 2023-12-03 21:06
-Version: v0.1.5
+Last update: 2024-01-15 15:55
+Version: v0.1.6
 ******************************************************************************/
 #ifndef X_H
-#define X_H X_VER(0, 1, 5)
+#define X_H X_VER(0, 1, 6)
 
 
 /** Table of Contents
@@ -186,6 +186,7 @@ Version: v0.1.5
 #include <cassert>
 #include <cerrno>
 #include <cfloat>
+#include <cmath>
 #include <cstdarg>
 #include <cstdint>
 #include <cstdio>
@@ -323,7 +324,8 @@ template<typename T>
 X_INLINE constexpr T x_PiB(const T n = static_cast<T>(1));
 
 template<typename T>
-X_INLINE constexpr T x_bit(const T bit);
+X_INLINE constexpr
+typename std::enable_if<std::is_integral_v<T>, T>::type x_bit(const T bit);
 
 template<typename T, typename N>
 X_INLINE bool x_buffer_valid(const T* buffer, const N size);
@@ -357,9 +359,19 @@ X_INLINE int x_getch();
 template<typename T>
 X_INLINE x_err x_malloc(T*& ptr, const size_t size);
 
+template<typename T>
+X_INLINE
+typename std::enable_if<std::is_integral_v<T>, T>::type
+x_next_exp(const T base, const T src);
+
 X_INLINE struct timespec x_now();
 
 X_INLINE bool x_path_exists(const char* path);
+
+template<typename T>
+X_INLINE
+typename std::enable_if<std::is_integral_v<T>, T>::type
+x_prev_exp(const T base, const T src);
 
 X_INLINE int x_split_path(
     const char* path,
@@ -749,7 +761,8 @@ constexpr T x_PiB(const T n)
 }
 
 template<typename T>
-constexpr T x_bit(const T bit)
+X_INLINE constexpr
+typename std::enable_if<std::is_integral_v<T>, T>::type x_bit(const T bit)
 {
   return static_cast<T>(1) << bit;
 }
@@ -944,6 +957,40 @@ x_err x_malloc(T*& ptr, const size_t size)
   return x_err();
 }
 
+template<typename T>
+X_INLINE
+typename std::enable_if<std::is_integral_v<T>, T>::type
+x_next_exp(const T base, const T src)
+{
+  if (src <= 0) {
+    return static_cast<T>(0);
+  }
+
+  T b{base};
+  size_t bits{0};
+  while (b != 0) {
+    bits += b & 1;
+    b >>= 1;
+  }
+
+  if (bits > 1) {
+    double exp =
+      std::ceil(
+          std::log(static_cast<double>(src))
+          / std::log(static_cast<double>(base)));
+    return static_cast<T>(std::pow(static_cast<double>(base), exp));
+  } else {
+    T s{src};
+    size_t count{0};
+    while (s != 0) {
+      s >>= 1;
+      count += 1;
+    }
+
+    return 1 << count;
+  }
+}
+
 struct timespec x_now()
 {
   struct timespec ts = {0};
@@ -970,6 +1017,40 @@ bool x_path_exists(const char* path)
 #endif
 
   return (err == 0);
+}
+
+template<typename T>
+X_INLINE
+typename std::enable_if<std::is_integral_v<T>, T>::type
+x_prev_exp(const T base, const T src)
+{
+  if (src <= 0) {
+    return static_cast<T>(0);
+  }
+
+  T b{base};
+  size_t bits{0};
+  while (b != 0) {
+    bits += b & 1;
+    b >>= 1;
+  }
+
+  if (bits > 1) {
+    double exp =
+      std::floor(
+          std::log(static_cast<double>(src))
+          / std::log(static_cast<double>(base)));
+    return static_cast<T>(std::pow(static_cast<double>(base), exp));
+  } else {
+    T s{src};
+    size_t count{0};
+    while (s != 0) {
+      s >>= 1;
+      count += 1;
+    }
+
+    return 1 << (count - 1);
+  }
 }
 
 int x_split_path(
