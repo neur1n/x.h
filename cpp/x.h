@@ -11,11 +11,11 @@ MERCHANTABILITY OR FIT FOR A PARTICULAR PURPOSE.
 See the Mulan PSL v2 for more details.
 
 
-Last update: 2024-01-15 15:55
-Version: v0.1.6
+Last update: 2024-01-17 15:42
+Version: v0.1.7
 ******************************************************************************/
 #ifndef X_H
-#define X_H X_VER(0, 1, 6)
+#define X_H X_VER(0, 1, 7)
 
 
 /** Table of Contents
@@ -1342,11 +1342,11 @@ void _x_log_impl(
   vsnprintf(msg, X_LOG_MSG_LIMIT, format, args);
   va_end(args);
 
-  if (file != nullptr) {
+  if (file == nullptr || file == stdout || file == stderr) {
+    printf("%s%s%s%s\n", color_level, prefix, msg, color_reset);
+  } else {
     fprintf(file, "%s%s\n", prefix, msg);
   }
-
-  printf("%s%s%s%s\n", color_level, prefix, msg, color_reset);
 }
 // IMPL_x_log}}}
 
