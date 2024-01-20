@@ -11,11 +11,11 @@ MERCHANTABILITY OR FIT FOR A PARTICULAR PURPOSE.
 See the Mulan PSL v2 for more details.
 
 
-Last update: 2024-01-20 20:44
-Version: v0.1.9
+Last update: 2024-01-20 21:46
+Version: v0.1.10
 ******************************************************************************/
 #ifndef X_H
-#define X_H X_VER(0, 1, 9)
+#define X_H X_VER(0, 1, 10)
 
 
 /** Table of Contents
@@ -963,27 +963,14 @@ typename std::enable_if<std::is_integral_v<T>, T>::type
 x_next_exp(const T base, const T src)
 {
   if (src <= 0) {
-    return static_cast<T>(0);
+    return static_cast<T>(1);
   }
 
-  if (src == base) {
-    return src;
-  }
+  if (base == 2) {
+    if ((src & (src - 1)) == 0) {
+      return src;
+    }
 
-  T b{base};
-  size_t bits{0};
-  while (b != 0) {
-    bits += b & 1;
-    b >>= 1;
-  }
-
-  if (bits > 1) {
-    double exp =
-      std::ceil(
-          std::log(static_cast<double>(src))
-          / std::log(static_cast<double>(base)));
-    return static_cast<T>(std::pow(static_cast<double>(base), exp));
-  } else {
     T s{src};
     size_t count{0};
     while (s != 0) {
@@ -992,6 +979,15 @@ x_next_exp(const T base, const T src)
     }
 
     return 1 << count;
+  } else {
+    double exp =
+      std::log(static_cast<double>(src)) / std::log(static_cast<double>(base));
+
+    if (exp == std::round(exp)) {
+      return src;
+    }
+
+    return static_cast<T>(std::pow(static_cast<double>(base), std::ceil(exp)));
   }
 }
 
@@ -1029,27 +1025,14 @@ typename std::enable_if<std::is_integral_v<T>, T>::type
 x_prev_exp(const T base, const T src)
 {
   if (src <= 0) {
-    return static_cast<T>(0);
+    return static_cast<T>(1);
   }
 
-  if (src == base) {
-    return src;
-  }
+  if (base == 2) {
+    if ((src & (src - 1)) == 0) {
+      return src;
+    }
 
-  T b{base};
-  size_t bits{0};
-  while (b != 0) {
-    bits += b & 1;
-    b >>= 1;
-  }
-
-  if (bits > 1) {
-    double exp =
-      std::floor(
-          std::log(static_cast<double>(src))
-          / std::log(static_cast<double>(base)));
-    return static_cast<T>(std::pow(static_cast<double>(base), exp));
-  } else {
     T s{src};
     size_t count{0};
     while (s != 0) {
@@ -1058,6 +1041,15 @@ x_prev_exp(const T base, const T src)
     }
 
     return 1 << (count - 1);
+  } else {
+    double exp =
+      std::log(static_cast<double>(src)) / std::log(static_cast<double>(base));
+
+    if (exp == std::round(exp)) {
+      return src;
+    }
+
+    return static_cast<T>(std::pow(static_cast<double>(base), std::floor(exp)));
   }
 }
 

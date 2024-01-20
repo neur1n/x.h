@@ -11,11 +11,11 @@ MERCHANTABILITY OR FIT FOR A PARTICULAR PURPOSE.
 See the Mulan PSL v2 for more details.
 
 
-Last update: 2024-01-20 20:44
-Version: v0.6.7
+Last update: 2024-01-20 21:46
+Version: v0.6.8
 ******************************************************************************/
 #ifndef X_H
-#define X_H X_VER(0, 6, 7)
+#define X_H X_VER(0, 6, 8)
 
 
 /** Table of Contents
@@ -1399,24 +1399,14 @@ x_err x_malloc(void** ptr, const size_t size)
 uint64_t x_next_exp(const uint64_t base, const uint64_t src)
 {
   if (src <= 0) {
-    return 0;
+    return 1;
   }
 
-  if (src == base) {
-    return src;
-  }
+  if (base == 2) {
+    if ((src & (src - 1)) == 0) {
+      return src;
+    }
 
-  uint64_t b = base;
-  size_t bits = 0;
-  while (b != 0) {
-    bits += b & 1;
-    b >>= 1;
-  }
-
-  if (bits > 1) {
-    double exp = ceil(log((double)src) / log((double)base));
-    return (uint64_t)pow((double)base, exp);
-  } else {
     uint64_t s = src;
     size_t count = 0;
     while (s != 0) {
@@ -1425,6 +1415,14 @@ uint64_t x_next_exp(const uint64_t base, const uint64_t src)
     }
 
     return 1 << count;
+  } else {
+    double exp = log((double)src) / log((double)base);
+
+    if (exp == round(exp)) {
+      return src;
+    }
+
+    return (uint64_t)pow((double)base, ceil(exp));
   }
 }
 
@@ -1459,24 +1457,14 @@ bool x_path_exists(const char* path)
 uint64_t x_prev_exp(const uint64_t base, const uint64_t src)
 {
   if (src <= 0) {
-    return 0;
+    return 1;
   }
 
-  if (src == base) {
-    return src;
-  }
+  if (base == 2) {
+    if ((src & (src - 1)) == 0) {
+      return src;
+    }
 
-  uint64_t b = base;
-  size_t bits = 0;
-  while (b != 0) {
-    bits += b & 1;
-    b >>= 1;
-  }
-
-  if (bits > 1) {
-    double exp = floor(log((double)src) / log((double)base));
-    return (uint64_t)pow((double)base, exp);
-  } else {
     uint64_t s = src;
     size_t count = 0;
     while (s != 0) {
@@ -1485,6 +1473,14 @@ uint64_t x_prev_exp(const uint64_t base, const uint64_t src)
     }
 
     return 1 << (count - 1);
+  } else {
+    double exp = log((double)src) / log((double)base);
+
+    if (exp == round(exp)) {
+      return src;
+    }
+
+    return (uint64_t)pow((double)base, floor(exp));
   }
 }
 
