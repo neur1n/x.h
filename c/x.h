@@ -11,11 +11,11 @@ MERCHANTABILITY OR FIT FOR A PARTICULAR PURPOSE.
 See the Mulan PSL v2 for more details.
 
 
-Last update: 2024-01-18 16:10
-Version: v0.6.6
+Last update: 2024-01-20 20:44
+Version: v0.6.7
 ******************************************************************************/
 #ifndef X_H
-#define X_H X_VER(0, 6, 6)
+#define X_H X_VER(0, 6, 7)
 
 
 /** Table of Contents
@@ -1402,6 +1402,10 @@ uint64_t x_next_exp(const uint64_t base, const uint64_t src)
     return 0;
   }
 
+  if (src == base) {
+    return src;
+  }
+
   uint64_t b = base;
   size_t bits = 0;
   while (b != 0) {
@@ -1456,6 +1460,10 @@ uint64_t x_prev_exp(const uint64_t base, const uint64_t src)
 {
   if (src <= 0) {
     return 0;
+  }
+
+  if (src == base) {
+    return src;
   }
 
   uint64_t b = base;
