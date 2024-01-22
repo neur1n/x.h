@@ -11,11 +11,11 @@ MERCHANTABILITY OR FIT FOR A PARTICULAR PURPOSE.
 See the Mulan PSL v2 for more details.
 
 
-Last update: 2024-01-22 19:30
-Version: v0.1.12
+Last update: 2024-01-22 20:01
+Version: v0.1.13
 ******************************************************************************/
 #ifndef X_H
-#define X_H X_VER(0, 1, 12)
+#define X_H X_VER(0, 1, 13)
 
 
 /** Table of Contents
@@ -353,32 +353,38 @@ X_INLINE void x_free(T*& ptr);
 
 X_INLINE const char* x_full_path(char* dst, const char* src);
 
-template<size_t m, size_t n>
-X_INLINE constexpr size_t x_gcd();
-
-X_INLINE size_t x_gcd(const size_t m, const size_t n);
+template<typename T>
+X_INLINE constexpr typename std::enable_if<std::is_integral_v<T>, T>::type
+x_gcd(const T m, const T n);
 
 X_INLINE int x_getch();
 
-template<size_t m, size_t n>
-X_INLINE constexpr size_t x_lcm();
-
-X_INLINE size_t x_lcm(const size_t m, const size_t n);
+template<typename T>
+X_INLINE constexpr typename std::enable_if<std::is_integral_v<T>, T>::type
+x_lcm(const T m, const T n);
 
 template<typename T>
 X_INLINE x_err x_malloc(T*& ptr, const size_t size);
 
-X_INLINE size_t x_next_exp(const size_t base, const size_t src);
+template<typename T>
+X_INLINE constexpr typename std::enable_if<std::is_integral_v<T>, T>::type
+x_next_exp(const T base, const T src);
 
-X_INLINE size_t x_next_mul(const size_t base, const size_t src);
+template<typename T>
+X_INLINE constexpr typename std::enable_if<std::is_integral_v<T>, T>::type
+x_next_mul(const T base, const T src);
 
 X_INLINE struct timespec x_now();
 
 X_INLINE bool x_path_exists(const char* path);
 
-X_INLINE size_t x_prev_exp(const size_t base, const size_t src);
+template<typename T>
+X_INLINE constexpr typename std::enable_if<std::is_integral_v<T>, T>::type
+x_prev_exp(const T base, const T src);
 
-X_INLINE size_t x_prev_mul(const size_t base, const size_t src);
+template<typename T>
+X_INLINE constexpr typename std::enable_if<std::is_integral_v<T>, T>::type
+x_prev_mul(const T base, const T src);
 
 X_INLINE int x_split_path(
     const char* path,
@@ -876,17 +882,9 @@ const char* x_full_path(char* dst, const char* src)
 #endif
 }
 
-template<size_t m, size_t n>
-constexpr size_t x_gcd()
-{
-  if constexpr (n == 0) {
-    return m;
-  } else {
-    return x_gcd<n, m % n>();
-  }
-}
-
-size_t x_gcd(const size_t m, const size_t n)
+template<typename T>
+constexpr typename std::enable_if<std::is_integral_v<T>, T>::type
+x_gcd(const T m, const T n)
 {
   return (n == 0 ? m : x_gcd(n, m % n));
 }
@@ -964,17 +962,9 @@ int x_getch()
 #endif
 }
 
-template<size_t m, size_t n>
-constexpr size_t x_lcm()
-{
-  if constexpr (m == 0 || n == 0) {
-    return 0;
-  }
-
-  return m / x_gcd<m, n>() * n;
-}
-
-size_t x_lcm(const size_t m, const size_t n)
+template<typename T>
+constexpr typename std::enable_if<std::is_integral_v<T>, T>::type
+x_lcm(const T m, const T n)
 {
   if (m == 0 || n == 0) {
     return 0;
@@ -998,7 +988,9 @@ x_err x_malloc(T*& ptr, const size_t size)
   return x_err();
 }
 
-size_t x_next_exp(const size_t base, const size_t src)
+template<typename T>
+X_INLINE constexpr typename std::enable_if<std::is_integral_v<T>, T>::type
+x_next_exp(const T base, const T src)
 {
   if (src == 0) {
     return 1;
@@ -1009,8 +1001,8 @@ size_t x_next_exp(const size_t base, const size_t src)
       return src;
     }
 
-    size_t s{src};
-    size_t count{0};
+    T s{src};
+    T count{0};
     while (s != 0) {
       s >>= 1;
       count += 1;
@@ -1029,7 +1021,9 @@ size_t x_next_exp(const size_t base, const size_t src)
   }
 }
 
-size_t x_next_mul(const size_t base, const size_t src)
+template<typename T>
+X_INLINE constexpr typename std::enable_if<std::is_integral_v<T>, T>::type
+x_next_mul(const T base, const T src)
 {
   return (src / base + 1) * base;
 }
@@ -1062,7 +1056,9 @@ bool x_path_exists(const char* path)
   return (err == 0);
 }
 
-size_t x_prev_exp(const size_t base, const size_t src)
+template<typename T>
+X_INLINE constexpr typename std::enable_if<std::is_integral_v<T>, T>::type
+x_prev_exp(const T base, const T src)
 {
   if (src == 0) {
     return 0;
@@ -1073,8 +1069,8 @@ size_t x_prev_exp(const size_t base, const size_t src)
       return src;
     }
 
-    size_t s{src};
-    size_t count{0};
+    T s{src};
+    T count{0};
     while (s != 0) {
       s >>= 1;
       count += 1;
@@ -1093,7 +1089,9 @@ size_t x_prev_exp(const size_t base, const size_t src)
   }
 }
 
-size_t x_prev_mul(const size_t base, const size_t src)
+template<typename T>
+X_INLINE constexpr typename std::enable_if<std::is_integral_v<T>, T>::type
+x_prev_mul(const T base, const T src)
 {
   return (src / base) * base;
 }
