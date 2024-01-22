@@ -11,11 +11,11 @@ MERCHANTABILITY OR FIT FOR A PARTICULAR PURPOSE.
 See the Mulan PSL v2 for more details.
 
 
-Last update: 2024-01-22 14:20
-Version: v0.6.9
+Last update: 2024-01-22 19:17
+Version: v0.6.10
 ******************************************************************************/
 #ifndef X_H
-#define X_H X_VER(0, 6, 9)
+#define X_H X_VER(0, 6, 10)
 
 
 /** Table of Contents
@@ -444,7 +444,11 @@ X_INLINE long long x_file_size(const char* file);
 
 X_INLINE const char* x_full_path(char* dst, const char* src);
 
+X_INLINE size_t x_gcd(const size_t m, const size_t n);
+
 X_INLINE int x_getch();
+
+X_INLINE size_t x_lcm(const size_t m, const size_t n);
 
 X_INLINE x_err x_malloc(void** ptr, const size_t size);
 
@@ -1313,6 +1317,11 @@ const char* x_full_path(char* dst, const char* src)
 #endif
 }
 
+size_t x_gcd(const size_t m, const size_t n)
+{
+  return (n == 0 ? m : x_gcd(n, m % n));
+}
+
 int x_getch()
 {
 #if X_WINDOWS
@@ -1384,6 +1393,15 @@ int x_getch()
 
   return (isalpha(key) ? toupper(key) : key);
 #endif
+}
+
+size_t x_lcm(const size_t m, const size_t n)
+{
+  if (m == 0 || n == 0) {
+    return 0;
+  }
+
+  return m / x_gcd(m, n) * n;
 }
 
 x_err x_malloc(void** ptr, const size_t size)

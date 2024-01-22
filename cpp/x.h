@@ -11,11 +11,11 @@ MERCHANTABILITY OR FIT FOR A PARTICULAR PURPOSE.
 See the Mulan PSL v2 for more details.
 
 
-Last update: 2024-01-22 14:17
-Version: v0.1.11
+Last update: 2024-01-22 19:30
+Version: v0.1.12
 ******************************************************************************/
 #ifndef X_H
-#define X_H X_VER(0, 1, 11)
+#define X_H X_VER(0, 1, 12)
 
 
 /** Table of Contents
@@ -353,7 +353,17 @@ X_INLINE void x_free(T*& ptr);
 
 X_INLINE const char* x_full_path(char* dst, const char* src);
 
+template<size_t m, size_t n>
+X_INLINE constexpr size_t x_gcd();
+
+X_INLINE size_t x_gcd(const size_t m, const size_t n);
+
 X_INLINE int x_getch();
+
+template<size_t m, size_t n>
+X_INLINE constexpr size_t x_lcm();
+
+X_INLINE size_t x_lcm(const size_t m, const size_t n);
 
 template<typename T>
 X_INLINE x_err x_malloc(T*& ptr, const size_t size);
@@ -866,6 +876,21 @@ const char* x_full_path(char* dst, const char* src)
 #endif
 }
 
+template<size_t m, size_t n>
+constexpr size_t x_gcd()
+{
+  if constexpr (n == 0) {
+    return m;
+  } else {
+    return x_gcd<n, m % n>();
+  }
+}
+
+size_t x_gcd(const size_t m, const size_t n)
+{
+  return (n == 0 ? m : x_gcd(n, m % n));
+}
+
 int x_getch()
 {
 #if X_WINDOWS
@@ -937,6 +962,25 @@ int x_getch()
 
   return (isalpha(key) ? toupper(key) : key);
 #endif
+}
+
+template<size_t m, size_t n>
+constexpr size_t x_lcm()
+{
+  if constexpr (m == 0 || n == 0) {
+    return 0;
+  }
+
+  return m / x_gcd<m, n>() * n;
+}
+
+size_t x_lcm(const size_t m, const size_t n)
+{
+  if (m == 0 || n == 0) {
+    return 0;
+  }
+
+  return m / x_gcd(m, n) * n;
 }
 
 template<typename T>
