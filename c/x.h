@@ -11,11 +11,11 @@ MERCHANTABILITY OR FIT FOR A PARTICULAR PURPOSE.
 See the Mulan PSL v2 for more details.
 
 
-Last update: 2024-01-20 21:46
-Version: v0.6.8
+Last update: 2024-01-22 14:20
+Version: v0.6.9
 ******************************************************************************/
 #ifndef X_H
-#define X_H X_VER(0, 6, 8)
+#define X_H X_VER(0, 6, 9)
 
 
 /** Table of Contents
@@ -448,13 +448,17 @@ X_INLINE int x_getch();
 
 X_INLINE x_err x_malloc(void** ptr, const size_t size);
 
-X_INLINE uint64_t x_next_exp(const uint64_t base, const uint64_t src);
+X_INLINE size_t x_next_exp(const uint64_t base, const uint64_t src);
+
+X_INLINE size_t x_next_mul(const uint64_t base, const uint64_t src);
 
 X_INLINE struct timespec x_now();
 
 X_INLINE bool x_path_exists(const char* path);
 
-X_INLINE uint64_t x_prev_exp(const uint64_t base, const uint64_t src);
+X_INLINE size_t x_prev_exp(const size_t base, const size_t src);
+
+X_INLINE size_t x_prev_mul(const size_t base, const size_t src);
 
 X_INLINE int x_split_path(
     const char* path,
@@ -1396,9 +1400,9 @@ x_err x_malloc(void** ptr, const size_t size)
   return x_ok();
 }
 
-uint64_t x_next_exp(const uint64_t base, const uint64_t src)
+size_t x_next_exp(const size_t base, const size_t src)
 {
-  if (src <= 0) {
+  if (src == 0) {
     return 1;
   }
 
@@ -1407,7 +1411,7 @@ uint64_t x_next_exp(const uint64_t base, const uint64_t src)
       return src;
     }
 
-    uint64_t s = src;
+    size_t s = src;
     size_t count = 0;
     while (s != 0) {
       s >>= 1;
@@ -1422,8 +1426,13 @@ uint64_t x_next_exp(const uint64_t base, const uint64_t src)
       return src;
     }
 
-    return (uint64_t)pow((double)base, ceil(exp));
+    return (size_t)pow((double)base, ceil(exp));
   }
+}
+
+size_t x_next_mul(const size_t base, const size_t src)
+{
+  return (src / base + 1) * base;
 }
 
 struct timespec x_now()
@@ -1454,10 +1463,10 @@ bool x_path_exists(const char* path)
   return (err == 0);
 }
 
-uint64_t x_prev_exp(const uint64_t base, const uint64_t src)
+size_t x_prev_exp(const size_t base, const size_t src)
 {
-  if (src <= 0) {
-    return 1;
+  if (src == 0) {
+    return 0;
   }
 
   if (base == 2) {
@@ -1465,7 +1474,7 @@ uint64_t x_prev_exp(const uint64_t base, const uint64_t src)
       return src;
     }
 
-    uint64_t s = src;
+    size_t s = src;
     size_t count = 0;
     while (s != 0) {
       s >>= 1;
@@ -1480,8 +1489,13 @@ uint64_t x_prev_exp(const uint64_t base, const uint64_t src)
       return src;
     }
 
-    return (uint64_t)pow((double)base, floor(exp));
+    return (size_t)pow((double)base, floor(exp));
   }
+}
+
+size_t x_prev_mul(const size_t base, const size_t src)
+{
+  return (src / base) * base;
 }
 
 int x_split_path(
