@@ -11,11 +11,11 @@ MERCHANTABILITY OR FIT FOR A PARTICULAR PURPOSE.
 See the Mulan PSL v2 for more details.
 
 
-Last update: 2024-01-22 20:01
-Version: v0.1.13
+Last update: 2024-02-06 15:42
+Version: v0.1.15
 ******************************************************************************/
 #ifndef X_H
-#define X_H X_VER(0, 1, 13)
+#define X_H X_VER(0, 1, 15)
 
 
 /** Table of Contents
@@ -201,6 +201,7 @@ Version: v0.1.13
 
 #if X_WINDOWS && X_MSVC
 #if X_ENABLE_SOCKET
+#pragma comment(lib, "Ws2_32")
 #include <winsock2.h>
 #include <ws2tcpip.h>
 #endif
@@ -1427,36 +1428,36 @@ int32_t x_err::cat() const
 
 const char* x_err::msg()
 {
-  if (this->m_cat == x_err_custom) {
+#if X_WINDOWS
+  if (this->m_cat == x_err_win32 || this->m_cat == x_err_socket) {
+    if (this->m_msg.empty()) {
+      this->m_msg.resize(128);
+    }
+    FormatMessageA(
+        FORMAT_MESSAGE_FROM_SYSTEM
+        | FORMAT_MESSAGE_IGNORE_INSERTS
+        | FORMAT_MESSAGE_MAX_WIDTH_MASK,
+        nullptr, (DWORD)this->m_val, MAKELANGID(LANG_ENGLISH, SUBLANG_ENGLISH_US),
+        this->m_msg.data(), this->m_msg.size(), nullptr);
+  } else if (this->m_cat == x_err_posix) {
+    if (this->m_msg.empty()) {
+      this->m_msg.resize(64);
+    }
+    strerror_s(this->m_msg.data(), this->m_msg.size(), this->m_val);
+#else
+  if (this->m_cat == x_err_posix) {
+    this->m_msg = strerror(this->m_val);
+#endif  // #if X_WINDOWS
+#if X_ENABLE_CUDA
+  } else if (this->m_cat == x_err_cuda) {
+    this->m_msg = cudaGetErrorString(static_cast<cudaError_t>(this->m_val));
+#endif  // #if X_ENABLE_CUDA
+  } else {
     if (this->m_msg.empty()) {
       char msg[32]{0};
       snprintf(msg, x_count(msg), "Custom error %d.", this->m_val);
       this->m_msg = msg;
     }
-#if X_ENABLE_CUDA
-  } else if (this->m_cat == x_err_cuda) {
-    this->m_msg = cudaGetErrorString(static_cast<cudaError_t>(this->m_val));
-#endif
-  } else {
-#if X_WINDOWS
-    if (this->m_cat == x_err_win32 || this->m_cat == x_err_socket) {
-      if (this->m_msg.size() < 128) {
-        this->m_msg.resize(128);
-      }
-      FormatMessageA(
-          FORMAT_MESSAGE_FROM_SYSTEM
-          | FORMAT_MESSAGE_IGNORE_INSERTS
-          | FORMAT_MESSAGE_MAX_WIDTH_MASK,
-          nullptr, (DWORD)this->m_val, MAKELANGID(LANG_ENGLISH, SUBLANG_ENGLISH_US),
-          this->m_msg.data(), this->m_msg.size(), nullptr);
-    } else {
-      // everything else falls back to x_err_posix
-      strerror_s(this->m_msg.data(), this->m_msg.size(), this->m_val);
-    }
-#else
-    // everything else falls back to x_err_posix
-    this->m_msg = strerror(this->m_val);
-#endif
   }
 
   return this->m_msg.c_str();
@@ -1472,9 +1473,11 @@ x_err& x_err::set(const int32_t cat)
   if (cat == x_err_win32) {
     this->m_cat = cat;
     this->m_val = static_cast<int32_t>(GetLastError());
+#if X_ENABLE_SOCKET
   } else if (cat == x_err_socket) {
     this->m_cat = cat;
     this->m_val = static_cast<int32_t>(WSAGetLastError());
+#endif
 #if X_ENABLE_CUDA
   } else if (cat == x_err_cuda) {
     this->m_cat = cat;
