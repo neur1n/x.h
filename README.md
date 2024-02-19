@@ -12,7 +12,7 @@
   <img src="https://img.shields.io/badge/C++-%2300599C.svg?style=for-the-badge&logo=c%2B%2B&logoColor=white" alt="C++">
 
   <a href="./LICENSE">
-    <img src="https://img.shields.io/badge/license-mulax_psl_v2-green.svg?style=for-the-badge" alt="license-mulan-psl-v2">
+    <img src="https://img.shields.io/badge/license-mulan_psl_v2-green.svg?style=for-the-badge" alt="license-mulan-psl-v2">
   </a>
 </p>
 
