@@ -11,11 +11,11 @@ MERCHANTABILITY OR FIT FOR A PARTICULAR PURPOSE.
 See the Mulan PSL v2 for more details.
 
 
-Last update: 2024-01-22 19:17
-Version: v0.6.10
+Last update: 2024-02-19 17:29
+Version: v0.6.11
 ******************************************************************************/
 #ifndef X_H
-#define X_H X_VER(0, 6, 10)
+#define X_H X_VER(0, 6, 11)
 
 
 /** Table of Contents
@@ -208,6 +208,12 @@ Version: v0.6.10
 #include <time.h>
 
 #if X_WINDOWS && X_MSVC
+#if X_ENABLE_SOCKET
+#pragma comment(lib, "Ws2_32")
+#include <winsock2.h>
+#include <ws2tcpip.h>
+#endif
+
 #if X_ENABLE_ATOMIC
 #include <intrin.h>
 #endif
@@ -216,11 +222,6 @@ Version: v0.6.10
 #include <process.h>
 #include <processthreadsapi.h>
 #include <synchapi.h>
-#endif
-
-#if X_ENABLE_SOCKET
-#include <winsock2.h>
-#include <ws2tcpip.h>
 #endif
 
 #include <windows.h>
@@ -383,10 +384,10 @@ X_INLINE x_err x_cu_malloc(void** ptr, const size_t size);
      _97,  _98,  _99, _100, _101, _102, _103, _104, \
     _105, _106, _107, _108, _109, _110, _111, _112, \
     _113, _114, _115, _116, _117, _118, _119, _120, \
-    _121, _122, _123, _124, _125, _126, _127,    N, ...) N
+    _121, _122, _123, _124, _125,    N, ...) N
 
 #define _x_seq_n() \
-  127, 126, 125, 124, 123, 122, 121, 120, \
+  125, 124, 123, 122, 121, 120, \
   119, 118, 117, 116, 115, 114, 113, 112, \
   111, 110, 109, 108, 107, 106, 105, 104, \
   103, 102, 101, 100,  99,  98,  97,  96, \
@@ -948,12 +949,6 @@ typedef struct _x_iov_
 
 #if X_ENABLE_SOCKET
 //*************************************************************** DECL_x_skt{{{
-#if X_ENABLE_SOCKET
-#if X_WINDOWS && X_MSVC
-#pragma comment(lib, "Ws2_32")
-#endif  // X_ENABLE_SOCKET
-#endif  // X_WINDOWS && X_MSVC
-
 typedef struct _x_skt_ x_skt;
 struct _x_skt_
 {
@@ -1839,9 +1834,11 @@ x_err _x_err_get(const int32_t cat)
   if (cat == x_err_win32) {
     err.cat = cat;
     err.val = (int32_t)GetLastError();
+#if X_ENABLE_SOCKET
   } else if (cat == x_err_socket) {
     err.cat = cat;
     err.val = (int32_t)WSAGetLastError();
+#endif
 #if X_ENABLE_CUDA
   } else if (cat == x_err_cuda) {
     err.cat = cat;
@@ -1885,27 +1882,26 @@ const char* x_err_msg(char* msg, const size_t msz, const x_err err)
     return "";
   }
 
-  if (err.cat == x_err_custom) {
-    snprintf(msg, msz, "Custom error %d.", err.val);
+#if X_WINDOWS
+  if (err.cat == x_err_win32 || err.cat == x_err_socket) {
+    FormatMessageA(
+        FORMAT_MESSAGE_FROM_SYSTEM
+        | FORMAT_MESSAGE_IGNORE_INSERTS
+        | FORMAT_MESSAGE_MAX_WIDTH_MASK,
+        NULL, (DWORD)err.val, MAKELANGID(LANG_ENGLISH, SUBLANG_ENGLISH_US),
+        msg, msz, NULL);
+  } else if (err.cat == x_err_posix) {
+    strerror_s(msg, msz, (int)err.val);
+#else
+  if (err.cat == x_err_posix) {
+    strcpy(msg, strerror((int)err.val));
+#endif  // #if X_WINDOWS
 #if X_ENABLE_CUDA
   } else if (err.cat == x_err_cuda) {
     strcpy(msg, cudaGetErrorString((cudaError_t)err.val));
-#endif
+#endif  // #if X_ENABLE_CUDA
   } else {
-#if X_WINDOWS
-    if (err.cat == x_err_win32 || err.cat == x_err_socket) {
-      FormatMessageA(
-          FORMAT_MESSAGE_FROM_SYSTEM
-          | FORMAT_MESSAGE_IGNORE_INSERTS
-          | FORMAT_MESSAGE_MAX_WIDTH_MASK,
-          NULL, (DWORD)err.val, MAKELANGID(LANG_ENGLISH, SUBLANG_ENGLISH_US),
-          msg, msz, NULL);
-    } else {  // x_err_posix
-      strerror_s(msg, msz, (int)err.val);
-    }
-#else
-    strcpy(msg, strerror((int)err.val));  // x_err_posix
-#endif
+    snprintf(msg, msz, "Custom error %d.", err.val);
   }
 
   return msg;
