@@ -3,7 +3,7 @@
 
 int main(int argc, char** argv)
 {
-  x_err err;
+  x_error err;
 
   double* ptr{nullptr};
 

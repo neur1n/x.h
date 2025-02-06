@@ -17,9 +17,9 @@ ADD_COMPILE_DEFINITIONS(X_ENABLE_CUDA=1)
 ADD_COMPILE_DEFINITIONS(X_ENABLE_SOCKET=1)
 
 SET(TEST_TARGETS
-  test_x_err
-  test_x_mem
-  test_x_stopwatch
+  test_x_error
+  test_x_event
+  test_x_memory
 )
 
 FOREACH(TARGET ${TEST_TARGETS})

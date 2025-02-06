@@ -3,7 +3,8 @@
 
 int main(int argc, char** argv)
 {
-  x_stopwatch_stats stats;
+  x_event_stats stats;
+  const char* unit{"ms"};
 
   // CUDA driver API event
   cuInit(0);
@@ -14,19 +15,19 @@ int main(int argc, char** argv)
   CUcontext context{nullptr};
   cuCtxCreate(&context, 0, device);
 
-  x_stopwatch_cu ttl_cu;
-  x_stopwatch_cu avg_cu;
+  x_event ttl_cu("cu");
+  x_event avg_cu("cu");
 
   ttl_cu.tic();
-  x_log('i', nullptr, "[ttl] x_stopwatch_cu starts.");
+  x_log('i', nullptr, "[cu] x_event starts.");
 
   for (size_t i = 0; i < 5; ++i) {
     avg_cu.tic();
     x_sleep(1000);
-    avg_cu.toc(stats, "ms", 3);
+    avg_cu.toc(stats, 3);
   }
   if (stats.ready) {
-    stats.echo();
+    stats.echo(unit);
   }
 
   stats.reset();
@@ -34,34 +35,35 @@ int main(int argc, char** argv)
   for (size_t i = 0; i < 5; ++i) {
     avg_cu.tic();
     x_sleep(1000);
-    avg_cu.toc(stats, "ms", 5);
+    avg_cu.toc(stats, 5);
   }
   if (stats.ready) {
-    stats.echo();
+    stats.echo(unit);
   }
 
-  ttl_cu.toc("ms");
-  x_log('i', nullptr, "[ttl] x_stopwatch_cu stops.", ttl_cu.elapsed());
-  x_log('p', nullptr, "[ttl] Total: %fms", ttl_cu.elapsed());
+  ttl_cu.toc();
+  x_log('i', nullptr, "[cu] x_event stops.", ttl_cu.duration(unit));
+  x_log('p', nullptr, "[cu] Total: %fms", ttl_cu.duration(unit));
 
   cuCtxDestroy(context);
 
+  stats.reset();
   printf("\n");
 
   // CUDA runtime API event
-  x_stopwatch_cuda ttl_cuda;
-  x_stopwatch_cuda avg_cuda;
+  x_event ttl_cuda("cuda");
+  x_event avg_cuda("cuda");
 
   ttl_cuda.tic();
-  x_log('i', nullptr, "[ttl] x_stopwatch_cuda starts.");
+  x_log('i', nullptr, "[cuda] x_event starts.");
 
   for (size_t i = 0; i < 5; ++i) {
     avg_cuda.tic();
     x_sleep(1000);
-    avg_cuda.toc(stats, "ms", 3);
+    avg_cuda.toc(stats, 3);
   }
   if (stats.ready) {
-    stats.echo();
+    stats.echo(unit);
   }
 
   stats.reset();
@@ -69,15 +71,15 @@ int main(int argc, char** argv)
   for (size_t i = 0; i < 5; ++i) {
     avg_cuda.tic();
     x_sleep(1000);
-    avg_cuda.toc(stats, "ms", 5);
+    avg_cuda.toc(stats, 5);
   }
   if (stats.ready) {
-    stats.echo();
+    stats.echo(unit);
   }
 
-  ttl_cuda.toc("ms");
-  x_log('i', nullptr, "[ttl] x_stopwatch_cuda stops.", ttl_cuda.elapsed());
-  x_log('p', nullptr, "[ttl] Total: %fms", ttl_cuda.elapsed());
+  ttl_cuda.toc();
+  x_log('i', nullptr, "[cuda] x_event stops.", ttl_cuda.duration(unit));
+  x_log('p', nullptr, "[cuda] Total: %fms", ttl_cuda.duration(unit));
 
   return 0;
 }

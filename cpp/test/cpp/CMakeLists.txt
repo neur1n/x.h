@@ -11,11 +11,11 @@ SET(CMAKE_CXX_STANDARD_REQUIRED ON)
 ADD_COMPILE_DEFINITIONS(X_ENABLE_SOCKET=1)
 
 SET(TEST_TARGETS
-  test_x_err
+  test_x_error
+  test_x_event
   test_x_gadget
-  test_x_log
-  test_x_mem
-  test_x_stopwatch
+  test_x_logging
+  test_x_memory
 )
 
 FOREACH(TARGET ${TEST_TARGETS})

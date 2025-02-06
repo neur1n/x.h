@@ -11,11 +11,11 @@ MERCHANTABILITY OR FIT FOR A PARTICULAR PURPOSE.
 See the Mulan PSL v2 for more details.
 
 
-Last update: 2025-01-24 19:48
+Last update: 2025-02-05 20:53
 Version: v0.8.0
 ******************************************************************************/
 #ifndef X_H
-#define X_H x_ver(0, 8, 0)
+#define X_H x_version(0, 8, 0)
 
 
 /** @internal
@@ -63,7 +63,7 @@ Version: v0.8.0
 /// @return The version number.
 /// @remark A big range of patch allow the result version number specifically
 ///         work with [\_MSC\_FULL\_VER](https://learn.microsoft.com/en-us/cpp/preprocessor/predefined-macros?view=msvc-170).
-#define x_ver(major, minor, patch) \
+#define x_version(major, minor, patch) \
   (((major) % 100) * 10000000 + ((minor) % 100) * 100000 + ((patch) % 100000))
 
 /******************************************************************************
@@ -136,13 +136,13 @@ Version: v0.8.0
  * @{
  *****************************************************************************/
 #if defined(__clang__)
-#define X_CLANG x_ver(__clang_major__, __clang_minor__, __clang_patchlevel__)
+#define X_CLANG x_version(__clang_major__, __clang_minor__, __clang_patchlevel__)
 #else
 #define X_CLANG (0)
 #endif
 
 #if defined(__GNUC__)
-#define X_GCC x_ver(__GNUC__, __GNUC_MINOR__, __GNUC_PATCHLEVEL__)
+#define X_GCC x_version(__GNUC__, __GNUC_MINOR__, __GNUC_PATCHLEVEL__)
 #else
 #define X_GCC (0)
 #endif
@@ -154,7 +154,7 @@ Version: v0.8.0
 #endif
 
 #if defined(__NVCC__)
-#define X_NVCC x_ver(__CUDACC_VER_MAJOR__, __CUDACC_VER_MINOR__, __CUDACC_VER_BUILD__)
+#define X_NVCC x_version(__CUDACC_VER_MAJOR__, __CUDACC_VER_MINOR__, __CUDACC_VER_BUILD__)
 #else
 #define X_NVCC (0)
 #endif
@@ -165,7 +165,7 @@ Version: v0.8.0
  * @{
  *****************************************************************************/
 #if defined(__CYGWIX__)
-#define X_CYGWIN x_ver(CYGWIN_VERSION_API_MAJOR, CYGWIN_VERSION_API_MINOR, 0)
+#define X_CYGWIN x_version(CYGWIN_VERSION_API_MAJOR, CYGWIN_VERSION_API_MINOR, 0)
 #else
 #define X_CYGWIN (0)
 #endif
@@ -177,9 +177,9 @@ Version: v0.8.0
 #endif
 
 #if defined(Macintosh) || defined(macintosh)
-#define X_MACOS x_ver(9, 0, 0)
+#define X_MACOS x_version(9, 0, 0)
 #elif defined(__APPLE__) && defined(__MACH__)
-#define X_MACOS x_ver(10, 0, 0)
+#define X_MACOS x_version(10, 0, 0)
 #else
 #define X_MACOS (0)
 #endif
@@ -210,13 +210,13 @@ Version: v0.8.0
 #endif
 
 #if defined(__MINGW32__)
-#define X_MINGW32 x_ver(__MINGW32_VERSION_MAJOR, __MINGW32_VERSION_MINOR, 0)
+#define X_MINGW32 x_version(__MINGW32_VERSION_MAJOR, __MINGW32_VERSION_MINOR, 0)
 #else
 #define X_MINGW32 (0)
 #endif
 
 #if defined(__MINGW64__)
-#define X_MINGW64 x_ver(__MINGW64_VERSION_MAJOR, __MINGW64_VERSION_MINOR, 0)
+#define X_MINGW64 x_version(__MINGW64_VERSION_MAJOR, __MINGW64_VERSION_MINOR, 0)
 #else
 #define X_MINGW64 (0)
 #endif
@@ -238,7 +238,7 @@ Version: v0.8.0
 #include <cstring>
 #include <ctime>
 
-#if (__cplusplus >= 202002L && (X_CLANG >= x_ver(17, 0, 0) || X_GCC >= x_ver(13, 0, 0) || X_MSVC >= x_ver(19, 29, 0)))
+#if (__cplusplus >= 202002L && (X_CLANG >= x_version(17, 0, 0) || X_GCC >= x_version(13, 0, 0) || X_MSVC >= x_version(19, 29, 0)))
 #include <format>
 #endif
 #include <stdexcept>
@@ -332,9 +332,12 @@ Version: v0.8.0
 #endif
 
 #define X_INL inline
+
+template<typename T>
+X_INL constexpr bool x_false = false;
 /** @} */  // Miscellaneous
 
-class x_err;
+class x_error;
 
 /******************************************************************************
  * @name Communication
@@ -342,155 +345,161 @@ class x_err;
  * @{
  *****************************************************************************/
 /// @brief Calculate the CRC32 checksum of a data chunk.
-X_INL uint32_t x_cks_crc32(
-    const void* data, const size_t size, const uint32_t* prev);
+X_INL uint32_t x_checksum_crc32(
+    const void* data, const size_t size, const uint32_t* prev = nullptr);
 
+/// @internal
 /// @brief Calculate the internet checksum of a data chunk.
 /// @see [RFC1071](https://www.rfc-editor.org/info/rfc1071)
-X_INL uint16_t x_cks_rfc1071(const void* data, const size_t size);
+/// @endinternal
+X_INL uint16_t x_checksum_rfc1071(
+    const void* data, const size_t size, const uint16_t* prev = nullptr);
 
+/// @internal
 /// @brief Calculate the XOR checksum of a data chunk.
-X_INL uint8_t x_cks_xor(const void* data, const size_t size);
+/// @endinternal
+X_INL uint8_t x_checksum_xor(
+    const void* data, const size_t size, const uint8_t* prev = nullptr);
 
 /// @brief The default start of frame for a packet.
-#ifndef X_PKT_SOF
-#define X_PKT_SOF (0x55AA)
+#ifndef X_PACKET_SOF
+#define X_PACKET_SOF (0x55AA)
 #endif
 
 /// @brief A macro to represent an infinite number of packets.
-#ifndef X_PKT_INF
-#define X_PKT_INF UINT64_MAX
+#ifndef X_PACKET_INF
+#define X_PACKET_INF UINT64_MAX
 #endif
 
-/// @struct x_hdr
+/// @struct x_header
 /// @brief The header of a packet.
-/// @var x_hdr::sof
+/// @var x_header::sof
 ///      The start of frame.
-/// @var x_hdr::ctl
+/// @var x_header::ctl
 ///      The control code.
-/// @var x_hdr::opt
+/// @var x_header::opt
 ///      The option, just use it freely.
-/// @var x_hdr::cnt
+/// @var x_header::cnt
 ///      The total number of packets.
-/// @var x_hdr::idx
+/// @var x_header::idx
 ///      The index of the current packet.
-/// @var x_hdr::dsz
+/// @var x_header::dsz
 ///      The size of the data chunk.
-/// @var x_hdr::cks
+/// @var x_header::cks
 ///      The checksum of the packet, which is calculated based on the header
 ///      and the data chunk.
-typedef struct _x_hdr_
+typedef struct _x_header_
 {
-  uint16_t sof{X_PKT_SOF};
+  uint16_t sof{X_PACKET_SOF};
   uint16_t ctl{0};
   uint32_t opt{0};
-  uint64_t cnt{X_PKT_INF};
+  uint64_t cnt{X_PACKET_INF};
   uint64_t idx{0};
   uint64_t dsz{0};
   uint64_t cks{0};
-} x_hdr;
+} x_header;
 
-/// @struct x_pkt
+/// @struct x_packet
 /// @brief A message packet.
-/// @var x_pkt::head
+/// @var x_packet::head
 ///      The header of the packet.
-/// @var x_pkt::body
+/// @var x_packet::body
 ///      The data chunk of the packet.
-typedef struct _x_pkt_
+typedef struct _x_packet_
 {
-  x_hdr head;
+  x_header head;
   void* body{nullptr};
-} x_pkt;
+} x_packet;
 
-/// @struct x_iov
+/// @struct x_iovec
 /// @brief An I/O vector.
-/// @var x_iov::buf
+/// @var x_iovec::buf
 ///      The buffer.
-/// @var x_iov::len
+/// @var x_iovec::len
 ///      The length of the buffer.
-typedef struct _x_iov_
+typedef struct _x_iovec_
 {
   void* buf{nullptr};
   size_t len{0};
-} x_iov;
+} x_iovec;
 
 #if X_ENABLE_SOCKET
 /// @brief A class wrapping the socket operations.
-class x_skt
+class x_socket
 {
 public:
   /// @brief Constructor.
-  X_INL x_skt();
+  X_INL x_socket();
 
   /// @brief Destructor.
-  X_INL ~x_skt();
+  X_INL ~x_socket();
 
   /// @brief Initialize the socket.
   /// @param type The type of the socket, `SOCK_STREAM` or `SOCK_DGRAM`.
-  /// @return An instance of @ref x_err.
-  X_INL x_err init(const int type);
+  /// @return An instance of @ref x_error.
+  X_INL x_error init(const int type);
 
   /// @brief Accept a connection from a client.
   /// @param client The client to be accepted.
-  /// @return An instance of @ref x_err.
-  X_INL x_err accept(x_skt* client);
+  /// @return An instance of @ref x_error.
+  X_INL x_error accept(x_socket* client);
 
   /// @brief Query the IP address and port of the socket.
   /// @param ip The buffer to store the IP address.
   /// @param port The buffer to store the port.
-  /// @return An instance of @ref x_err.
-  X_INL x_err addr(char* ip, uint16_t* port);
+  /// @return An instance of @ref x_error.
+  X_INL x_error addr(char* ip, uint16_t* port);
 
   /// @brief Close the socket.
-  /// @return An instance of @ref x_err.
-  X_INL x_err close();
+  /// @return An instance of @ref x_error.
+  X_INL x_error close();
 
   /// @brief Connect to a server with specified IP address and port.
   /// @param ip The IP address of the server.
   /// @param port The port of the server.
-  /// @return An instance of @ref x_err.
-  X_INL x_err connect(const char* ip, const uint16_t port);
+  /// @return An instance of @ref x_error.
+  X_INL x_error connect(const char* ip, const uint16_t port);
 
   /// @brief Wrapper of `getsockopt` with error handling.
   /// @see getsockopt
-  /// @return An instance of @ref x_err.
-  X_INL x_err getopt(
+  /// @return An instance of @ref x_error.
+  X_INL x_error getopt(
       const int lvl, const int opt, void* val, socklen_t* len);
 
   /// @brief Listen on a specified IP address and port.
   /// @param ip The IP address to listen on.
   /// @param port The port to listen on.
-  /// @return An instance of @ref x_err.
-  X_INL x_err listen(const char* ip, const uint16_t port);
+  /// @return An instance of @ref x_error.
+  X_INL x_error listen(const char* ip, const uint16_t port);
 
   /// @brief Wrapper of `recv` with error handling.
-  /// @return An instance of @ref x_err.
+  /// @return An instance of @ref x_error.
   /// @see recv
   /// @remark Different from the standard `recv`, this function trys to receive
   ///         the specified size of data before returning.
-  X_INL x_err recv(void* buf, const size_t size, const int flags);
+  X_INL x_error recv(void* buf, const size_t size, const int flags);
 
   /// @brief Vectored version of `recv`.
-  /// @return An instance of @ref x_err.
-  /// @see @ref x_skt::recv
-  X_INL x_err recvv(x_iov* iov, const size_t count, const int flags);
+  /// @return An instance of @ref x_error.
+  /// @see @ref x_socket::recv
+  X_INL x_error recvv(x_iovec* iov, const size_t count, const int flags);
 
   /// @brief Wrapper of `send` with error handling.
-  /// @return An instance of @ref x_err.
+  /// @return An instance of @ref x_error.
   /// @see send
   /// @remark Different from the standard `send`, this function trys to send
   ///         the specified size of data before returning.
-  X_INL x_err send(const void* buf, const size_t size, const int flags);
+  X_INL x_error send(const void* buf, const size_t size, const int flags);
 
   /// @brief Vectored version of `send`.
-  /// @return An instance of @ref x_err.
-  /// @see @ref x_skt::send
-  X_INL x_err sendv(const x_iov* iov, const size_t count, const int flags);
+  /// @return An instance of @ref x_error.
+  /// @see @ref x_socket::send
+  X_INL x_error sendv(const x_iovec* iov, const size_t count, const int flags);
 
   /// @brief Wrapper of `setsockopt` with error handling.
   /// @see setsockopt
-  /// @return An instance of @ref x_err.
-  X_INL x_err setopt(
+  /// @return An instance of @ref x_error.
+  X_INL x_error setopt(
       const int lvl, const int opt, const void* val, const socklen_t len);
 
 private:
@@ -549,19 +558,6 @@ X_INL int x_getch();
  * @brief A collection of date and time utilities.
  * @{
  *****************************************************************************/
-/// @brief Calculate the duration between two time points.
-/// @param unit The unit of the duration, "h", "m", "s", "ms", "us", or "ns".
-/// @param start The start time point.
-/// @param stop The stop time point.
-/// @return The duration in the specified unit.
-/// @see @ref x_now
-X_INL double x_duration(
-    const char* unit, const struct timespec& start, const struct timespec& stop);
-
-/// @brief Get the current time point.
-/// @return The current time point.
-X_INL struct timespec x_now();
-
 /// @brief Sleep for a specified amount of time.
 /// @param ms The amount of time to sleep in milliseconds.
 X_INL void x_sleep(const unsigned long ms);
@@ -576,163 +572,96 @@ X_INL void x_sleep(const unsigned long ms);
 ///         26 bytes is guaranteed to store the timestamp.
 X_INL const char* x_timestamp(char* buf, const size_t bsz);
 
-/// @struct x_stopwatch_stats
+/// @struct x_event_stats
 /// @brief A structure to store the statistics of a stopwatch.
-/// @var x_stopwatch_stats::ready
+/// @var x_event_stats::ready
 ///      Whether the stopwatch is ready.
-/// @var x_stopwatch_stats::cyc
+/// @var x_event_stats::cyc
 ///      The number of cycles.
-/// @var x_stopwatch_stats::sum
+/// @var x_event_stats::sum
 ///      The total elapsed time.
-/// @var x_stopwatch_stats::avg
+/// @var x_event_stats::avg
 ///      The average elapsed time.
-/// @var x_stopwatch_stats::max
+/// @var x_event_stats::max
 ///      The frame that captures the maximum elapsed time.
-/// @var x_stopwatch_stats::min
+/// @var x_event_stats::min
 ///      The frame that captures the minimum elapsed time.
-typedef struct _x_stopwatch_stats_
+typedef struct _x_event_stats_
 {
-  /// @brief Constructor.
-  X_INL _x_stopwatch_stats_();
-
   /// @brief Echo the statistics in a predefined format.
+  /// @param unit The unit of the statistics, "h", "m", "s", "ms", "us", or "ns".
   /// @param title The title for the statistics. Default is "STATS". If the
   ///              title is not a valid string, "STATS" will be used.
   /// @param stream The output stream. Default is `stdout`.
   /// @remark This helper function provides a handy way to print the
   ///         statistics. Users may use their own format to print the
   ///         statistics with the data members of this structure.
-  X_INL void echo(const char* title = "STATS", FILE* const stream = stdout);
+  X_INL void echo(
+      const char* unit, const char* title = "STATS", FILE* const stream = stdout);
 
   /// @brief Reset the statistics.
   X_INL void reset();
 
-  char unit[2];
-  bool ready;
-  size_t cyc;
-  double sum;
-  double avg;
+  bool ready{false};
+  size_t cyc{0};
+  double sum{0.0};
+  double avg{0.0};
   struct
   {
     size_t idx;
     double val;
-  } max, min;
-} x_stopwatch_stats;
+  } max{0, DBL_MIN}, min{0, DBL_MAX};
+} x_event_stats;
 
-/// @brief A stopwatch class.
-class x_stopwatch
+class x_event
 {
 public:
-  /// @brief Constructor.
-  X_INL x_stopwatch();
+  X_INL x_event(const char* type, const unsigned int flags = 0);
 
-  /// @brief Destructor.
-  X_INL ~x_stopwatch();
+  X_INL ~x_event();
 
-  /// @brief Get the elapsed time.
-  X_INL double elapsed() const;
+  /// @brief Calculate the duration between two events.
+  /// @param unit The unit of the duration, "h", "m", "s", "ms", "us", or "ns".
+  /// @return The elapsed time.
+  /// @attention Before calling this function, @ref x_event::tic and
+  ///            @ref x_event::toc must be called.
+  X_INL double duration(const char* unit);
 
-  /// @brief Reset the stopwatch.
-  X_INL void reset();
+  /// @brief Start the recording.
+  /// @param stream The optional stream to perform the recording. It is only
+  ///               used when the CUDA driver or runtime API is enabled.
+  /// @param flags The optional flags to perform the recording. It is only used
+  ///              when the CUDA driver or runtime API is enabled.
+  X_INL void tic(void* stream = nullptr, const unsigned int flags = 0);
 
-  /// @brief Start the stopwatch.
-  X_INL void tic();
+  /// @brief Stop the recording.
+  /// @param stream The optional stream to perform the recording. It is only
+  ///               used when the CUDA driver or runtime API is enabled.
+  /// @param flags The optional flags to perform the recording. It is only used
+  ///              when the CUDA driver or runtime API is enabled.
+  X_INL void toc(void* stream = nullptr, const unsigned int flags = 0);
 
-  /// @brief Stop the stopwatch.
-  /// @param unit The unit of the elapsed time, "h", "m", "s", "ms", "us", or
-  ///             "ns".
-  X_INL void toc(const char* unit);
-
-  /// @brief Stop the stopwatch and return the statistics.
-  /// @param stats The statistics of the stopwatch.
-  /// @param unit The unit of the elapsed time, "h", "m", "s", "ms", "us", or
-  ///             "ns".
+  /// @brief Stop the event recording and return the statistics.
+  /// @param stats The statistics of the event.
   /// @param cycle The number of cycles.
   X_INL void toc(
-      x_stopwatch_stats& stats, const char* unit, const size_t cycle);
+      x_event_stats& stats, const size_t cycle,
+      void* stream = nullptr, const unsigned int flags = 0);
 
 private:
-  struct timespec m_start{0};
-  double m_elapsed{0.0};
-};
-
+  union
+  {
+    struct timespec cpu;
 #if X_ENABLE_CU
-/// @brief Calculate the duration between two CUDA driver events.
-X_INL double x_duration_cu(
-    const char* unit, const CUevent start, const CUevent stop);
-
-/// @brief CUDA driver version of @ref x_stopwatch.
-/// @see @ref x_stopwatch
-class x_stopwatch_cu
-{
-public:
-  X_INL x_stopwatch_cu(const unsigned int flags = CU_EVENT_DEFAULT);
-
-  X_INL ~x_stopwatch_cu();
-
-  X_INL double elapsed() const;
-
-  X_INL void reset();
-
-  X_INL void tic(
-      CUstream const stream = 0,
-      const unsigned int flags = CU_EVENT_RECORD_DEFAULT);
-
-  X_INL void toc(
-      const char* unit,
-      CUstream const stream = 0,
-      const unsigned int flags = CU_EVENT_RECORD_DEFAULT);
-
-  X_INL void toc(
-      x_stopwatch_stats& stats, const char* unit, const size_t cycle,
-      CUstream const stream = 0,
-      const unsigned int flags = CU_EVENT_RECORD_DEFAULT);
-
-private:
-  CUevent m_start{nullptr};
-  CUevent m_stop{nullptr};
-  double m_elapsed{0.0};
-};
-#endif  // X_ENABLE_CU
-
+    CUevent cu;
+#endif
 #if X_ENABLE_CUDA
-/// @brief Calculate the duration between two CUDA runtime events.
-X_INL double x_duration_cuda(
-    const char* unit, const cudaEvent_t start, const cudaEvent_t stop);
+    cudaEvent_t cuda;
+#endif
+  } m_start{0}, m_stop{0};
 
-/// @brief CUDA runtime version of @ref x_stopwatch.
-/// @see @ref x_stopwatch
-class x_stopwatch_cuda
-{
-public:
-  X_INL x_stopwatch_cuda(const unsigned int flags = cudaEventDefault);
-
-  X_INL ~x_stopwatch_cuda();
-
-  X_INL double elapsed() const;
-
-  X_INL void reset();
-
-  X_INL void tic(
-      cudaStream_t const stream = 0,
-      const unsigned int flags = cudaEventRecordDefault);
-
-  X_INL void toc(
-      const char* unit,
-      cudaStream_t const stream = 0,
-      const unsigned int flags = cudaEventRecordDefault);
-
-  X_INL void toc(
-      x_stopwatch_stats& stats, const char* unit, const size_t cycle,
-      cudaStream_t const stream = 0,
-      const unsigned int flags = cudaEventRecordDefault);
-
-private:
-  cudaEvent_t m_start{nullptr};
-  cudaEvent_t m_stop{nullptr};
-  double m_elapsed{0.0};
+  int32_t m_type{0};  // For faster branching.
 };
-#endif  // X_ENABLE_CUDA
 /** @} */  // Date and Time
 
 /******************************************************************************
@@ -757,130 +686,85 @@ private:
 } while (false)
 
 /// @brief Wrapping the error handling of a function call.
-/// @param cat The error category, should be one of the `x_err_` enumerations.
+/// @param cat The error category, should be supported by @ref x_error.
 /// @param func The function to call.
 /// @param ... The arguments of the function.
-/// @return An instance of @ref x_err.
+/// @return An instance of @ref x_error.
 #define x_check(cat, func, ...) \
   _x_check_impl(__FILENAME__, #func, __LINE__, cat, func, ##__VA_ARGS__)
 
-/// @brief Check if an instance of @ref x_err indicates a failure.
-/// @param err The instance of @ref x_err.
+/// @brief Check if an instance of @ref x_error indicates a failure.
+/// @param err The instance of @ref x_error.
 /// @return `true` if the instance is indicating a failure, `false` otherwise.
 /// @see @ref x_succ
 /// @remark Using this function is not necessary since there is a boolean
-///         operator defined for @ref x_err. This is provided to align with the
-///         C version of this library.
-X_INL bool x_fail(const x_err& err);
+///         operator defined for @ref x_error. This is provided to align with
+///         the C version of this library.
+X_INL bool x_fail(const x_error& err);
 
 /// @brief The counterpart of x_fail.
 /// @see @ref x_fail
-X_INL bool x_succ(const x_err& err);
-
-/// @var x_err_custom
-///      Custom error that is set by the user.
-/// @var x_err_posix
-///      POSIX error that is set by `errno`.
-/// @var x_err_win32
-///      Windows error that may be returned by `GetLastError`.
-/// @var x_err_socket
-///      Socket error that is set by `errno` on Linux or returned by
-///      `WSAGetLastError` on Windows.
-/// @var x_err_cu
-///      CUDA error that is set by the CUDA driver API.
-/// @var x_err_cuda
-///      CUDA error that is set by the CUDA runtime API.
-/// @attention The x_err_cuda is only available when `X_ENABLE_CUDA` is set to
-///            a truthy value.
-/// @var x_err_max
-///      The maximum number of error categories.
-/// @var x_err_system
-///      The system error, which is either x_err_posix on Linux or
-///      or x_err_win32 on Windows.
-enum
-{
-  x_err_custom = 0,
-  x_err_posix  = 1,
-  x_err_win32  = 2,
-  x_err_socket = 3,
-#if X_ENABLE_CU
-  x_err_cu     = 4,
-#endif
-#if X_ENABLE_CUDA
-  x_err_cuda   = 5,
-#endif
-  x_err_max,
-#if X_WINDOWS
-  x_err_system = x_err_win32,
-#else
-  x_err_system = x_err_posix,
-#endif
-};
+X_INL bool x_succ(const x_error& err);
 
 /// @brief An error class that encapsulates the error category, error value,
 ///        and corresponding error message.
 /// @remark The error handling class `std::error_code` is extensible but not
 ///         user-friendly in my opinion. This class is designed to work with
 ///         different error categories with less effort.
-class x_err
+class x_error
 {
 public:
-  /// @brief Default constructor, which sets the error category to x_err_posix
-  ///        and the error value to 0.
-  X_INL explicit x_err();
+  /// @brief Default constructor, which sets the error category to "posix" and
+  ///        the error value to 0.
+  X_INL explicit x_error();
 
   /// @brief Constructor with a error category. Corresponding error code and
   ///        message will be queried based on the error category. For example,
-  ///        if the error category is x_err_posix, the error value will be set
-  ///        to `errno` and the error message will be set to `strerror(errno)`.
-  /// @attention Using x_err_custom here is not supported since the sources of
+  ///        if the error category is "posix", the error value will be set to
+  ///        `errno` and the error message will be set to `strerror(errno)`.
+  /// @attention Using "custom" here is not supported since the sources of
   ///            error value and message are unknown.
-  X_INL explicit x_err(const int32_t cat);
+  X_INL explicit x_error(const char* cat);
 
   /// @brief Constructor with an error category, an error value, and an
   ///        optional failure predicate. The failure predicate is used to
   ///        determine if the error value is a failure or not. The error
   ///        message will be queried based on the error category and the error
-  ///        value. For example, if the error category is x_err_posix and the
-  ///        error value is `EINVAL`, the error message will be set to
+  ///        value. For example, if the error category is "posix" and the error
+  ///        value is `EINVAL`, the error message will be set to
   ///        `strerror(EINVAL)`.
-  /// @note If the error category is x_err_custom, the error message will be
-  ///       set to "Custom error X" where X is the error value `val`.
-  /// @attention If the error category is x_err_custom, the failure predicate
-  ///            is mandatory.
-  X_INL explicit x_err(
-      const int32_t cat, const int32_t val,
+  /// @note If the error category is "custom", the error message will be set to
+  ///       "Custom error X" where X is the error value `val`.
+  /// @attention If the error category is "custom", the failure predicate is
+  ///            mandatory.
+  X_INL explicit x_error(
+      const char* cat, const int32_t val,
       bool (*fail)(const int32_t) = nullptr);
 
   /// @brief Constructor with an error category, an error value, and a custom
   ///        predicate.
-  X_INL explicit x_err(
-      const int32_t cat, const int32_t val, const char* msg,
+  X_INL explicit x_error(
+      const char* cat, const int32_t val, const char* msg,
       bool (*fail)(const int32_t) = nullptr);
 
   /// @brief Destructor.
-  X_INL ~x_err();
+  X_INL ~x_error();
+
+  X_INL x_error& set(const char* cat);
+
+  X_INL x_error& set(
+      const char* cat, const int32_t val,
+      bool (*fail)(const int32_t) = nullptr);
+
+  X_INL x_error& set(
+      const char* cat, const int32_t val, const char* msg,
+      bool (*fail)(const int32_t) = nullptr);
 
   /// @brief Get the error category.
-  X_INL int32_t cat() const;
+  X_INL const char* cat();
 
   /// @brief Get the error message.
   X_INL const char* msg();
-
-  /// @brief This function work as same as @ref x_err::x_err(const int32_t).
-  X_INL x_err& set(const int32_t cat);
-
-  /// @brief This function work as same as
-  ///        @ref x_err::x_err(const int32_t, const int32_t, bool (*)(const int32_t) = nullptr).
-  X_INL x_err& set(
-      const int32_t cat, const int32_t val,
-      bool (*fail)(const int32_t) = nullptr);
-
-  /// @brief This function work as same as
-  ///        @ref x_err::x_err(const int32_t, const int32_t, const char*, bool (*)(const int32_t) = nullptr).
-  X_INL x_err& set(
-      const int32_t cat, const int32_t val, const char* msg,
-      bool (*fail)(const int32_t) = nullptr);
 
   /// @brief Get the error value.
   X_INL int32_t val() const;
@@ -890,9 +774,9 @@ public:
   X_INL operator bool() const;
 
 private:
-  int32_t m_cat{x_err_posix};
-  int32_t m_val{0};
+  const char* m_cat{"posix"};
   std::string m_msg;
+  int32_t m_val{0};
   bool (*m_fail)(const int32_t){nullptr};
 };
 /** @} */  // Error Handling
@@ -911,10 +795,10 @@ X_INL bool x_fexist(const char* file);
 /// @param stream The file stream to open.
 /// @param file The file to open.
 /// @param mode The mode to open the file.
-/// @return An instance of @ref x_err.
+/// @return An instance of @ref x_error.
 /// @remark A wrapper of `fopen` with error handling, as well as for `fopen_s`
 ///         on Windows to avoid the warning C4996.
-X_INL x_err x_fopen(FILE** stream, const char* file, const char* mode);
+X_INL x_error x_fopen(FILE** stream, const char* file, const char* mode);
 
 /// @brief Get the full path of a file or directory.
 /// @param dst The destination buffer to store the full path.
@@ -937,7 +821,7 @@ X_INL long long x_fsize(const char* file);
 /// @param fsz The size of the file buffer.
 /// @param ext The buffer to store the extension.
 /// @param esz The size of the extension buffer.
-X_INL x_err x_split_path(
+X_INL x_error x_split_path(
     const char* path,
     char* root, const size_t rsz, char* dir, const size_t dsz,
     char* file, const size_t fsz, char* ext, const size_t esz);
@@ -1000,8 +884,7 @@ X_INL constexpr T x_PiB(const T n);
 /// @param n The n-th bit.
 /// @see C++'s `std::bitset` for a more versatile solution.
 template<typename T>
-X_INL constexpr typename std::enable_if<std::is_integral_v<T>, T>::type
-x_bit(const T n);
+X_INL constexpr T x_bit(const T n);
 
 /// @brief Calculate the greatest common divisor of two integers.
 /// @param m The first integer.
@@ -1009,8 +892,7 @@ x_bit(const T n);
 /// @return The greatest common divisor.
 /// @attention This function is only available for integral types.
 template<typename T>
-X_INL constexpr typename std::enable_if<std::is_integral_v<T>, T>::type
-x_gcd(const T m, const T n);
+X_INL constexpr T x_gcd(const T m, const T n);
 
 /// @brief Calculate the least common multiple of two integers.
 /// @param m The first integer.
@@ -1018,8 +900,7 @@ x_gcd(const T m, const T n);
 /// @return The least common multiple.
 /// @attention This function is only available for integral types.
 template<typename T>
-X_INL constexpr typename std::enable_if<std::is_integral_v<T>, T>::type
-x_lcm(const T m, const T n);
+X_INL constexpr T x_lcm(const T m, const T n);
 
 /// @brief Calculate the next exponent of a base.
 /// @param base The base.
@@ -1027,8 +908,7 @@ x_lcm(const T m, const T n);
 /// @return The next exponent of the base.
 /// @attention This function is only available for integral types.
 template<typename T>
-X_INL constexpr typename std::enable_if<std::is_integral_v<T>, T>::type
-x_next_exp(const T base, const T src);
+X_INL constexpr T x_next_exp(const T base, const T src);
 
 /// @brief Calculate the next multiple of a base.
 /// @param base The base.
@@ -1036,8 +916,7 @@ x_next_exp(const T base, const T src);
 /// @return The next multiple of the base.
 /// @attention This function is only available for integral types.
 template<typename T>
-X_INL constexpr typename std::enable_if<std::is_integral_v<T>, T>::type
-x_next_mul(const T base, const T src);
+X_INL constexpr T x_next_mul(const T base, const T src);
 
 /// @brief Calculate the previous exponent of a base.
 /// @param base The base.
@@ -1045,8 +924,7 @@ x_next_mul(const T base, const T src);
 /// @return The previous exponent of the base.
 /// @attention This function is only available for integral types.
 template<typename T>
-X_INL constexpr typename std::enable_if<std::is_integral_v<T>, T>::type
-x_prev_exp(const T base, const T src);
+X_INL constexpr T x_prev_exp(const T base, const T src);
 
 /// @brief Calculate the previous multiple of a base.
 /// @param base The base.
@@ -1054,8 +932,7 @@ x_prev_exp(const T base, const T src);
 /// @return The previous multiple of the base.
 /// @attention This function is only available for integral types.
 template<typename T>
-X_INL constexpr typename std::enable_if<std::is_integral_v<T>, T>::type
-x_prev_mul(const T base, const T src);
+X_INL constexpr T x_prev_mul(const T base, const T src);
 /** @} */  // Mathematics
 
 /******************************************************************************
@@ -1083,23 +960,14 @@ template<typename T>
 X_INL void x_free(T*& ptr);
 
 template<typename T>
-X_INL x_err x_malloc(T** ptr, const size_t size);
+X_INL x_error x_malloc(T** ptr, const size_t size);
 
-X_INL x_err x_memcpy(void* dst, const void* src, const size_t size);
+X_INL x_error x_memcpy(void* dst, const void* src, const size_t size);
 
-X_INL x_err x_meminfo(size_t* avail, size_t* total);
+X_INL x_error x_meminfo(const char* type, size_t* avail, size_t* total);
 
-#if X_ENABLE_CU
-X_INL x_err x_meminfo_cu(size_t* avail, size_t* total);
-
-X_INL const char* x_memtype_cu(const CUdeviceptr ptr);
-#endif  // X_ENABLE_CU
-
-#if X_ENABLE_CUDA
-X_INL x_err x_meminfo_cuda(size_t* avail, size_t* total);
-
-X_INL const char* x_memtype_cuda(const void* ptr);
-#endif  // X_ENABLE_CUDA
+template<typename T>
+X_INL const char* x_memtype(const char* type, const T ptr);
 /** @} */  // Memory Management
 
 /******************************************************************************
@@ -1160,16 +1028,18 @@ X_INL void _x_log_impl(
  * @brief A collection of string utilities.
  * @{
  *****************************************************************************/
-X_INL x_err x_strcpy(char* dst, size_t dsz, const char* src);
+/// @brief Copy a string with error handling.
+X_INL x_error x_strcpy(char* dst, size_t dsz, const char* src);
 
+/// @brief Check if a string is empty.
 X_INL bool x_strmty(const char* string);
 /** @} */  // String
 
 //******************************************************* IMPL_Communication{{{
-X_INL uint32_t x_cks_crc32(
+X_INL uint32_t x_checksum_crc32(
     const void* data, const size_t size, const uint32_t* prev)
 {
-  uint8_t* d{(uint8_t*)data};
+  const uint8_t* d{static_cast<const uint8_t*>(data)};
   size_t cnt{size / sizeof(uint8_t)};
   int i{0};
 
@@ -1186,11 +1056,12 @@ X_INL uint32_t x_cks_crc32(
   return ~cks;
 }
 
-X_INL uint16_t x_cks_rfc1071(const void* data, const size_t size)
+X_INL uint16_t x_checksum_rfc1071(
+    const void* data, const size_t size, const uint16_t* prev)
 {
-  uint16_t* d{(uint16_t*)data};
+  const uint16_t* d{static_cast<const uint16_t*>(data)};
   size_t cnt{size / sizeof(uint8_t)};
-  uint32_t cks{0};
+  uint32_t cks{prev ? static_cast<uint32_t>(~(*prev)) : 0};
 
   while (cnt > 1) {
     cks += *d++;
@@ -1208,9 +1079,10 @@ X_INL uint16_t x_cks_rfc1071(const void* data, const size_t size)
   return static_cast<uint16_t>(~cks);
 }
 
-X_INL uint8_t x_cks_xor(const void* data, const size_t size)
+X_INL uint8_t x_checksum_xor(
+    const void* data, const size_t size, const uint8_t* prev)
 {
-  const uint8_t* d8{(const uint8_t*)data};
+  const uint8_t* d8{static_cast<const uint8_t*>(data)};
   const uint64_t* d64{(const uint64_t*)data};
   const size_t dsz{sizeof(uint64_t)};
   const size_t cnt{size / dsz};
@@ -1218,7 +1090,11 @@ X_INL uint8_t x_cks_xor(const void* data, const size_t size)
   union {
     uint8_t u8[8];
     uint64_t u64;
-  } cks{{0}};
+  } cks{0};
+
+  if (prev) {
+    cks.u8[0] = *prev;
+  }
 
   size_t i{0};
   for (i = 0; i < (cnt & (~0x07)); i += 8) {
@@ -1237,21 +1113,22 @@ X_INL uint8_t x_cks_xor(const void* data, const size_t size)
 }
 
 #if X_ENABLE_SOCKET
-// class x_skt{{{
-X_INL x_skt::x_skt()
+// class x_socket{{{
+X_INL x_socket::x_socket()
 {
 }
 
-X_INL x_skt::~x_skt()
+X_INL x_socket::~x_socket()
 {
+  this->close();
 }
 
-X_INL x_err x_skt::init(const int type)
+X_INL x_error x_socket::init(const int type)
 {
 #if X_WINDOWS
   WSADATA data{0};
   if (WSAStartup(MAKEWORD(2, 2), &data) != 0) {
-    return x_err(x_err_socket);
+    return x_error("socket");
   }
 #endif
 
@@ -1260,16 +1137,16 @@ X_INL x_err x_skt::init(const int type)
   } else if (type == SOCK_DGRAM) {
     this->m_hndl = socket(AF_INET, type, IPPROTO_UDP);
   } else {
-    return x_err(x_err_posix, ENOTSUP);
+    return x_error("posix", ENOTSUP);
   }
 
 #if X_WINDOWS
   if (this->m_hndl == INVALID_SOCKET) {
-    return x_err(x_err_socket);
+    return x_error("socket");
   }
 #else
   if (this->m_hndl == -1) {
-    return x_err(x_err_socket);
+    return x_error("socket");
   }
 #endif
 
@@ -1283,96 +1160,94 @@ X_INL x_err x_skt::init(const int type)
   setsockopt(this->m_hndl, SOL_SOCKET, SO_REUSEADDR, (char*)&val, len);
 #endif
 
-  return x_err();
+  return x_error();
 }
 
-X_INL x_err x_skt::accept(x_skt* client)
+X_INL x_error x_socket::accept(x_socket* client)
 {
   if (client == nullptr) {
-    return x_err(x_err_posix, EINVAL);
-  }
-
-  struct sockaddr_in sin{0};
-  socklen_t len{0};
-
-#if X_WINDOWS
-  SOCKET hndl = ::accept(this->m_hndl, (struct sockaddr*)&sin, &len);
-  if (hndl == INVALID_SOCKET) {
-#else
-  int hndl = ::accept(this->m_hndl, (struct sockaddr*)&sin, &len);
-  if (hndl == -1) {
-#endif
-    return x_err(x_err_socket);
+    return x_error("posix", EINVAL);
   }
 
   struct sockaddr addr{0};
-  memcpy(&addr, &sin, len);
+  socklen_t len{0};
+
+#if X_WINDOWS
+  SOCKET hndl = ::accept(this->m_hndl, &addr, &len);
+  if (hndl == INVALID_SOCKET) {
+#else
+  int hndl = ::accept(this->m_hndl, &addr, &len);
+  if (hndl == -1) {
+#endif
+    return x_error("socket");
+  }
 
   client->m_addr = std::move(addr);
   client->m_hndl = std::move(hndl);
 
-  return x_err();
+  return x_error();
 }
 
-X_INL x_err x_skt::addr(char* ip, uint16_t* port)
+X_INL x_error x_socket::addr(char* ip, uint16_t* port)
 {
   if (ip == nullptr || port == nullptr) {
-    return x_err(x_err_posix, EINVAL);
+    return x_error("posix", EINVAL);
   }
 
   struct sockaddr_in* sin{(struct sockaddr_in*)&this->m_addr};
 
   if (inet_ntop(AF_INET, &sin->sin_addr, ip, 16) == nullptr) {
-    return x_err(x_err_socket);
+    return x_error("socket");
   }
 
   *port = sin->sin_port;
 
-  return x_err();
+  return x_error();
 }
 
-X_INL x_err x_skt::close()
+X_INL x_error x_socket::close()
 {
 #if X_WINDOWS
   if (closesocket(this->m_hndl) != 0) {
-    return x_err(x_err_socket);
+    return x_error("socket");
   }
 
-  return WSACleanup() == 0 ? x_err() : x_err(x_err_socket);
+  return WSACleanup() == 0 ? x_error() : x_error("socket");
 #else
-  return ::close(this->m_hndl) == 0 ? x_err() : x_err(x_err_socket);
+  return ::close(this->m_hndl) == 0 ? x_error() : x_error("socket");
 #endif
 }
 
-X_INL x_err x_skt::connect(const char* ip, const uint16_t port)
+X_INL x_error x_socket::connect(const char* ip, const uint16_t port)
 {
   struct sockaddr_in sin{0};
   sin.sin_family = AF_INET;
   sin.sin_port = htons(port);
   int ierr{inet_pton(AF_INET, ip, &sin.sin_addr)};
   if (ierr == 0) {
-    return x_err(x_err_posix, EFAULT);
+    return x_error("posix", EFAULT);
   } else if (ierr == -1) {
-    return x_err(x_err_socket);
+    return x_error("socket");
   }
 
   memcpy(&this->m_addr, &sin, sizeof(struct sockaddr));
 
-  return ::connect(this->m_hndl, &this->m_addr, sizeof(struct sockaddr_in)) == 0
-    ? x_err() : x_err(x_err_socket);
+  return ::connect(this->m_hndl, &this->m_addr, sizeof(struct sockaddr)) == 0
+    ? x_error() : x_error("socket");
 }
 
-X_INL x_err x_skt::getopt(const int lvl, const int opt, void* val, socklen_t* len)
+X_INL x_error x_socket::getopt(
+    const int lvl, const int opt, void* val, socklen_t* len)
 {
   if (val == nullptr || len == nullptr) {
-    return x_err(x_err_posix, EINVAL);
+    return x_error("posix", EINVAL);
   }
 
   return getsockopt(this->m_hndl, lvl, opt, (char*)val, len) == 0
-    ? x_err() : x_err(x_err_socket);
+    ? x_error() : x_error("socket");
 }
 
-X_INL x_err x_skt::listen(const char* ip, const uint16_t port)
+X_INL x_error x_socket::listen(const char* ip, const uint16_t port)
 {
   struct sockaddr_in sin{0};
   sin.sin_family = AF_INET;
@@ -1380,9 +1255,9 @@ X_INL x_err x_skt::listen(const char* ip, const uint16_t port)
 
   int ierr{inet_pton(AF_INET, ip, &sin.sin_addr)};
   if (ierr == 0) {
-    return x_err(x_err_posix, EFAULT);
+    return x_error("posix", EFAULT);
   } else if (ierr == -1) {
-    return x_err(x_err_socket);
+    return x_error("socket");
   }
 
   memcpy(&this->m_addr, &sin, sizeof(struct sockaddr));
@@ -1392,13 +1267,13 @@ X_INL x_err x_skt::listen(const char* ip, const uint16_t port)
     ierr = ::listen(this->m_hndl, SOMAXCONN);
   }
 
-  return ierr == 0 ? x_err() : x_err(x_err_socket);
+  return ierr == 0 ? x_error() : x_error("socket");
 }
 
-X_INL x_err x_skt::recv(void* buf, const size_t size, const int flags)
+X_INL x_error x_socket::recv(void* buf, const size_t size, const int flags)
 {
   if (buf == nullptr || size == 0) {
-    return x_err(x_err_posix, EINVAL);
+    return x_error("posix", EINVAL);
   }
 
 #if X_WINDOWS
@@ -1413,30 +1288,30 @@ X_INL x_err x_skt::recv(void* buf, const size_t size, const int flags)
   while (remain > 0) {
     bytes = ::recv(this->m_hndl, static_cast<char*>(buf) + offset, remain, flags);
     if (bytes <= 0) {
-      return x_err(x_err_socket);
+      return x_error("socket");
     }
 
     offset += bytes;
     remain -= bytes;
   }
 
-  return x_err();
+  return x_error();
 }
 
-X_INL x_err x_skt::recvv(x_iov* iov, const size_t count, const int flags)
+X_INL x_error x_socket::recvv(x_iovec* iov, const size_t count, const int flags)
 {
   if (iov == nullptr || count == 0) {
-    return x_err(x_err_posix, EINVAL);
+    return x_error("posix", EINVAL);
   }
 
   size_t total{0};
   for (size_t i = 0; i < count; ++i) {
     if (iov[i].buf == nullptr || iov[i].len == 0) {
-      return x_err(x_err_posix, EINVAL);
+      return x_error("posix", EINVAL);
     }
 
     if (iov[i].len > (SIZE_MAX - total)) {
-      return x_err(x_err_posix, EOVERFLOW);
+      return x_error("posix", EOVERFLOW);
     }
 
     total += iov[i].len;
@@ -1445,10 +1320,10 @@ X_INL x_err x_skt::recvv(x_iov* iov, const size_t count, const int flags)
   // NOTE: _alloca/alloca may be used if all data received are rather small.
   void* buf = malloc(total);
   if (buf == nullptr) {
-    return x_err(x_err_posix);
+    return x_error("posix");
   }
 
-  x_err err = this->recv(buf, total, flags);
+  x_error err = this->recv(buf, total, flags);
   if (!err) {
     size_t offset{0};
     for (size_t i = 0; i < count; ++i) {
@@ -1462,7 +1337,7 @@ X_INL x_err x_skt::recvv(x_iov* iov, const size_t count, const int flags)
   return err;
 }
 
-X_INL x_err x_skt::send(const void* buf, const size_t size, const int flags)
+X_INL x_error x_socket::send(const void* buf, const size_t size, const int flags)
 {
 #if X_WINDOWS
   int remain{static_cast<int>(size)};
@@ -1475,30 +1350,30 @@ X_INL x_err x_skt::send(const void* buf, const size_t size, const int flags)
   while (remain > 0) {
     bytes = ::send(this->m_hndl, (char*)buf + offset, remain, flags);
     if (bytes <= 0) {
-      return x_err(x_err_socket);
+      return x_error("socket");
     }
 
     offset += bytes;
     remain -= bytes;
   }
 
-  return x_err();
+  return x_error();
 }
 
-X_INL x_err x_skt::sendv(const x_iov* iov, const size_t count, const int flags)
+X_INL x_error x_socket::sendv(const x_iovec* iov, const size_t count, const int flags)
 {
   if (iov == nullptr || count == 0) {
-    return x_err(x_err_posix, EINVAL);
+    return x_error("posix", EINVAL);
   }
 
   size_t total{0};
   for (size_t i = 0; i < count; ++i) {
     if (iov[i].buf == nullptr || iov[i].len == 0) {
-      return x_err(x_err_posix, EINVAL);
+      return x_error("posix", EINVAL);
     }
 
     if (iov[i].len > (SIZE_MAX - total)) {
-      return x_err(x_err_posix, EOVERFLOW);
+      return x_error("posix", EOVERFLOW);
     }
 
     total += iov[i].len;
@@ -1507,7 +1382,7 @@ X_INL x_err x_skt::sendv(const x_iov* iov, const size_t count, const int flags)
   // NOTE: _alloca/alloca may be used if all data sent are rather small.
   void* buf = malloc(total);
   if (buf == nullptr) {
-    return x_err(x_err_posix);
+    return x_error("posix");
   }
 
   size_t offset{0};
@@ -1516,24 +1391,24 @@ X_INL x_err x_skt::sendv(const x_iov* iov, const size_t count, const int flags)
     offset += iov[i].len;
   }
 
-  x_err err = this->send(buf, total, flags);
+  x_error err = this->send(buf, total, flags);
 
   free(buf);
 
   return err;
 }
 
-X_INL x_err x_skt::setopt(
+X_INL x_error x_socket::setopt(
     const int lvl, const int opt, const void* val, const socklen_t len)
 {
   if (val == nullptr) {
-    return x_err(x_err_posix, EINVAL);
+    return x_error("posix", EINVAL);
   }
 
   return setsockopt(this->m_hndl, lvl, opt, (char*)val, len) == 0
-    ? x_err() : x_err(x_err_socket);
+    ? x_error() : x_error("socket");
 }
-// class x_skt}}}
+// class x_socket}}}
 #endif  // X_ENABLE_SOCKET
 // IMPL_Communication}}}
 
@@ -1553,6 +1428,7 @@ X_INL int _kbhit()
 
   int byte{0};
   ioctl(STDIN_FILENO, FIONREAD, &byte);
+
   return byte;
 }
 #endif
@@ -1632,40 +1508,6 @@ X_INL int x_getch()
 // IMPL_Console_IO}}}
 
 //******************************************************* IMPL_Date_and_Time{{{
-X_INL double x_duration(
-    const char* unit, const struct timespec& start, const struct timespec& stop)
-{
-  double diff{static_cast<double>(
-      (stop.tv_sec - start.tv_sec) * 1000000000 + stop.tv_nsec - start.tv_nsec)};
-
-  if (strcmp(unit, "h") == 0) {
-    return diff / 3600000000000.0;
-  } else if (strcmp(unit, "m") == 0) {
-    return diff / 60000000000.0;
-  } else if (strcmp(unit, "s") == 0) {
-    return diff / 1000000000.0;
-  } else if (strcmp(unit, "ms") == 0) {
-    return diff / 1000000.0;
-  } else if (strcmp(unit, "us") == 0) {
-    return diff / 1000.0;
-  } else { // if (strcmp(unit, "ns") == 0)
-    return diff;
-  }
-}
-
-X_INL struct timespec x_now()
-{
-  struct timespec ts{0};
-
-#if X_WINDOWS || __STDC_VERSION__ >= 201112L
-  timespec_get(&ts, TIME_UTC);
-#else
-  clock_gettime(CLOCK_MONOTONIC, &ts);
-#endif
-
-  return ts;
-}
-
 X_INL void x_sleep(const unsigned long ms)
 {
 #if X_WINDOWS
@@ -1704,26 +1546,35 @@ X_INL const char* x_timestamp(char* buf, const size_t bsz)
   return buf;
 }
 
-// struct _x_stopwatch_stats_{{{
-X_INL x_stopwatch_stats::_x_stopwatch_stats_()
-{
-  this->reset();
-}
-
-X_INL void x_stopwatch_stats::echo(const char* title,FILE* const stream)
+// struct _x_event_stats_{{{
+X_INL void x_event_stats::echo(
+    const char* unit, const char* title, FILE* const stream)
 {
   const char* t = x_strmty(title) ? "STATS" : title;
-  std::string u(this->unit);
   std::string msg(128, '\0');
 
+  double scale{1.0};
+
+  if (strcmp(unit, "us") == 0) {
+    scale = 1000.0;
+  } else if (strcmp(unit, "ms") == 0) {
+    scale = 1000000.0;
+  } else if (strcmp(unit, "s") == 0) {
+    scale = 1000000000.0;
+  } else if (strcmp(unit, "m") == 0) {
+    scale = 60000000000.0;
+  } else if (strcmp(unit, "h") == 0) {
+    scale = 3600000000000.0;
+  }
+
   msg = std::string("[") + t + std::string("] ")
-    + std::to_string(this->sum) + u + " in "
+    + std::to_string(this->sum / scale) + unit + " in "
     + std::to_string(this->cyc) + " cycles - avg: "
-    + std::to_string(this->avg) + u + ", min("
+    + std::to_string(this->avg / scale) + unit + ", min("
     + std::to_string(this->min.idx) + "): "
-    + std::to_string(this->min.val) + u + ", max("
+    + std::to_string(this->min.val / scale) + unit + ", max("
     + std::to_string(this->max.idx) + "): "
-    + std::to_string(this->max.val) + u;
+    + std::to_string(this->max.val / scale) + unit;
 
   if (stream == nullptr) {
     fprintf(stdout, "%s\n", msg.c_str());
@@ -1732,9 +1583,8 @@ X_INL void x_stopwatch_stats::echo(const char* title,FILE* const stream)
   }
 }
 
-X_INL void x_stopwatch_stats::reset()
+X_INL void x_event_stats::reset()
 {
-  this->unit[0] = '\0';
   this->ready = false;
   this->cyc = 0;
   this->sum = 0.0;
@@ -1744,80 +1594,44 @@ X_INL void x_stopwatch_stats::reset()
   this->min.idx = 0;
   this->min.val = DBL_MAX;
 }
-// struct _x_stopwatch_stats_}}}
+// struct _x_event_stats_}}}
 
-// class x_stopwatch{{{
-x_stopwatch::x_stopwatch()
+// class x_event{{{
+X_INL double _x_duration_cpu(
+    const struct timespec& start, const struct timespec& stop)
 {
+  int64_t s{static_cast<int64_t>(stop.tv_sec - start.tv_sec)};
+  int64_t ns{static_cast<int64_t>(stop.tv_nsec - start.tv_nsec)};
+
+  return static_cast<double>(s * 1e9 + ns);
 }
 
-x_stopwatch::~x_stopwatch()
+X_INL struct timespec _x_now_cpu()
 {
+  struct timespec ts{0};
+
+#if X_WINDOWS || __STDC_VERSION__ >= 201112L
+  timespec_get(&ts, TIME_UTC);
+#else
+  clock_gettime(CLOCK_MONOTONIC, &ts);
+#endif
+
+  return ts;
 }
 
-double x_stopwatch::elapsed() const
+X_INL void _x_tic_cpu(struct timespec& ts)
 {
-  return this->m_elapsed;
+#if X_WINDOWS || __STDC_VERSION__ >= 201112L
+  timespec_get(&ts, TIME_UTC);
+#else
+  clock_gettime(CLOCK_MONOTONIC, &ts);
+#endif
 }
 
-void x_stopwatch::reset()
-{
-  this->m_elapsed = 0.0;
-}
-
-void x_stopwatch::tic()
-{
-  this->m_start = x_now();
-}
-
-void x_stopwatch::toc(const char* unit)
-{
-  this->m_elapsed = x_duration(unit, this->m_start, x_now());
-}
-
-void x_stopwatch::toc(
-    x_stopwatch_stats& stats, const char* unit, const size_t cycle)
-{
-  if (cycle == 0) {
-    stats.reset();
-    return;
-  }
-
-  // NOTE: If the statistics are ready, do not update them.
-  if (stats.ready) {
-    return;
-  }
-
-  // NOTE: Reset the stats before the first cycle.
-  if (stats.cyc == 0) {
-    stats.reset();
-    x_strcpy(stats.unit, sizeof(stats.unit), unit);
-  }
-
-  this->toc(unit);
-
-  if (this->m_elapsed > stats.max.val) {
-    stats.max.idx = stats.cyc;
-    stats.max.val = this->m_elapsed;
-  }
-  if (this->m_elapsed < stats.min.val) {
-    stats.min.idx = stats.cyc;
-    stats.min.val = this->m_elapsed;
-  }
-
-  stats.sum += this->m_elapsed;
-  stats.cyc += 1;
-  stats.avg = stats.sum / stats.cyc;
-
-  if (stats.cyc % cycle == 0) {
-    stats.ready = true;
-  }
-}
-// class x_stopwatch}}}
+#define _x_toc_cpu _x_tic_cpu
 
 #if X_ENABLE_CU
-X_INL double x_duration_cu(
-    const char* unit, const CUevent start, const CUevent stop)
+X_INL double _x_duration_cu(const CUevent start, const CUevent stop)
 {
   const char* msg{nullptr};
 
@@ -1844,27 +1658,15 @@ X_INL double x_duration_cu(
     return -1.0;
   }
 
-  if (strcmp(unit, "h") == 0) {
-    return static_cast<double>(ms) / 3600000.0;
-  } else if (strcmp(unit, "m") == 0) {
-    return static_cast<double>(ms) / 60000.0;
-  } else if (strcmp(unit, "s") == 0) {
-    return static_cast<double>(ms) / 1000.0;
-  } else if (strcmp(unit, "ms") == 0) {
-    return static_cast<double>(ms);
-  } else if (strcmp(unit, "us") == 0) {
-    return static_cast<double>(ms) * 1000.0;
-  } else { // if (strcmp(unit, "ns") == 0)
-    return static_cast<double>(ms) * 1000000;
-  }
+  return static_cast<double>(ms) * 1000000.0;
 }
 
-// class x_stopwatch_cu{{{
-X_INL x_stopwatch_cu::x_stopwatch_cu(const unsigned int flags)
+X_INL CUevent _x_now_cu(const unsigned int flags)
 {
+  CUevent evt{0};
   const char* msg{nullptr};
 
-  CUresult cres = cuEventCreate(&this->m_start, flags);
+  CUresult cres = cuEventCreate(&evt, flags);
   if (cres != CUDA_SUCCESS) {
     cres = cuGetErrorString(cres, &msg);
     if (cres == CUDA_SUCCESS) {
@@ -1875,39 +1677,14 @@ X_INL x_stopwatch_cu::x_stopwatch_cu(const unsigned int flags)
     }
   }
 
-  cres = cuEventCreate(&this->m_stop, flags);
-  if (cres != CUDA_SUCCESS) {
-    cres = cuGetErrorString(cres, &msg);
-    if (cres == CUDA_SUCCESS) {
-      throw std::runtime_error(std::string("cuEventCreate: ") + msg);
-    } else {
-      throw std::runtime_error(
-          std::string("cuEventCreate: unknown error ") + std::to_string(cres));
-    }
-  }
+  return evt;
 }
 
-X_INL x_stopwatch_cu::~x_stopwatch_cu()
-{
-  cuEventDestroy(this->m_start);
-  cuEventDestroy(this->m_stop);
-}
-
-X_INL double x_stopwatch_cu::elapsed() const
-{
-  return this->m_elapsed;
-}
-
-X_INL void x_stopwatch_cu::reset()
-{
-  this->m_elapsed = 0.0;
-}
-
-X_INL void x_stopwatch_cu::tic(CUstream const stream, const unsigned int flags)
+X_INL void _x_tic_cu(CUevent event, CUstream stream, const unsigned int flags)
 {
   const char* msg{nullptr};
 
-  CUresult cres = cuEventRecordWithFlags(this->m_start, stream, flags);
+  CUresult cres = cuEventRecordWithFlags(event, stream, flags);
   if (cres != CUDA_SUCCESS) {
     cres = cuGetErrorString(cres, &msg);
     if (cres == CUDA_SUCCESS) {
@@ -1919,70 +1696,11 @@ X_INL void x_stopwatch_cu::tic(CUstream const stream, const unsigned int flags)
   }
 }
 
-X_INL void x_stopwatch_cu::toc(
-    const char* unit, CUstream const stream, const unsigned int flags)
-{
-  const char* msg{nullptr};
-
-  CUresult cres = cuEventRecordWithFlags(this->m_stop, stream, flags);
-  if (cres != CUDA_SUCCESS) {
-    cres = cuGetErrorString(cres, &msg);
-    if (cres == CUDA_SUCCESS) {
-      throw std::runtime_error(std::string("cuEventRecordWithFlags: ") + msg);
-    } else {
-      throw std::runtime_error(
-          std::string("cuEventRecordWithFlags: unknown error ") + std::to_string(cres));
-    }
-  }
-
-  this->m_elapsed = x_duration_cu(unit, this->m_start, this->m_stop);
-}
-
-X_INL void x_stopwatch_cu::toc(
-    x_stopwatch_stats& stats, const char* unit, const size_t cycle,
-    CUstream const stream, const unsigned int flags)
-{
-  if (cycle == 0) {
-    stats.reset();
-    return;
-  }
-
-  // NOTE: If the statistics are ready, do not update them.
-  if (stats.ready) {
-    return;
-  }
-
-  // NOTE: Reset the stats before the first cycle.
-  if (stats.cyc == 0) {
-    stats.reset();
-    x_strcpy(stats.unit, sizeof(stats.unit), unit);
-  }
-
-  this->toc(unit, stream, flags);
-
-  if (this->m_elapsed > stats.max.val) {
-    stats.max.idx = stats.cyc;
-    stats.max.val = this->m_elapsed;
-  }
-  if (this->m_elapsed < stats.min.val) {
-    stats.min.idx = stats.cyc;
-    stats.min.val = this->m_elapsed;
-  }
-
-  stats.sum += this->m_elapsed;
-  stats.cyc += 1;
-  stats.avg = stats.sum / stats.cyc;
-
-  if (stats.cyc % cycle == 0) {
-    stats.ready = true;
-  }
-}
-// class x_stopwatch_cu}}}
+#define _x_toc_cu _x_tic_cu
 #endif  // X_ENABLE_CU
 
 #if X_ENABLE_CUDA
-X_INL double x_duration_cuda(
-    const char* unit, const cudaEvent_t start, const cudaEvent_t stop)
+X_INL double _x_duration_cuda(const cudaEvent_t start, const cudaEvent_t stop)
 {
   cudaError_t cerr = cudaEventSynchronize(stop);
   if (cerr != cudaSuccess) {
@@ -1997,83 +1715,161 @@ X_INL double x_duration_cuda(
     return -1.0;
   }
 
-  if (strcmp(unit, "h") == 0) {
-    return static_cast<double>(ms) / 3600000.0;
-  } else if (strcmp(unit, "m") == 0) {
-    return static_cast<double>(ms) / 60000.0;
-  } else if (strcmp(unit, "s") == 0) {
-    return static_cast<double>(ms) / 1000.0;
-  } else if (strcmp(unit, "ms") == 0) {
-    return static_cast<double>(ms);
+  return static_cast<double>(ms) * 1000000.0;
+}
+
+X_INL cudaEvent_t _x_now_cuda(const unsigned int flags)
+{
+  CUevent evt{0};
+
+  cudaError_t cerr = cudaEventCreateWithFlags(&evt, flags);
+  if (cerr != cudaSuccess) {
+    throw std::runtime_error(
+        std::string("cudaEventCreateWithFlags: ") + cudaGetErrorString(cerr));
+  }
+
+  return evt;
+}
+
+X_INL void _x_tic_cuda(
+    cudaEvent_t event, cudaStream_t stream, const unsigned int flags)
+{
+  cudaError_t cerr = cudaEventRecordWithFlags(event, stream, flags);
+  if (cerr != cudaSuccess) {
+    throw std::runtime_error(
+        std::string("cudaEventRecordWithFlags: ") + cudaGetErrorString(cerr));
+  }
+}
+
+#define _x_toc_cuda _x_tic_cuda
+#endif  // X_ENABLE_CUDA
+
+X_INL x_event::x_event(const char* type, const unsigned int flags)
+{
+  if (strcmp(type, "cpu") == 0) {
+    this->m_type = 0;
+#if X_ENABLE_CU
+  } else if (strcmp(type, "cu") == 0) {
+    this->m_type = 1;
+    this->m_start.cu = _x_now_cu(flags);
+    this->m_stop.cu = _x_now_cu(flags);
+#endif
+#if X_ENABLE_CUDA
+    this->m_type = 2;
+  } else if (strcmp(type, "cuda") == 0) {
+    this->m_start.cuda = _x_now_cuda(flags);
+    this->m_stop.cuda = _x_now_cuda(flags);
+#endif
+  } else {
+    this->m_type = -1;
+    throw std::invalid_argument(
+        std::string("x_event: unsupported type ") + type);
+  }
+}
+
+X_INL x_event::~x_event()
+{
+  switch (this->m_type) {
+    case 0:
+      break;
+#if X_ENABLE_CU
+    case 1:
+      cuEventDestroy(this->m_start.cu);
+      cuEventDestroy(this->m_stop.cu);
+      break;
+#endif
+#if X_ENABLE_CUDA
+    case 2:
+      cudaEventDestroy(this->m_start.cuda);
+      cudaEventDestroy(this->m_stop.cuda);
+      break;
+#endif
+    default:
+      break;
+  }
+}
+
+X_INL double x_event::duration(const char* unit)
+{
+  double ns{-1.0};
+
+  switch (this->m_type) {
+    case 0:
+      ns = _x_duration_cpu(this->m_start.cpu, this->m_stop.cpu);
+      break;
+#if X_ENABLE_CU
+    case 1:
+      ns = _x_duration_cu(this->m_start.cu, this->m_stop.cu);
+      break;
+#endif
+#if X_ENABLE_CUDA
+    case 2:
+      ns = _x_duration_cuda(this->m_start.cuda, this->m_stop.cuda);
+      break;
+#endif
+    default:
+      throw std::runtime_error("x_event::duration: unsupported call");
+  }
+
+  if (strcmp(unit, "ns") == 0) {
+    return ns;
   } else if (strcmp(unit, "us") == 0) {
-    return static_cast<double>(ms) * 1000.0;
-  } else { // if (strcmp(unit, "ns") == 0)
-    return static_cast<double>(ms) * 1000000;
+    return ns / 1000.0;
+  } else if (strcmp(unit, "ms") == 0) {
+    return ns / 1000000.0;
+  } else if (strcmp(unit, "s") == 0) {
+    return ns / 1000000000.0;
+  } else if (strcmp(unit, "m") == 0) {
+    return ns / 60000000000.0;
+  } else {  // (strcmp(unit, "h") == 0)
+    return ns / 3600000000000.0;
   }
 }
 
-// class x_stopwatch_cuda{{{
-x_stopwatch_cuda::x_stopwatch_cuda(const unsigned int flags)
+X_INL void x_event::tic(void* stream, const unsigned int flags)
 {
-  cudaError_t cerr = cudaEventCreateWithFlags(&this->m_start, flags);
-  if (cerr != cudaSuccess) {
-    throw std::runtime_error(
-        std::string("cudaEventCreateWithFlags: ") + cudaGetErrorString(cerr));
-  }
-
-  cerr = cudaEventCreate(&this->m_stop, flags);
-  if (cerr != cudaSuccess) {
-    throw std::runtime_error(
-        std::string("cudaEventCreateWithFlags: ") + cudaGetErrorString(cerr));
-  }
-}
-
-x_stopwatch_cuda::~x_stopwatch_cuda()
-{
-  cudaEventDestroy(this->m_start);
-  cudaEventDestroy(this->m_stop);
-}
-
-double x_stopwatch_cuda::elapsed() const
-{
-  return this->m_elapsed;
-}
-
-void x_stopwatch_cuda::reset()
-{
-  this->m_elapsed = 0.0;
-}
-
-void x_stopwatch_cuda::tic(cudaStream_t const stream, const unsigned int flags)
-{
-  cudaError_t cerr = cudaEventRecordWithFlags(this->m_start, stream, flags);
-  if (cerr != cudaSuccess) {
-    throw std::runtime_error(
-        std::string("cudaEventRecordWithFlags: ") + cudaGetErrorString(cerr));
+  switch (this->m_type) {
+    case 0:
+      _x_tic_cpu(this->m_start.cpu);
+      break;
+#if X_ENABLE_CU
+    case 1:
+      _x_tic_cu(this->m_start.cu, static_cast<CUstream>(stream), flags);
+      break;
+#endif
+#if X_ENABLE_CUDA
+    case 2:
+      _x_tic_cuda(this->m_start.cuda, static_cast<cudaStream_t>(stream), flags);
+      break;
+#endif
+    default:
+      throw std::runtime_error("x_event::tic: unsupported call");
   }
 }
 
-void x_stopwatch_cuda::toc(
-    const char* unit, cudaStream_t const stream, const unsigned int flags)
+X_INL void x_event::toc(void* stream, const unsigned int flags)
 {
-  cudaError_t cerr = cudaEventRecordWithFlags(this->m_stop, stream, flags);
-  if (cerr != cudaSuccess) {
-    throw std::runtime_error(
-        std::string("cudaEventRecordWithFlags: ") + cudaGetErrorString(cerr));
+  switch (this->m_type) {
+    case 0:
+      _x_toc_cpu(this->m_stop.cpu);
+      break;
+#if X_ENABLE_CU
+    case 1:
+      _x_toc_cu(this->m_stop.cu, static_cast<CUstream>(stream), flags);
+      break;
+#endif
+#if X_ENABLE_CUDA
+    case 2:
+      _x_toc_cuda(this->m_stop.cuda, static_cast<cudaStream_t>(stream), flags);
+      break;
+#endif
+    default:
+      throw std::runtime_error("x_event::tic: unsupported call");
   }
-
-  cerr = cudaEventSynchronize(this->m_stop);
-  if (cerr != cudaSuccess) {
-    throw std::runtime_error(
-        std::string("cudaEventSynchronize: ") + cudaGetErrorString(cerr));
-  }
-
-  this->m_elapsed = x_duration_cuda(unit, this->m_start, this->m_stop);
 }
 
-void x_stopwatch_cuda::toc(
-    x_stopwatch_stats& stats, const char* unit, const size_t cycle,
-    cudaStream_t const stream, const unsigned int flags)
+X_INL void x_event::toc(
+    x_event_stats& stats, const size_t cycle, void* stream, const unsigned int flags)
 {
   if (cycle == 0) {
     stats.reset();
@@ -2088,21 +1884,22 @@ void x_stopwatch_cuda::toc(
   // NOTE: Reset the stats before the first cycle.
   if (stats.cyc == 0) {
     stats.reset();
-    x_strcpy(stats.unit, sizeof(stats.unit), unit);
   }
 
-  this->toc(unit, stream, flags);
+  this->toc(stream, flags);
 
-  if (this->m_elapsed > stats.max.val) {
+  double ns = this->duration("ns");
+
+  if (ns > stats.max.val) {
     stats.max.idx = stats.cyc;
-    stats.max.val = this->m_elapsed;
+    stats.max.val = ns;
   }
-  if (this->m_elapsed < stats.min.val) {
+  if (ns < stats.min.val) {
     stats.min.idx = stats.cyc;
-    stats.min.val = this->m_elapsed;
+    stats.min.val = ns;
   }
 
-  stats.sum += this->m_elapsed;
+  stats.sum += ns;
   stats.cyc += 1;
   stats.avg = stats.sum / stats.cyc;
 
@@ -2110,27 +1907,26 @@ void x_stopwatch_cuda::toc(
     stats.ready = true;
   }
 }
-// class x_stopwatch_cuda}}}
-#endif  // X_ENABLE_CUDA
+// class x_event}}}
 // IMPL_Date_and_Time}}}
 
 //****************************************************** IMPL_Error_Handling{{{
 template<typename Func, typename... Args>
-X_INL x_err _x_check_impl(
+X_INL x_error _x_check_impl(
     const char* filename, const char* function, const long long line,
-    const int32_t cat, Func&& func, Args&&... args)
+    const char* cat, Func&& func, Args&&... args)
 {
   static_assert(
-      std::is_same_v<std::invoke_result_t<Func, Args...>, x_err>
+      std::is_same_v<std::invoke_result_t<Func, Args...>, x_error>
       || std::is_convertible_v<std::invoke_result_t<Func, Args...>, int32_t>,
-      "Return type of 'func' must be x_err or convertible to int32_t.");
+      "Return type of 'func' must be x_error or convertible to int32_t.");
 
-  x_err err;
+  x_error err;
 
-  if constexpr (std::is_same_v<std::invoke_result_t<Func, Args...>, x_err>) {
+  if constexpr (std::is_same_v<std::invoke_result_t<Func, Args...>, x_error>) {
     err = func(std::forward<Args>(args)...);
   } else {
-    err = x_err(cat, static_cast<int32_t>(func(std::forward<Args>(args)...)));
+    err = x_error(cat, static_cast<int32_t>(func(std::forward<Args>(args)...)));
   }
   if (err) {
     _x_log_impl<'e'>(filename, function, line, stderr, "%s", err.msg());
@@ -2139,148 +1935,70 @@ X_INL x_err _x_check_impl(
   return err;
 }
 
-X_INL bool x_fail(const x_err& err)
+X_INL bool x_fail(const x_error& err)
 {
   return err;
 }
 
-X_INL bool x_succ(const x_err& err)
+X_INL bool x_succ(const x_error& err)
 {
   return !err;
 }
 
-// class x_err{{{
-x_err::x_err()
-  :m_cat(x_err_posix), m_val(0)
+// class x_error{{{
+X_INL x_error::x_error()
 {
 }
 
-x_err::x_err(const int32_t cat)
+X_INL x_error::x_error(const char* cat)
 {
   this->set(cat);
 }
 
-x_err::x_err(const int32_t cat, const int32_t val, bool (*fail)(const int32_t))
+X_INL x_error::x_error(
+    const char* cat, const int32_t val, bool (*fail)(const int32_t))
 {
   this->set(cat, val, fail);
 }
 
-x_err::x_err(
-    const int32_t cat, const int32_t val, const char* msg,
-    bool (*fail)(const int32_t))
+X_INL x_error::x_error(
+    const char* cat, const int32_t val, const char* msg, bool (*fail)(const int32_t))
 {
   this->set(cat, val, msg, fail);
 }
 
-x_err::~x_err()
+X_INL x_error::~x_error()
 {
 }
 
-int32_t x_err::cat() const
+X_INL x_error& x_error::set(const char* cat)
 {
-  return this->m_cat;
-}
+  this->m_cat = cat;
 
-const char* x_err::msg()
-{
-  switch (this->m_cat) {
-#if X_WINDOWS
-    case x_err_posix:
-      if (this->m_msg.empty()) {
-        this->m_msg.resize(64);
-      }
-      strerror_s(
-          this->m_msg.data(), this->m_msg.size(), static_cast<int>(this->m_val));
-      break;
-    case x_err_win32:
-    case x_err_socket:
-      if (this->m_msg.empty()) {
-        this->m_msg.resize(128);
-      }
-      FormatMessageA(
-          FORMAT_MESSAGE_FROM_SYSTEM
-          | FORMAT_MESSAGE_IGNORE_INSERTS
-          | FORMAT_MESSAGE_MAX_WIDTH_MASK,
-          nullptr, static_cast<DWORD>(this->m_val),
-          MAKELANGID(LANG_ENGLISH, SUBLANG_ENGLISH_US),
-          this->m_msg.data(), static_cast<DWORD>(this->m_msg.size()), nullptr);
-      break;
-#else
-    case x_err_posix:
-      this->m_msg = strerror(static_cast<int>(this->m_val));
-      break;
-#endif
-#if X_ENABLE_CU
-    case x_err_cu:
-      {
-        const char* msg{nullptr};
-        CUresult cres = cuGetErrorString(static_cast<CUresult>(this->m_val), &msg);
-        if (cres == CUDA_SUCCESS) {
-          this->m_msg = msg;
-        } else {
-          this->m_msg = std::string("Unknown CUDA driver error ") + std::to_string(cres);
-        }
-      }
-      break;
-#endif
+  if (strcmp(cat, "posix") == 0) {
+    this->m_val = static_cast<int32_t>(errno);
+  } else if (strcmp(cat, "win32") == 0) {
+    this->m_val = static_cast<int32_t>(GetLastError());
+  } else if (strcmp(cat, "socket") == 0) {
+    this->m_val = static_cast<int32_t>(WSAGetLastError());
 #if X_ENABLE_CUDA
-    case x_err_cuda:
-      this->m_msg = cudaGetErrorString(static_cast<cudaError_t>(this->m_val));
-      break;
+  } else if (strcmp(cat, "cuda") == 0) {
+    this->m_val = static_cast<int32_t>(cudaGetLastError());
 #endif
-    default:
-      if (this->m_msg.empty()) {
-        this->m_msg.resize(32);
-        snprintf(
-            this->m_msg.data(), this->m_msg.size(), "Custom error %d", this->m_val);
-      }
+  } else {
+    throw std::invalid_argument(
+        std::string("x_error: unsupported error category ") + cat);
   }
-
-  return this->m_msg.c_str();
-}
-
-x_err& x_err::set(const int32_t cat)
-{
-  switch (cat) {
-    case x_err_posix:
-      this->m_cat = cat;
-      this->m_val = static_cast<int32_t>(errno);
-      break;
-#if X_WINDOWS
-    case x_err_win32:
-      this->m_cat = cat;
-      this->m_val = static_cast<int32_t>(GetLastError());
-      break;
-#if X_ENABLE_SOCKET
-    case x_err_socket:
-      this->m_cat = cat;
-      this->m_val = static_cast<int32_t>(WSAGetLastError());
-      break;
-#endif
-#endif
-#if X_ENABLE_CUDA
-    case x_err_cuda:
-      this->m_cat = cat;
-      this->m_val = static_cast<int32_t>(cudaGetLastError());
-      break;
-#endif
-    default:
-      throw std::invalid_argument(
-          std::string("Unsupported error category: ") + std::to_string(cat));
-  }
-
-  this->m_msg.clear();
 
   return *this;
 }
 
-x_err& x_err::set(
-    const int32_t cat, const int32_t val, bool (*fail)(const int32_t))
+X_INL x_error& x_error::set(
+    const char* cat, const int32_t val, bool (*fail)(const int32_t))
 {
-  if (this->m_fail == nullptr && fail == nullptr
-      && (cat <= x_err_custom || cat >= x_err_max)) {
+  if (strcmp(cat, "custom") == 0 && this->m_fail == nullptr && fail == nullptr) {
     throw std::invalid_argument(
-        "A failure predicate is required for a custom error.");
+        "x_error: a failure predicate is required for a custom error");
   }
 
   this->m_cat = cat;
@@ -2291,14 +2009,12 @@ x_err& x_err::set(
   return *this;
 }
 
-x_err& x_err::set(
-    const int32_t cat, const int32_t val, const char* msg,
-    bool (*fail)(const int32_t))
+X_INL x_error& x_error::set(
+    const char* cat, const int32_t val, const char* msg, bool (*fail)(const int32_t))
 {
-  if (this->m_fail == nullptr && fail == nullptr
-      && (cat <= x_err_custom || cat >= x_err_max)) {
+  if (strcmp(cat, "custom") == 0 && this->m_fail == nullptr && fail == nullptr) {
     throw std::invalid_argument(
-        "A failure predicate is required for a custom error.");
+        "x_error: a failure predicate is required for a custom error");
   }
 
   this->m_cat = cat;
@@ -2309,41 +2025,98 @@ x_err& x_err::set(
   return *this;
 }
 
-int32_t x_err::val() const
+X_INL const char* x_error::cat()
+{
+  return this->m_cat;
+}
+
+X_INL const char* x_error::msg()
+{
+#if X_WINDOWS
+  if (strcmp(this->m_cat, "posix") == 0) {
+    if (this->m_msg.empty()) {
+      this->m_msg.resize(64);
+    }
+    strerror_s(
+        this->m_msg.data(), this->m_msg.size(), static_cast<int>(this->m_val));
+  } else if (strcmp(this->m_cat, "win32") == 0 || strcmp(this->m_cat, "socket") == 0) {
+    if (this->m_msg.empty()) {
+      this->m_msg.resize(128);
+    }
+    FormatMessageA(
+        FORMAT_MESSAGE_FROM_SYSTEM
+        | FORMAT_MESSAGE_IGNORE_INSERTS
+        | FORMAT_MESSAGE_MAX_WIDTH_MASK,
+        nullptr, static_cast<DWORD>(this->m_val),
+        MAKELANGID(LANG_ENGLISH, SUBLANG_ENGLISH_US),
+        this->m_msg.data(), static_cast<DWORD>(this->m_msg.size()), nullptr);
+  }
+#else
+  if (strcmp(this->m_cat, "posix") == 0 || strcmp(this->m_cat, "socket") == 0) {
+    this->m_msg = strerror(static_cast<int>(this->m_val));
+  }
+#endif
+#if X_ENABLE_CU
+  else if (strcmp(this->m_cat, "cu")) {
+    const char* msg{nullptr};
+    CUresult cres = cuGetErrorString(static_cast<CUresult>(this->m_val), &msg);
+    if (cres == CUDA_SUCCESS) {
+      this->m_msg = msg;
+    } else {
+      this->m_msg = std::string("Unknown CUDA driver error ") + std::to_string(cres);
+    }
+  }
+#endif
+#if X_ENABLE_CUDA
+  else if (strcmp(this->m_cat, "cuda")) {
+    this->m_msg = cudaGetErrorString(static_cast<cudaError_t>(this->m_val));
+  }
+#endif
+  else {
+    if (this->m_msg.empty()) {
+      this->m_msg = std::string("Custom error") + std::to_string(this->m_val);
+    }
+  }
+
+  return this->m_msg.c_str();
+}
+
+X_INL int32_t x_error::val() const
 {
   return this->m_val;
 }
 
-x_err::operator bool() const
+X_INL x_error::operator bool() const
 {
   if (this->m_fail) {
-    // NOTE: Covers the x_err_custom and other customized cases.
+    // NOTE: Covers the "custom" and other customized cases.
     return this->m_fail(this->m_val);
   } else {
-    switch (this->m_cat) {
+    if (strcmp(this->m_cat, "socket") == 0) {
+      return this->m_val != 0;
+    }
 #if X_WINDOWS
-      case x_err_win32:
-        return this->m_val != 0;
-#if X_ENABLE_SOCKET
-      case x_err_socket:
-        return this->m_val != 0;
-#endif
+    else if (strcmp(this->m_cat, "win32") == 0) {
+      return this->m_val != 0;
+    }
 #endif
 #if X_ENABLE_CU
-      case x_err_cu:
-        return static_cast<CUresult>(this->m_val) != CUDA_SUCCESS;
+    else if (strcmp(this->m_cat, "cu") == 0) {
+      return static_cast<CUresult>(this->m_val) != CUDA_SUCCESS;
+    }
 #endif
 #if X_ENABLE_CUDA
-      case x_err_cuda:
-        return static_cast<cudaError_t>(this->m_val) != cudaSuccess;
+    else if (strcmp(this->m_cat, "cuda") == 0) {
+      return static_cast<cudaError_t>(this->m_val) != cudaSuccess;
+    }
 #endif
-      default:
-        // NOTE: Covers the x_err_posix case.
-        return this->m_val != 0;
+    else {
+      // NOTE: Covers the "posix" case.
+      return this->m_val != 0;
     }
   }
 }
-// class x_err}}}
+// class x_error}}}
 // IMPL_Error_Handling}}}
 
 //********************************************************* IMPL_File_System{{{
@@ -2362,21 +2135,21 @@ X_INL bool x_fexist(const char* file)
   return ierr == 0;
 }
 
-X_INL x_err x_fopen(FILE** stream, const char* file, const char* mode)
+X_INL x_error x_fopen(FILE** stream, const char* file, const char* mode)
 {
 #if X_WINDOWS
   errno_t ierr = fopen_s(stream, file, mode);
   if (ierr != 0) {
-    return x_err(x_err_posix, ierr);
+    return x_error("posix", ierr);
   }
 #else
   *stream = fopen(file, mode);
   if (*stream == nullptr) {
-    return x_err(x_err_posix);
+    return x_error("posix");
   }
 #endif
 
-  return x_err();
+  return x_error();
 }
 
 X_INL const char* x_fpath(char* dst, const char* src)
@@ -2403,7 +2176,7 @@ X_INL long long x_fsize(const char* file)
   return ierr == 0 ? s.st_size : -1;
 }
 
-X_INL x_err x_split_path(
+X_INL x_error x_split_path(
     const char *path,
     char *root, const size_t rsz, char *dir, const size_t dsz,
     char *file, const size_t fsz, char *ext, const size_t esz)
@@ -2412,16 +2185,16 @@ X_INL x_err x_split_path(
   x_fpath(full, path);
 
   if (!x_fexist(full)) {
-    return x_err(x_err_posix, ENOENT);
+    return x_error("posix", ENOENT);
   }
 
 #if X_WINDOWS
-  return x_err(
-      x_err_posix, _splitpath_s(full, root, rsz, dir, dsz, file, fsz, ext, esz));
+  return x_error(
+      "posix", _splitpath_s(full, root, rsz, dir, dsz, file, fsz, ext, esz));
 #else
   if (root == nullptr || rsz == 0 || dir == nullptr || dsz == 0
       || file == nullptr || fsz == 0 || ext == nullptr || esz == 0) {
-    return x_err(x_err_posix, EINVAL);
+    return x_error("posix", EINVAL);
   }
 
   if (root != nullptr) { root[0] = '\0'; }
@@ -2437,7 +2210,7 @@ X_INL x_err x_split_path(
   // root
   begin = strchr((char*)path, '/');
   if (begin == nullptr) {
-    return x_err(x_err_posix, ENOENT);
+    return x_error("posix", ENOENT);
   }
 
   end = strchr(begin + 1, '/');
@@ -2448,26 +2221,26 @@ X_INL x_err x_split_path(
   if (root != nullptr) {
     sz = end - begin;
     if (sz >= rsz) {
-      return x_err(x_err_posix, ENOBUFS);
+      return x_error("posix", ENOBUFS);
     }
 
     memcpy(root, begin, sz);
     root[sz] = '\0';
 
     if (end == nullptr) {
-      return x_err();
+      return x_error();
     }
   }
 
   // dir
   begin = strchr(end, '/');
   if (begin == nullptr) {
-    return x_err();
+    return x_error();
   }
 
   end = strrchr((char*)path, '/');
   if (end <= begin) {
-    return x_err();
+    return x_error();
   }
   if (end == nullptr) {
     end = full + psz;
@@ -2476,26 +2249,26 @@ X_INL x_err x_split_path(
   if (dir != nullptr) {
     sz = end - begin;
     if (sz >= dsz) {
-      return x_err(x_err_posix, ENOBUFS);
+      return x_error("posix", ENOBUFS);
     }
 
     memcpy(dir, begin, sz);
     dir[sz] = '\0';
 
     if (end == nullptr) {
-      return x_err();
+      return x_error();
     }
   }
 
   // file
   begin = end + 1;
   if ((begin - full) >= 0) {
-    return x_err();
+    return x_error();
   }
 
   end = strrchr((char*)path, '.');
   if (end <= begin) {
-    return x_err();
+    return x_error();
   }
   if (end == nullptr) {
     end = full + psz;
@@ -2504,7 +2277,7 @@ X_INL x_err x_split_path(
   if (file != nullptr) {
     sz = end - begin;
     if (sz >= fsz) {
-      return x_err(x_err_posix, ENOBUFS);
+      return x_error("posix", ENOBUFS);
     }
 
     memcpy(file, begin, sz);
@@ -2516,7 +2289,7 @@ X_INL x_err x_split_path(
     begin = end;
     end = full + psz;
     if (end <= begin) {
-      return x_err();
+      return x_error();
     }
 
     sz = end - begin;
@@ -2524,7 +2297,7 @@ X_INL x_err x_split_path(
     ext[sz] = '\0';
   }
 
-  return x_err();
+  return x_error();
 #endif
 }
 // IMPL_File_System}}}
@@ -2617,23 +2390,26 @@ X_INL constexpr T x_PiB(const T n)
 }
 
 template<typename T>
-X_INL constexpr typename std::enable_if<std::is_integral_v<T>, T>::type
-x_bit(const T n)
+X_INL constexpr T x_bit(const T n)
 {
+  static_assert(std::is_integral_v<T>, "x_bit: an integral type is required");
+
   return static_cast<T>(1) << n;
 }
 
 template<typename T>
-X_INL constexpr typename std::enable_if<std::is_integral_v<T>, T>::type
-x_gcd(const T m, const T n)
+X_INL constexpr T x_gcd(const T m, const T n)
 {
+  static_assert(std::is_integral_v<T>, "x_gcd: an integral type is required");
+
   return n == 0 ? m : x_gcd(n, m % n);
 }
 
 template<typename T>
-X_INL constexpr typename std::enable_if<std::is_integral_v<T>, T>::type
-x_lcm(const T m, const T n)
+X_INL constexpr T x_lcm(const T m, const T n)
 {
+  static_assert(std::is_integral_v<T>, "x_lcm: an integral type is required");
+
   if (m == 0 || n == 0) {
     return 0;
   }
@@ -2642,9 +2418,10 @@ x_lcm(const T m, const T n)
 }
 
 template<typename T>
-X_INL constexpr typename std::enable_if<std::is_integral_v<T>, T>::type
-x_next_exp(const T base, const T src)
+X_INL constexpr T x_next_exp(const T base, const T src)
 {
+  static_assert(std::is_integral_v<T>, "x_next_exp: an integral type is required");
+
   if (src == 0) {
     return 1;
   }
@@ -2675,16 +2452,18 @@ x_next_exp(const T base, const T src)
 }
 
 template<typename T>
-X_INL constexpr typename std::enable_if<std::is_integral_v<T>, T>::type
-x_next_mul(const T base, const T src)
+X_INL constexpr T x_next_mul(const T base, const T src)
 {
+  static_assert(std::is_integral_v<T>, "x_next_mul: an integral type is required");
+
   return (src / base + 1) * base;
 }
 
 template<typename T>
-X_INL constexpr typename std::enable_if<std::is_integral_v<T>, T>::type
-x_prev_exp(const T base, const T src)
+X_INL constexpr T x_prev_exp(const T base, const T src)
 {
+  static_assert(std::is_integral_v<T>, "x_prev_exp: an integral type is required");
+
   if (src == 0) {
     return 0;
   }
@@ -2715,9 +2494,10 @@ x_prev_exp(const T base, const T src)
 }
 
 template<typename T>
-X_INL constexpr typename std::enable_if<std::is_integral_v<T>, T>::type
-x_prev_mul(const T base, const T src)
+X_INL constexpr T x_prev_mul(const T base, const T src)
 {
+  static_assert(std::is_integral_v<T>, "x_prev_mul: an integral type is required");
+
   return (src / base) * base;
 }
 // IMPL_Mathematics}}}
@@ -2752,37 +2532,37 @@ X_INL void x_free(T*& ptr)
 }
 
 template<typename T>
-X_INL x_err x_malloc(T** ptr, const size_t size)
+X_INL x_error x_malloc(T** ptr, const size_t size)
 {
   if (*ptr != nullptr) {
-    return x_err(x_err_posix, EINVAL);
+    return x_error("posix", EINVAL);
   }
 
   *ptr = static_cast<T*>(malloc(size));
   if (*ptr == nullptr) {
-    return x_err(x_err_posix);
+    return x_error("posix");
   }
 
-  return x_err();
+  return x_error();
 }
 
-X_INL x_err x_memcpy(void* dst, const void* src, const size_t size)
+X_INL x_error x_memcpy(void* dst, const void* src, const size_t size)
 {
   if (dst == nullptr || src == nullptr) {
-    return x_err(x_err_posix, EINVAL);
+    return x_error("posix", EINVAL);
   }
 
   if (size != 0) {
     memcpy(dst, src, size);
   }
 
-  return x_err();
+  return x_error();
 }
 
-X_INL x_err x_meminfo(size_t* avail, size_t* total)
+X_INL x_error _x_meminfo_cpu(size_t* avail, size_t* total)
 {
   if (avail == nullptr && total == nullptr) {
-    return x_err(x_err_posix, EINVAL);
+    return x_error("posix", EINVAL);
   }
 
 #if X_WINDOWS
@@ -2790,7 +2570,7 @@ X_INL x_err x_meminfo(size_t* avail, size_t* total)
   status.dwLength = sizeof(status);
 
   if (!GlobalMemoryStatusEx(&status)) {
-    return x_err(x_err_win32);
+    return x_error("win32");
   }
 
   if (avail != nullptr) {
@@ -2802,7 +2582,7 @@ X_INL x_err x_meminfo(size_t* avail, size_t* total)
 #else
   struct sysinfo info{0};
   if (sysinfo(&info) != 0) {
-    return x_err(x_err_posix);
+    return x_error("posix");
   }
 
   if (avail != nullptr) {
@@ -2813,25 +2593,60 @@ X_INL x_err x_meminfo(size_t* avail, size_t* total)
   }
 #endif
 
-  return x_err();
+  return x_error();
 }
 
 #if X_ENABLE_CU
-X_INL x_err x_meminfo_cu(size_t* avail, size_t* total)
+X_INL x_error _x_meminfo_cu(size_t* avail, size_t* total)
 {
   if (avail == nullptr && total == nullptr) {
-    return x_err(x_err_posix, EINVAL);
+    return x_error("posix", EINVAL);
   }
 
   CUresult cres = cuMemGetInfo(avail, total);
   if (cres != CUDA_SUCCESS) {
-    return x_err(x_err_cu, cres);
+    return x_error("cu", cres);
   }
 
-  return x_err();
+  return x_error();
+}
+#endif
+
+#if X_ENABLE_CUDA
+X_INL x_error _x_meminfo_cuda(size_t* avail, size_t* total)
+{
+  if (avail == nullptr && total == nullptr) {
+    return x_error("posix", EINVAL);
+  }
+
+  cudaError_t cerr = cudaMemGetInfo(avail, total);
+  if (cerr != cudaSuccess) {
+    return x_error("cuda", cerr);
+  }
+
+  return x_error();
+}
+#endif
+
+X_INL x_error x_meminfo(const char* type, size_t* avail, size_t* total)
+{
+  if (strcmp(type, "cpu") == 0) {
+    return _x_meminfo_cpu(avail, total);
+#if X_ENABLE_CU
+  } else if (strcmp(type, "cu") == 0) {
+    return _x_meminfo_cu(avail, total);
+#endif
+#if X_ENABLE_CUDA
+  } else if (strcmp(type, "cuda") == 0) {
+    return _x_meminfo_cuda(avail, total);
+#endif
+  } else {
+    return x_error("posix", EINVAL, "unspported type");
+  }
 }
 
-X_INL const char* x_memtype_cu(const CUdeviceptr ptr)
+#if X_ENABLE_CU
+X_INL const char* _x_memtype_cu(const CUdeviceptr ptr)
 {
   static const char* type[] = {"Unknown", "Host", "Device", "Array", "Unified"};
 
@@ -2857,21 +2672,7 @@ X_INL const char* x_memtype_cu(const CUdeviceptr ptr)
 #endif  // X_ENABLE_CU
 
 #if X_ENABLE_CUDA
-X_INL x_err x_meminfo_cuda(size_t* avail, size_t* total)
-{
-  if (avail == nullptr && total == nullptr) {
-    return x_err(x_err_posix, EINVAL);
-  }
-
-  cudaError_t cerr = cudaMemGetInfo(avail, total);
-  if (cerr != cudaSuccess) {
-    return x_err(x_err_cuda, cerr);
-  }
-
-  return x_err();
-}
-
-X_INL const char* x_memtype_cuda(const void* ptr)
+X_INL const char* _x_memtype_cuda(const void* ptr)
 {
   static const char* type[] = {"Unregistered", "Host", "Device", "Managed"};
 
@@ -2882,14 +2683,36 @@ X_INL const char* x_memtype_cuda(const void* ptr)
     return "Unknown";
   }
 
-  if (attr.type >= cudaMemoryTypeUnregistered
-      && attr.type <= cudaMemoryTypeManaged) {
+  if (attr.type >= cudaMemoryTypeUnregistered && attr.type <= cudaMemoryTypeManaged) {
     return type[attr.type];
   }
 
   return "Unknown";
 }
 #endif  // X_ENABLE_CUDA
+
+template<typename T>
+X_INL const char* x_memtype(const char* type, const T ptr)
+{
+#if X_ENABLE_CU
+  if constexpr (std::is_same_v<T, CUdeviceptr>) {
+    if (strcmp(type, "cu") == 0) {
+      return _x_memtype_cu(ptr);
+    }
+  }
+#endif
+
+#if X_ENABLE_CUDA
+  if constexpr (std::is_pointer_v<T>) {
+    if (strcmp(type, "cuda") == 0) {
+      return _x_memtype_cuda(ptr);
+    }
+  }
+#endif
+
+  return "N/A";
+}
+
 // IMPL_Memory_Management}}}
 
 //********************************************************* IMPL_Standard_IO{{{
@@ -2980,7 +2803,7 @@ X_INL void _x_log_impl(
   char prefix[X_LOG_PREFIX_LIMIT]{0};
   _x_log_prefix<level>(prefix, X_LOG_PREFIX_LIMIT, filename, function, line);
 
-#if (__cplusplus >= 202002L && (X_CLANG >= x_ver(17, 0, 0) || X_GCC >= x_ver(13, 0, 0) || X_MSVC >= x_ver(19, 29, 0)))
+#if (__cplusplus >= 202002L && (X_CLANG >= x_version(17, 0, 0) || X_GCC >= x_version(13, 0, 0) || X_MSVC >= x_version(19, 29, 0)))
   std::string fmsg = std::vformat(format, std::make_format_args(args...));
 
   // NOTE: Cover the case that there are no `{}`s in `format`.
@@ -3003,10 +2826,10 @@ X_INL void _x_log_impl(
 // IMPL_Standard_IO}}}
 
 //************************************************************** IMPL_String{{{
-X_INL x_err x_strcpy(char* dst, size_t dsz, const char* src)
+X_INL x_error x_strcpy(char* dst, size_t dsz, const char* src)
 {
   if (dst == nullptr || dsz == 0) {
-    return x_err(x_err_posix, EINVAL);
+    return x_error("posix", EINVAL);
   }
 
   size_t cpy_sz{dsz - 1};
@@ -3015,7 +2838,7 @@ X_INL x_err x_strcpy(char* dst, size_t dsz, const char* src)
   if (src_sz > 0) {
     cpy_sz = cpy_sz < src_sz ? cpy_sz : src_sz;
 
-    x_err err = x_memcpy(dst, src, cpy_sz);
+    x_error err = x_memcpy(dst, src, cpy_sz);
     if (err) {
       return err;
     }
@@ -3023,7 +2846,7 @@ X_INL x_err x_strcpy(char* dst, size_t dsz, const char* src)
 
   dst[cpy_sz] = '\0';
 
-  return x_err();
+  return x_error();
 }
 
 X_INL bool x_strmty(const char* string)
