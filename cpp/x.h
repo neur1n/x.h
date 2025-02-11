@@ -11,11 +11,11 @@ MERCHANTABILITY OR FIT FOR A PARTICULAR PURPOSE.
 See the Mulan PSL v2 for more details.
 
 
-Last update: 2025-02-05 20:53
-Version: v0.8.0
+Last update: 2025-02-11 11:16
+Version: v0.8.1
 ******************************************************************************/
 #ifndef X_H
-#define X_H x_version(0, 8, 0)
+#define X_H x_version(0, 8, 1)
 
 
 /** @internal
@@ -348,16 +348,12 @@ class x_error;
 X_INL uint32_t x_checksum_crc32(
     const void* data, const size_t size, const uint32_t* prev = nullptr);
 
-/// @internal
 /// @brief Calculate the internet checksum of a data chunk.
 /// @see [RFC1071](https://www.rfc-editor.org/info/rfc1071)
-/// @endinternal
 X_INL uint16_t x_checksum_rfc1071(
     const void* data, const size_t size, const uint16_t* prev = nullptr);
 
-/// @internal
 /// @brief Calculate the XOR checksum of a data chunk.
-/// @endinternal
 X_INL uint8_t x_checksum_xor(
     const void* data, const size_t size, const uint8_t* prev = nullptr);
 
@@ -428,16 +424,14 @@ typedef struct _x_iovec_
 class x_socket
 {
 public:
-  /// @brief Constructor.
-  X_INL x_socket();
+  /// @brief Constructor, a wrapper of `socket`.
+  /// @note This constructor enables the `SO_KEEPALIVE` and
+  ///       `SO_EXCLUSIVEADDRUSE` options by default but does not check the
+  ///       return value of `setsockopt`.
+  X_INL x_socket(const int domain, const int type, const int protocol);
 
   /// @brief Destructor.
   X_INL ~x_socket();
-
-  /// @brief Initialize the socket.
-  /// @param type The type of the socket, `SOCK_STREAM` or `SOCK_DGRAM`.
-  /// @return An instance of @ref x_error.
-  X_INL x_error init(const int type);
 
   /// @brief Accept a connection from a client.
   /// @param client The client to be accepted.
@@ -509,6 +503,7 @@ private:
   int m_hndl{-1};
 #endif
   struct sockaddr m_addr{0};
+  int m_domain{AF_UNSPEC};
 };
 #endif  // X_ENABLE_SOCKET
 /** @} */  // Communication
@@ -672,15 +667,13 @@ private:
 /// @brief Assertion with optional message.
 /// @param expr The expression to assert.
 /// @param ... The optional message to print.
-/// @attention The optional message must be a string literal.
+/// @attention The optional message must be a C-style string.
 #define x_assert(expr, ...) do { \
   if (!(expr)) { \
     fprintf(stderr, "Assertion failed: %s\n", #expr); \
-    if (strlen(#__VA_ARGS__)) { \
-      fprintf(stderr, "Message: %s\n", __VA_ARGS__); \
-    } \
+    _x_assert_msg(__VA_ARGS__); \
     fprintf(stderr, "Position: %s:%lld: %s\n", \
-        __FILENAME__, (long long)__LINE__, __PRETTY_FUNCTION__); \
+        __FILENAME__, static_cast<long long>(__LINE__), __PRETTY_FUNCTION__); \
     abort(); \
   } \
 } while (false)
@@ -690,8 +683,13 @@ private:
 /// @param func The function to call.
 /// @param ... The arguments of the function.
 /// @return An instance of @ref x_error.
-#define x_check(cat, func, ...) \
-  _x_check_impl(__FILENAME__, #func, __LINE__, cat, func, ##__VA_ARGS__)
+// NOTE: `_x_log_impl` is put here to avoid a forward declaration.
+#define x_check(cat, func, ...) do {\
+  x_error err = _x_check_impl(__FILENAME__, #func, static_cast<long long>(__LINE__), cat, func, ##__VA_ARGS__) \
+  if (err) { \
+    _x_log_impl<'e'>(filename, function, line, stderr, "%s", err.msg()); \
+  } \
+} while (false)
 
 /// @brief Check if an instance of @ref x_error indicates a failure.
 /// @param err The instance of @ref x_error.
@@ -966,6 +964,9 @@ X_INL x_error x_memcpy(void* dst, const void* src, const size_t size);
 
 X_INL x_error x_meminfo(const char* type, size_t* avail, size_t* total);
 
+/// @note Current supported types are:
+///            - "cu"
+///            - "cuda"
 template<typename T>
 X_INL const char* x_memtype(const char* type, const T ptr);
 /** @} */  // Memory Management
@@ -1005,11 +1006,6 @@ X_INL const char* x_memtype(const char* type, const T ptr);
 #ifndef X_LOG_MSG_LIMIT
 #define X_LOG_MSG_LIMIT (256)
 #endif
-
-template<char level, typename... Args>
-X_INL void _x_log_impl(
-    const char* filename, const char* function, const long long line,
-    FILE* stream, const char* format, Args&&... args);
 
 /// @brief Log a message with a specified log level.
 /// @param level The log level, one of 'p', 'f', 'e', 'w', 'i', 'd'.
@@ -1114,39 +1110,25 @@ X_INL uint8_t x_checksum_xor(
 
 #if X_ENABLE_SOCKET
 // class x_socket{{{
-X_INL x_socket::x_socket()
-{
-}
-
-X_INL x_socket::~x_socket()
-{
-  this->close();
-}
-
-X_INL x_error x_socket::init(const int type)
+X_INL x_socket::x_socket(const int domain, const int type, const int protocol)
+  :m_domain{domain}
 {
 #if X_WINDOWS
   WSADATA data{0};
   if (WSAStartup(MAKEWORD(2, 2), &data) != 0) {
-    return x_error("socket");
+    throw std::runtime_error(
+        std::string("WSAStartup: ") + x_error("socket").msg());
   }
 #endif
 
-  if (type == SOCK_STREAM) {
-    this->m_hndl = socket(AF_INET, type, IPPROTO_TCP);
-  } else if (type == SOCK_DGRAM) {
-    this->m_hndl = socket(AF_INET, type, IPPROTO_UDP);
-  } else {
-    return x_error("posix", ENOTSUP);
-  }
-
+  this->m_hndl = socket(domain, type, protocol);
 #if X_WINDOWS
-  if (this->m_hndl == INVALID_SOCKET) {
-    return x_error("socket");
+  if (this->m_hndl  == INVALID_SOCKET) {
+    throw std::runtime_error(std::string("socket: ") + x_error("socket").msg());
   }
 #else
-  if (this->m_hndl == -1) {
-    return x_error("socket");
+  if (this->m_hndl  == -1) {
+    throw std::runtime_error(std::string("posix: ") + x_error("socket").msg());
   }
 #endif
 
@@ -1159,8 +1141,11 @@ X_INL x_error x_socket::init(const int type)
   val = 0;
   setsockopt(this->m_hndl, SOL_SOCKET, SO_REUSEADDR, (char*)&val, len);
 #endif
+}
 
-  return x_error();
+X_INL x_socket::~x_socket()
+{
+  this->close();
 }
 
 X_INL x_error x_socket::accept(x_socket* client)
@@ -1175,12 +1160,14 @@ X_INL x_error x_socket::accept(x_socket* client)
 #if X_WINDOWS
   SOCKET hndl = ::accept(this->m_hndl, &addr, &len);
   if (hndl == INVALID_SOCKET) {
+    return x_error("socket");
+  }
 #else
   int hndl = ::accept(this->m_hndl, &addr, &len);
   if (hndl == -1) {
-#endif
     return x_error("socket");
   }
+#endif
 
   client->m_addr = std::move(addr);
   client->m_hndl = std::move(hndl);
@@ -1194,9 +1181,9 @@ X_INL x_error x_socket::addr(char* ip, uint16_t* port)
     return x_error("posix", EINVAL);
   }
 
-  struct sockaddr_in* sin{(struct sockaddr_in*)&this->m_addr};
+  struct sockaddr_in* sin{reinterpret_cast<struct sockaddr_in*>(&this->m_addr)};
 
-  if (inet_ntop(AF_INET, &sin->sin_addr, ip, 16) == nullptr) {
+  if (inet_ntop(this->m_domain, &sin->sin_addr, ip, 16) == nullptr) {
     return x_error("socket");
   }
 
@@ -1221,9 +1208,9 @@ X_INL x_error x_socket::close()
 X_INL x_error x_socket::connect(const char* ip, const uint16_t port)
 {
   struct sockaddr_in sin{0};
-  sin.sin_family = AF_INET;
+  sin.sin_family = this->m_domain;
   sin.sin_port = htons(port);
-  int ierr{inet_pton(AF_INET, ip, &sin.sin_addr)};
+  int ierr{inet_pton(this->m_domain, ip, &sin.sin_addr)};
   if (ierr == 0) {
     return x_error("posix", EFAULT);
   } else if (ierr == -1) {
@@ -1250,10 +1237,10 @@ X_INL x_error x_socket::getopt(
 X_INL x_error x_socket::listen(const char* ip, const uint16_t port)
 {
   struct sockaddr_in sin{0};
-  sin.sin_family = AF_INET;
+  sin.sin_family = this->m_domain;
   sin.sin_port = htons(port);
 
-  int ierr{inet_pton(AF_INET, ip, &sin.sin_addr)};
+  int ierr{inet_pton(this->m_domain, ip, &sin.sin_addr)};
   if (ierr == 0) {
     return x_error("posix", EFAULT);
   } else if (ierr == -1) {
@@ -1576,11 +1563,7 @@ X_INL void x_event_stats::echo(
     + std::to_string(this->max.idx) + "): "
     + std::to_string(this->max.val / scale) + unit;
 
-  if (stream == nullptr) {
-    fprintf(stdout, "%s\n", msg.c_str());
-  } else {
-    fprintf(stream, "%s\n", msg.c_str());
-  }
+  fprintf(stream ? stream : stdout, "%s\n", msg.c_str());
 }
 
 X_INL void x_event_stats::reset()
@@ -1864,7 +1847,7 @@ X_INL void x_event::toc(void* stream, const unsigned int flags)
       break;
 #endif
     default:
-      throw std::runtime_error("x_event::tic: unsupported call");
+      throw std::runtime_error("x_event::toc: unsupported call");
   }
 }
 
@@ -1911,6 +1894,14 @@ X_INL void x_event::toc(
 // IMPL_Date_and_Time}}}
 
 //****************************************************** IMPL_Error_Handling{{{
+template<typename... Args>
+X_INL void _x_assert_msg(Args&&... args)
+{
+  if constexpr (sizeof...(args) > 0) {
+    fprintf(stderr, "Message: %s\n", std::forward<Args>(args)...);
+  }
+}
+
 template<typename Func, typename... Args>
 X_INL x_error _x_check_impl(
     const char* filename, const char* function, const long long line,
@@ -1921,18 +1912,11 @@ X_INL x_error _x_check_impl(
       || std::is_convertible_v<std::invoke_result_t<Func, Args...>, int32_t>,
       "Return type of 'func' must be x_error or convertible to int32_t.");
 
-  x_error err;
-
   if constexpr (std::is_same_v<std::invoke_result_t<Func, Args...>, x_error>) {
-    err = func(std::forward<Args>(args)...);
+    return func(std::forward<Args>(args)...);
   } else {
-    err = x_error(cat, static_cast<int32_t>(func(std::forward<Args>(args)...)));
+    return x_error(cat, static_cast<int32_t>(func(std::forward<Args>(args)...)));
   }
-  if (err) {
-    _x_log_impl<'e'>(filename, function, line, stderr, "%s", err.msg());
-  }
-
-  return err;
 }
 
 X_INL bool x_fail(const x_error& err)
@@ -2057,7 +2041,7 @@ X_INL const char* x_error::msg()
   }
 #endif
 #if X_ENABLE_CU
-  else if (strcmp(this->m_cat, "cu")) {
+  else if (strcmp(this->m_cat, "cu") == 0) {
     const char* msg{nullptr};
     CUresult cres = cuGetErrorString(static_cast<CUresult>(this->m_val), &msg);
     if (cres == CUDA_SUCCESS) {
@@ -2068,13 +2052,13 @@ X_INL const char* x_error::msg()
   }
 #endif
 #if X_ENABLE_CUDA
-  else if (strcmp(this->m_cat, "cuda")) {
+  else if (strcmp(this->m_cat, "cuda") == 0) {
     this->m_msg = cudaGetErrorString(static_cast<cudaError_t>(this->m_val));
   }
 #endif
   else {
     if (this->m_msg.empty()) {
-      this->m_msg = std::string("Custom error") + std::to_string(this->m_val);
+      this->m_msg = std::string("Custom error ") + std::to_string(this->m_val);
     }
   }
 
@@ -2447,7 +2431,7 @@ X_INL constexpr T x_next_exp(const T base, const T src)
       return src;
     }
 
-    return std::pow(base, static_cast<size_t>(std::ceil(exp)));
+    return std::pow(base, static_cast<int>(std::ceil(exp)));
   }
 }
 
@@ -2489,7 +2473,7 @@ X_INL constexpr T x_prev_exp(const T base, const T src)
       return src;
     }
 
-    return std::pow(base, static_cast<size_t>(std::floor(exp)));
+    return std::pow(base, static_cast<int>(std::floor(exp)));
   }
 }
 
@@ -2641,7 +2625,7 @@ X_INL x_error x_meminfo(const char* type, size_t* avail, size_t* total)
     return _x_meminfo_cuda(avail, total);
 #endif
   } else {
-    return x_error("posix", EINVAL, "unspported type");
+    return x_error("posix", ENOTSUP, "unspported type");
   }
 }
 
@@ -2736,7 +2720,7 @@ X_INL const char* x_memtype(const char* type, const T ptr)
 
 template<char level>
 X_INL void _x_log_prefix(
-    char* buf, size_t bsz,
+    char* buf, const size_t bsz,
     const char* filename, const char* function, const long long line)
 {
   char timestamp[26]{0};
@@ -2753,7 +2737,7 @@ X_INL void _x_log_prefix(
 template<char level, typename... Args>
 X_INL void _x_log_impl(
     const char* filename, const char* function, const long long line,
-    FILE* file, const char* format, Args&&... args)
+    FILE* stream, const char* format, Args&&... args)
 {
   char color_level[8]{0};
   char color_reset[8]{0};
@@ -2814,12 +2798,12 @@ X_INL void _x_log_impl(
   snprintf(msg, X_LOG_MSG_LIMIT, format, std::forward<Args>(args)...);
 #endif
 
-  if (file == nullptr || file == stdout || file == stderr) {
+  if (stream == nullptr || stream == stdout || stream == stderr) {
     fprintf(
-        file == nullptr ? stdout : file,
+        stream == nullptr ? stdout : stream,
         "%s%s%s%s\n", color_level, prefix, msg, color_reset);
   } else {
-    fprintf(file, "%s%s\n", prefix, msg);
+    fprintf(stream, "%s%s\n", prefix, msg);
   }
 }
 // x_log}}}
