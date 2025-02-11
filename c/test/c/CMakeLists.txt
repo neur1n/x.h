@@ -5,7 +5,7 @@ INCLUDE_DIRECTORIES(
   ../..
 )
 
-SET(CMAKE_C_STANDARD 99)
+SET(CMAKE_C_STANDARD 11)
 SET(CMAKE_C_STANDARD_REQUIRED ON)
 
 # NOTE: This is required to make x_narg work with MSVC.
@@ -15,5 +15,14 @@ ENDIF()
 
 ADD_COMPILE_DEFINITIONS(X_ENABLE_SOCKET=1)
 
-ADD_EXECUTABLE(test_x_err test_x_err.c)
-ADD_EXECUTABLE(test_x_timing test_x_timing.c)
+SET(TEST_TARGETS
+  test_x_error
+  test_x_event
+  test_x_gadget
+  test_x_logging
+  test_x_memory
+)
+
+FOREACH(TARGET ${TEST_TARGETS})
+  ADD_EXECUTABLE(${TARGET} ${TARGET}.c)
+ENDFOREACH()
