@@ -11,11 +11,11 @@ MERCHANTABILITY OR FIT FOR A PARTICULAR PURPOSE.
 See the Mulan PSL v2 for more details.
 
 
-Last update: 2025-02-11 10:56
-Version: v0.8.1
+Last update: 2025-02-17 16:49
+Version: v0.8.2
 ******************************************************************************/
 #ifndef X_H
-#define X_H x_version(0, 8, 1)
+#define X_H x_version(0, 8, 2)
 
 
 /** @internal
@@ -838,7 +838,7 @@ X_INL const char* x_fpath(char* dst, const char* src);
 /// @brief Get the size of a file.
 /// @param file The file to query.
 /// @return The size of the file. If an error occurs, the return value is -1.
-X_INL long long x_fsize(const char* file);
+X_INL int64_t x_fsize(const char* file);
 
 /// @brief Split a path into root, directory, file, and extension.
 /// @param path The path to split.
@@ -2130,7 +2130,7 @@ X_INL const char* x_fpath(char* dst, const char* src)
 #endif
 }
 
-X_INL long long x_fsize(const char* file)
+X_INL int64_t x_fsize(const char* file)
 {
   int ierr = 0;
 
@@ -2142,7 +2142,7 @@ X_INL long long x_fsize(const char* file)
   ierr = stat(file, &s);
 #endif
 
-  return ierr == 0 ? s.st_size : -1;
+  return ierr == 0 ? (int64_t)s.st_size : -1;
 }
 
 X_INL x_error x_split_path(
