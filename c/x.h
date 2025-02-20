@@ -11,8 +11,8 @@ MERCHANTABILITY OR FIT FOR A PARTICULAR PURPOSE.
 See the Mulan PSL v2 for more details.
 
 
-Last update: 2025-02-17 16:49
-Version: v0.8.2
+Last update: 2025-02-20 20:11
+Version: v0.8.3
 ******************************************************************************/
 #ifndef X_H
 #define X_H x_version(0, 8, 2)
@@ -2005,10 +2005,12 @@ X_INL x_error _x_error_cat(const char* cat)
 
   if (strcmp(cat, "posix") == 0) {
     err.val = (int32_t)errno;
+#if X_WINDOWS
   } else if (strcmp(cat, "win32") == 0) {
     err.val = (int32_t)GetLastError();
   } else if (strcmp(cat, "socket") == 0) {
     err.val = (int32_t)WSAGetLastError();
+#endif
 #if X_ENABLE_CUDA
   } else if (strcmp(cat, "cuda") == 0) {
     err.val = (int32_t)cudaGetLastError();
