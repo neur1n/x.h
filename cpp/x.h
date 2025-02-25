@@ -11,11 +11,11 @@ MERCHANTABILITY OR FIT FOR A PARTICULAR PURPOSE.
 See the Mulan PSL v2 for more details.
 
 
-Last update: 2025-02-20 20:06
+Last update: 2025-02-25 20:50
 Version: v0.8.3
 ******************************************************************************/
 #ifndef X_H
-#define X_H x_version(0, 8, 2)
+#define X_H x_version(0, 8, 3)
 
 
 /** @internal
@@ -238,7 +238,7 @@ Version: v0.8.3
 #include <cstring>
 #include <ctime>
 
-#if (__cplusplus >= 202002L && (X_CLANG >= x_version(17, 0, 0) || X_GCC >= x_version(13, 0, 0) || X_MSVC >= x_version(19, 29, 0)))
+#if ((X_CLANG >= x_version(17, 0, 0) || X_GCC >= x_version(13, 0, 0) || X_MSVC >= x_version(19, 29, 0)))
 #include <format>
 #endif
 #include <stdexcept>
@@ -685,15 +685,15 @@ private:
 /// @return An instance of @ref x_error.
 // NOTE: `_x_log_impl` is put here to avoid a forward declaration.
 #define x_check(cat, func, ...) do {\
-  x_error err = _x_check_impl(__FILENAME__, #func, static_cast<long long>(__LINE__), cat, func, ##__VA_ARGS__) \
+  x_error err = _x_check_impl(cat, func, ##__VA_ARGS__); \
   if (err) { \
-    _x_log_impl<'e'>(filename, function, line, stderr, "%s", err.msg()); \
+    _x_log_impl<'e'>(__FILENAME__, #func, static_cast<long long>(__LINE__), stderr, "%s", err.msg()); \
   } \
 } while (false)
 
 /// @brief Check if an instance of @ref x_error indicates a failure.
 /// @param err The instance of @ref x_error.
-/// @return `true` if the instance is indicating a failure, `false` otherwise.
+/// @return `true` if the instance is indicating a faiure, `false` otherwise.
 /// @see @ref x_succ
 /// @remark Using this function is not necessary since there is a boolean
 ///         operator defined for @ref x_error. This is provided to align with
@@ -1025,7 +1025,7 @@ X_INL const char* x_memtype(const char* type, const T ptr);
  * @{
  *****************************************************************************/
 /// @brief Copy a string with error handling.
-X_INL x_error x_strcpy(char* dst, size_t dsz, const char* src);
+X_INL x_error x_strcpy(char* dst, const size_t dsz, const char* src);
 
 /// @brief Check if a string is empty.
 X_INL bool x_strmty(const char* string);
@@ -1903,9 +1903,7 @@ X_INL void _x_assert_msg(Args&&... args)
 }
 
 template<typename Func, typename... Args>
-X_INL x_error _x_check_impl(
-    const char* filename, const char* function, const long long line,
-    const char* cat, Func&& func, Args&&... args)
+X_INL x_error _x_check_impl(const char* cat, Func&& func, Args&&... args)
 {
   static_assert(
       std::is_same_v<std::invoke_result_t<Func, Args...>, x_error>
@@ -2789,7 +2787,7 @@ X_INL void _x_log_impl(
   char prefix[X_LOG_PREFIX_LIMIT]{0};
   _x_log_prefix<level>(prefix, X_LOG_PREFIX_LIMIT, filename, function, line);
 
-#if (__cplusplus >= 202002L && (X_CLANG >= x_version(17, 0, 0) || X_GCC >= x_version(13, 0, 0) || X_MSVC >= x_version(19, 29, 0)))
+#if ((X_CLANG >= x_version(17, 0, 0) || X_GCC >= x_version(13, 0, 0) || X_MSVC >= x_version(19, 29, 0)))
   std::string fmsg = std::vformat(format, std::make_format_args(args...));
 
   // NOTE: Cover the case that there are no `{}`s in `format`.
@@ -2812,7 +2810,7 @@ X_INL void _x_log_impl(
 // IMPL_Standard_IO}}}
 
 //************************************************************** IMPL_String{{{
-X_INL x_error x_strcpy(char* dst, size_t dsz, const char* src)
+X_INL x_error x_strcpy(char* dst, const size_t dsz, const char* src)
 {
   if (dst == nullptr || dsz == 0) {
     return x_error("posix", EINVAL);

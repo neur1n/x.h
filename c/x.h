@@ -11,11 +11,11 @@ MERCHANTABILITY OR FIT FOR A PARTICULAR PURPOSE.
 See the Mulan PSL v2 for more details.
 
 
-Last update: 2025-02-20 20:11
+Last update: 2025-02-25 20:36
 Version: v0.8.3
 ******************************************************************************/
 #ifndef X_H
-#define X_H x_version(0, 8, 2)
+#define X_H x_version(0, 8, 3)
 
 
 /** @internal
@@ -1054,7 +1054,7 @@ X_INL const char* x_memtype(const char* type, ... /*const T* ptr*/);
  * @{
  *****************************************************************************/
 /// @brief Copy a string with error handling.
-X_INL x_error x_strcpy(char* dst, size_t dsz, const char* src);
+X_INL x_error x_strcpy(char* dst, const size_t dsz, const char* src);
 
 /// @brief Check if a string is empty.
 X_INL bool x_strmty(const char* string);
@@ -2735,7 +2735,7 @@ X_INL void _x_log_impl(
 // IMPL_Standard_IO}}}
 
 //************************************************************** IMPL_String{{{
-X_INL x_error x_strcpy(char* dst, size_t dsz, const char* src)
+X_INL x_error x_strcpy(char* dst, const size_t dsz, const char* src)
 {
   if (dst == NULL || dsz == 0) {
     return x_error_set("posix", EINVAL);
