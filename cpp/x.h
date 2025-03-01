@@ -11,7 +11,7 @@ MERCHANTABILITY OR FIT FOR A PARTICULAR PURPOSE.
 See the Mulan PSL v2 for more details.
 
 
-Last update: 2025-03-01 13:32
+Last update: 2025-03-01 14:49
 Version: v0.8.4
 ******************************************************************************/
 #ifndef X_H
@@ -238,6 +238,9 @@ Version: v0.8.4
 #include <cstring>
 #include <ctime>
 
+#if (__cplusplus >= 202002L && (X_CLANG >= x_version(17, 0, 0) || X_GCC >= x_version(13, 0, 0) || X_MSVC >= x_version(19, 29, 0)))
+#include <format>
+#endif
 #include <stdexcept>
 #include <string>
 
@@ -455,7 +458,7 @@ public:
   /// @see getsockopt
   /// @return An instance of @ref x_error.
   X_INL x_error getopt(
-      const int lvl, const int opt, void* val, socklen_t* len);
+      const int level, const int option, void* value, socklen_t* length);
 
   /// @brief Listen on a specified IP address and port.
   /// @param ip The IP address to listen on.
@@ -468,30 +471,30 @@ public:
   /// @see recv
   /// @remark Different from the standard `recv`, this function trys to receive
   ///         the specified size of data before returning.
-  X_INL x_error recv(void* buf, const size_t size, const int flags);
+  X_INL x_error recv(void* buffer, const size_t size, const int flags);
 
   /// @brief Vectored version of `recv`.
   /// @return An instance of @ref x_error.
   /// @see @ref x_socket::recv
-  X_INL x_error recvv(x_iovec* iov, const size_t count, const int flags);
+  X_INL x_error recvv(x_iovec* iovec, const size_t count, const int flags);
 
   /// @brief Wrapper of `send` with error handling.
   /// @return An instance of @ref x_error.
   /// @see send
   /// @remark Different from the standard `send`, this function trys to send
   ///         the specified size of data before returning.
-  X_INL x_error send(const void* buf, const size_t size, const int flags);
+  X_INL x_error send(const void* buffer, const size_t size, const int flags);
 
   /// @brief Vectored version of `send`.
   /// @return An instance of @ref x_error.
   /// @see @ref x_socket::send
-  X_INL x_error sendv(const x_iovec* iov, const size_t count, const int flags);
+  X_INL x_error sendv(const x_iovec* iovec, const size_t count, const int flags);
 
   /// @brief Wrapper of `setsockopt` with error handling.
   /// @see setsockopt
   /// @return An instance of @ref x_error.
   X_INL x_error setopt(
-      const int lvl, const int opt, const void* val, const socklen_t len);
+      const int level, const int option, const void* value, const socklen_t length);
 
 private:
 #if X_WINDOWS
@@ -555,14 +558,14 @@ X_INL int x_getch();
 X_INL void x_sleep(const unsigned long ms);
 
 /// @brief Get the current timestamp.
-/// @param buf The buffer to store the timestamp.
-/// @param bsz The size of the buffer.
+/// @param buffer The buffer to store the timestamp.
+/// @param size The size of the buffer.
 /// @return The current timestamp, same as `buf`.
 /// @remark This function calls `ctime_s` on Windows and `ctime_r` on Linux
 ///         internally and uses their return values to fill the buffer.
 ///         Therefore, the format is not customizable. A buffer with at least
 ///         26 bytes is guaranteed to store the timestamp.
-X_INL const char* x_timestamp(char* buf, const size_t bsz);
+X_INL const char* x_timestamp(char* buffer, const size_t size);
 
 /// @struct x_event_stats
 /// @brief A structure to store the statistics of a stopwatch.
@@ -676,30 +679,30 @@ private:
 } while (false)
 
 /// @brief Wrapping the error handling of a function call.
-/// @param cat The error category, should be supported by @ref x_error.
-/// @param func The function to call.
+/// @param category The error category, should be supported by @ref x_error.
+/// @param function The function to call.
 /// @param ... The arguments of the function.
 /// @return An instance of @ref x_error.
 // NOTE: `_x_log_impl` is put here to avoid a forward declaration.
-#define x_check(cat, func, ...) do {\
-  x_error err = _x_check_impl(cat, func, ##__VA_ARGS__); \
+#define x_check(category, function, ...) do {\
+  x_error err = _x_check_impl(category, function, ##__VA_ARGS__); \
   if (err) { \
-    _x_log_impl<'e'>(__FILENAME__, #func, static_cast<long long>(__LINE__), stderr, "%s", err.msg()); \
+    _x_log_impl<'e'>(__FILENAME__, #function, static_cast<long long>(__LINE__), stderr, "%s", err.msg()); \
   } \
 } while (false)
 
 /// @brief Check if an instance of @ref x_error indicates a failure.
-/// @param err The instance of @ref x_error.
+/// @param error The instance of @ref x_error.
 /// @return `true` if the instance is indicating a faiure, `false` otherwise.
 /// @see @ref x_succ
 /// @remark Using this function is not necessary since there is a boolean
 ///         operator defined for @ref x_error. This is provided to align with
 ///         the C version of this library.
-X_INL bool x_fail(const x_error& err);
+X_INL bool x_fail(const x_error& error);
 
 /// @brief The counterpart of x_fail.
 /// @see @ref x_fail
-X_INL bool x_succ(const x_error& err);
+X_INL bool x_succ(const x_error& error);
 
 /// @brief An error class that encapsulates the error category, error value,
 ///        and corresponding error message.
@@ -719,7 +722,7 @@ public:
   ///        `errno` and the error message will be set to `strerror(errno)`.
   /// @attention Using "custom" here is not supported since the sources of
   ///            error value and message are unknown.
-  X_INL explicit x_error(const char* cat);
+  X_INL explicit x_error(const char* category);
 
   /// @brief Constructor with an error category, an error value, and an
   ///        optional failure predicate. The failure predicate is used to
@@ -733,26 +736,26 @@ public:
   /// @attention If the error category is "custom", the failure predicate is
   ///            mandatory.
   X_INL explicit x_error(
-      const char* cat, const int32_t val,
+      const char* category, const int32_t value,
       bool (*fail)(const int32_t) = nullptr);
 
   /// @brief Constructor with an error category, an error value, and a custom
   ///        predicate.
   X_INL explicit x_error(
-      const char* cat, const int32_t val, const char* msg,
+      const char* category, const int32_t value, const char* message,
       bool (*fail)(const int32_t) = nullptr);
 
   /// @brief Destructor.
   X_INL ~x_error();
 
-  X_INL x_error& set(const char* cat);
+  X_INL x_error& set(const char* category);
 
   X_INL x_error& set(
-      const char* cat, const int32_t val,
+      const char* category, const int32_t value,
       bool (*fail)(const int32_t) = nullptr);
 
   X_INL x_error& set(
-      const char* cat, const int32_t val, const char* msg,
+      const char* category, const int32_t value, const char* message,
       bool (*fail)(const int32_t) = nullptr);
 
   /// @brief Get the error category.
@@ -1004,6 +1007,16 @@ X_INL const char* x_memtype(const char* type, const T ptr);
 #define X_LOG_MSG_LIMIT (256)
 #endif
 
+/// @brief A function providing similar functionality to `std::vformat`.
+/// @param buffer The buffer to store the formatted string.
+/// @param size The size of the buffer.
+/// @param format The format string.
+/// @param ... The optional arguments.
+/// @note This function calls `std::vformat` if C++20 is available.
+template<typename... Args>
+X_INL const char* x_fmt(
+    char* buffer, const size_t size, const char* format, Args... args);
+
 /// @brief Log a message with a specified log level.
 /// @param level The log level, one of 'p', 'f', 'e', 'w', 'i', 'd'.
 /// @param stream The optional file stream to save the log.
@@ -1083,7 +1096,7 @@ X_INL uint8_t x_checksum_xor(
   union {
     uint8_t u8[8];
     uint64_t u64;
-  } cks{0};
+  } cks{{0}};
 
   if (prev) {
     cks.u8[0] = *prev;
@@ -1221,13 +1234,13 @@ X_INL x_error x_socket::connect(const char* ip, const uint16_t port)
 }
 
 X_INL x_error x_socket::getopt(
-    const int lvl, const int opt, void* val, socklen_t* len)
+    const int level, const int option, void* value, socklen_t* length)
 {
-  if (val == nullptr || len == nullptr) {
+  if (value == nullptr || length == nullptr) {
     return x_error("posix", EINVAL);
   }
 
-  return getsockopt(this->m_hndl, lvl, opt, (char*)val, len) == 0
+  return getsockopt(this->m_hndl, level, option, (char*)value, length) == 0
     ? x_error() : x_error("socket");
 }
 
@@ -1254,9 +1267,9 @@ X_INL x_error x_socket::listen(const char* ip, const uint16_t port)
   return ierr == 0 ? x_error() : x_error("socket");
 }
 
-X_INL x_error x_socket::recv(void* buf, const size_t size, const int flags)
+X_INL x_error x_socket::recv(void* buffer, const size_t size, const int flags)
 {
-  if (buf == nullptr || size == 0) {
+  if (buffer == nullptr || size == 0) {
     return x_error("posix", EINVAL);
   }
 
@@ -1270,7 +1283,7 @@ X_INL x_error x_socket::recv(void* buf, const size_t size, const int flags)
   size_t offset{0};
 
   while (remain > 0) {
-    bytes = ::recv(this->m_hndl, static_cast<char*>(buf) + offset, remain, flags);
+    bytes = ::recv(this->m_hndl, (char*)(buffer) + offset, remain, flags);
     if (bytes <= 0) {
       return x_error("socket");
     }
@@ -1282,23 +1295,24 @@ X_INL x_error x_socket::recv(void* buf, const size_t size, const int flags)
   return x_error();
 }
 
-X_INL x_error x_socket::recvv(x_iovec* iov, const size_t count, const int flags)
+X_INL x_error x_socket::recvv(
+    x_iovec* iovec, const size_t count, const int flags)
 {
-  if (iov == nullptr || count == 0) {
+  if (iovec == nullptr || count == 0) {
     return x_error("posix", EINVAL);
   }
 
   size_t total{0};
   for (size_t i = 0; i < count; ++i) {
-    if (iov[i].buf == nullptr || iov[i].len == 0) {
+    if (iovec[i].buf == nullptr || iovec[i].len == 0) {
       return x_error("posix", EINVAL);
     }
 
-    if (iov[i].len > (SIZE_MAX - total)) {
+    if (iovec[i].len > (SIZE_MAX - total)) {
       return x_error("posix", EOVERFLOW);
     }
 
-    total += iov[i].len;
+    total += iovec[i].len;
   }
 
   // NOTE: _alloca/alloca may be used if all data received are rather small.
@@ -1311,8 +1325,8 @@ X_INL x_error x_socket::recvv(x_iovec* iov, const size_t count, const int flags)
   if (!err) {
     size_t offset{0};
     for (size_t i = 0; i < count; ++i) {
-      memcpy(iov[i].buf, (char*)buf + offset, iov[i].len);
-      offset += iov[i].len;
+      memcpy(iovec[i].buf, (char*)buf + offset, iovec[i].len);
+      offset += iovec[i].len;
     }
   }
 
@@ -1321,7 +1335,8 @@ X_INL x_error x_socket::recvv(x_iovec* iov, const size_t count, const int flags)
   return err;
 }
 
-X_INL x_error x_socket::send(const void* buf, const size_t size, const int flags)
+X_INL x_error x_socket::send(
+    const void* buffer, const size_t size, const int flags)
 {
 #if X_WINDOWS
   int remain{static_cast<int>(size)};
@@ -1332,7 +1347,7 @@ X_INL x_error x_socket::send(const void* buf, const size_t size, const int flags
   int bytes{0};
 
   while (remain > 0) {
-    bytes = ::send(this->m_hndl, (char*)buf + offset, remain, flags);
+    bytes = ::send(this->m_hndl, (char*)(buffer) + offset, remain, flags);
     if (bytes <= 0) {
       return x_error("socket");
     }
@@ -1344,23 +1359,24 @@ X_INL x_error x_socket::send(const void* buf, const size_t size, const int flags
   return x_error();
 }
 
-X_INL x_error x_socket::sendv(const x_iovec* iov, const size_t count, const int flags)
+X_INL x_error x_socket::sendv(
+    const x_iovec* iovec, const size_t count, const int flags)
 {
-  if (iov == nullptr || count == 0) {
+  if (iovec == nullptr || count == 0) {
     return x_error("posix", EINVAL);
   }
 
   size_t total{0};
   for (size_t i = 0; i < count; ++i) {
-    if (iov[i].buf == nullptr || iov[i].len == 0) {
+    if (iovec[i].buf == nullptr || iovec[i].len == 0) {
       return x_error("posix", EINVAL);
     }
 
-    if (iov[i].len > (SIZE_MAX - total)) {
+    if (iovec[i].len > (SIZE_MAX - total)) {
       return x_error("posix", EOVERFLOW);
     }
 
-    total += iov[i].len;
+    total += iovec[i].len;
   }
 
   // NOTE: _alloca/alloca may be used if all data sent are rather small.
@@ -1371,8 +1387,8 @@ X_INL x_error x_socket::sendv(const x_iovec* iov, const size_t count, const int 
 
   size_t offset{0};
   for (size_t i = 0; i < count; ++i) {
-    memcpy(static_cast<char*>(buf) + offset, iov[i].buf, iov[i].len);
-    offset += iov[i].len;
+    memcpy(static_cast<char*>(buf) + offset, iovec[i].buf, iovec[i].len);
+    offset += iovec[i].len;
   }
 
   x_error err = this->send(buf, total, flags);
@@ -1383,13 +1399,13 @@ X_INL x_error x_socket::sendv(const x_iovec* iov, const size_t count, const int 
 }
 
 X_INL x_error x_socket::setopt(
-    const int lvl, const int opt, const void* val, const socklen_t len)
+    const int level, const int option, const void* value, const socklen_t length)
 {
-  if (val == nullptr) {
+  if (value == nullptr) {
     return x_error("posix", EINVAL);
   }
 
-  return setsockopt(this->m_hndl, lvl, opt, (char*)val, len) == 0
+  return setsockopt(this->m_hndl, level, option, (char*)value, length) == 0
     ? x_error() : x_error("socket");
 }
 // class x_socket}}}
@@ -1509,25 +1525,25 @@ X_INL void x_sleep(const unsigned long ms)
 #endif
 }
 
-X_INL const char* x_timestamp(char* buf, const size_t bsz)
+X_INL const char* x_timestamp(char* buffer, const size_t size)
 {
-  if (buf == nullptr) {
+  if (buffer == nullptr) {
     return "";
   }
 
   time_t now{time(nullptr)};
 
 #if X_WINDOWS
-  if (ctime_s(buf, bsz, &now) != 0) {
+  if (ctime_s(buffer, size, &now) != 0) {
     return "";
   }
 #else
   ctime_r(&now, buf);
 #endif
 
-  buf[strlen(buf) - 1] = '\0';
+  buffer[strlen(buffer) - 1] = '\0';
 
-  return buf;
+  return buffer;
 }
 
 // struct _x_event_stats_{{{
@@ -1900,7 +1916,7 @@ X_INL void _x_assert_msg(Args&&... args)
 }
 
 template<typename Func, typename... Args>
-X_INL x_error _x_check_impl(const char* cat, Func&& func, Args&&... args)
+X_INL x_error _x_check_impl(const char* category, Func&& func, Args&&... args)
 {
   static_assert(
       std::is_same_v<std::invoke_result_t<Func, Args...>, x_error>
@@ -1910,18 +1926,18 @@ X_INL x_error _x_check_impl(const char* cat, Func&& func, Args&&... args)
   if constexpr (std::is_same_v<std::invoke_result_t<Func, Args...>, x_error>) {
     return func(std::forward<Args>(args)...);
   } else {
-    return x_error(cat, static_cast<int32_t>(func(std::forward<Args>(args)...)));
+    return x_error(category, static_cast<int32_t>(func(std::forward<Args>(args)...)));
   }
 }
 
-X_INL bool x_fail(const x_error& err)
+X_INL bool x_fail(const x_error& error)
 {
-  return err;
+  return error;
 }
 
-X_INL bool x_succ(const x_error& err)
+X_INL bool x_succ(const x_error& error)
 {
-  return !err;
+  return !error;
 }
 
 // class x_error{{{
@@ -1929,61 +1945,62 @@ X_INL x_error::x_error()
 {
 }
 
-X_INL x_error::x_error(const char* cat)
+X_INL x_error::x_error(const char* category)
 {
-  this->set(cat);
+  this->set(category);
 }
 
 X_INL x_error::x_error(
-    const char* cat, const int32_t val, bool (*fail)(const int32_t))
+    const char* category, const int32_t value, bool (*fail)(const int32_t))
 {
-  this->set(cat, val, fail);
+  this->set(category, value, fail);
 }
 
 X_INL x_error::x_error(
-    const char* cat, const int32_t val, const char* msg, bool (*fail)(const int32_t))
+    const char* category, const int32_t value, const char* message,
+    bool (*fail)(const int32_t))
 {
-  this->set(cat, val, msg, fail);
+  this->set(category, value, message, fail);
 }
 
 X_INL x_error::~x_error()
 {
 }
 
-X_INL x_error& x_error::set(const char* cat)
+X_INL x_error& x_error::set(const char* category)
 {
-  this->m_cat = cat;
+  this->m_cat = category;
 
-  if (strcmp(cat, "posix") == 0) {
+  if (strcmp(category, "posix") == 0) {
     this->m_val = static_cast<int32_t>(errno);
 #if X_WINDOWS
-  } else if (strcmp(cat, "win32") == 0) {
+  } else if (strcmp(category, "win32") == 0) {
     this->m_val = static_cast<int32_t>(GetLastError());
-  } else if (strcmp(cat, "socket") == 0) {
+  } else if (strcmp(category, "socket") == 0) {
     this->m_val = static_cast<int32_t>(WSAGetLastError());
 #endif
 #if X_ENABLE_CUDA
-  } else if (strcmp(cat, "cuda") == 0) {
+  } else if (strcmp(category, "cuda") == 0) {
     this->m_val = static_cast<int32_t>(cudaGetLastError());
 #endif
   } else {
     throw std::invalid_argument(
-        std::string("x_error: unsupported error category ") + cat);
+        std::string("x_error: unsupported error category ") + category);
   }
 
   return *this;
 }
 
 X_INL x_error& x_error::set(
-    const char* cat, const int32_t val, bool (*fail)(const int32_t))
+    const char* category, const int32_t value, bool (*fail)(const int32_t))
 {
-  if (strcmp(cat, "custom") == 0 && this->m_fail == nullptr && fail == nullptr) {
+  if (strcmp(category, "custom") == 0 && this->m_fail == nullptr && fail == nullptr) {
     throw std::invalid_argument(
         "x_error: a failure predicate is required for a custom error");
   }
 
-  this->m_cat = cat;
-  this->m_val = val;
+  this->m_cat = category;
+  this->m_val = value;
   this->m_msg.clear();
   this->m_fail = fail;
 
@@ -1991,16 +2008,17 @@ X_INL x_error& x_error::set(
 }
 
 X_INL x_error& x_error::set(
-    const char* cat, const int32_t val, const char* msg, bool (*fail)(const int32_t))
+    const char* category, const int32_t value, const char* message,
+    bool (*fail)(const int32_t))
 {
-  if (strcmp(cat, "custom") == 0 && this->m_fail == nullptr && fail == nullptr) {
+  if (strcmp(category, "custom") == 0 && this->m_fail == nullptr && fail == nullptr) {
     throw std::invalid_argument(
         "x_error: a failure predicate is required for a custom error");
   }
 
-  this->m_cat = cat;
-  this->m_val = val;
-  this->m_msg = msg;
+  this->m_cat = category;
+  this->m_val = value;
+  this->m_msg = message;
   this->m_fail = fail;
 
   return *this;
@@ -2287,7 +2305,7 @@ X_INL x_error x_split_path(
 X_INL size_t x_ncpu()
 {
 #if X_WINDOWS
-  SYSTEM_INFO info{0};
+  SYSTEM_INFO info{{0}};
   GetSystemInfo(&info);
   return static_cast<size_t>(info.dwNumberOfProcessors);
 #else
@@ -2732,31 +2750,40 @@ X_INL std::string _x_log_to_string(T src)
 }
 
 template<typename... Args>
-X_INL size_t _x_log_parse(
-    char* dst, const size_t dsz, const char* src, Args&&... args)
+X_INL const char* x_fmt(
+    char* buffer, const size_t size, const char* format, Args... args)
 {
-  std::string strargs[]{_x_log_to_string(std::forward<Args>(args))...};
-  std::string format{src};
-  size_t index{0};
-  size_t offset{0};
-  size_t begin{0};
-  size_t end{0};
+  if constexpr (sizeof...(args) == 0) {
+    return format;
+  } else {
+#if (__cplusplus >= 202002L && (X_CLANG >= x_version(17, 0, 0) || X_GCC >= x_version(13, 0, 0) || X_MSVC >= x_version(19, 29, 0)))
+    std::string fmsg = std::vformat(format, std::make_format_args(args...));
+    memcpy(buffer, fmsg.c_str(), size < fmsg.size() ? size : fmsg.size());
+#else
+    std::string arg[]{_x_log_to_string(std::forward<Args>(args))...};
+    std::string fmt{format};
+    size_t index{0};
+    size_t offset{0};
+    size_t begin{0};
+    size_t end{0};
 
-  while ((end = format.find("{}", begin)) != std::string::npos
-      && index < sizeof...(args) && offset < dsz) {
-    memcpy(dst + offset, src + begin, end - begin);
-    offset += end - begin;
+    while ((end = fmt.find("{}", begin)) != std::string::npos
+        && index < sizeof...(args) && offset < size) {
+      memcpy(buffer + offset, format + begin, end - begin);
+      offset += end - begin;
 
-    memcpy(dst + offset, strargs[index].c_str(), strargs[index].size());
-    offset += strargs[index].size();
+      memcpy(buffer + offset, arg[index].c_str(), arg[index].size());
+      offset += arg[index].size();
 
-    begin = end + 2;
-    index += 1;
+      begin = end + 2;
+      index += 1;
+    }
+
+    memcpy(buffer + offset, format + begin, fmt.size() - begin);
+#endif
+
+    return buffer;
   }
-
-  memcpy(dst + offset, src + begin, format.size() - begin);
-
-  return sizeof...(args) - index;
 }
 
 template<char level>
@@ -2828,28 +2855,20 @@ X_INL void _x_log_impl(
   char prefix[X_LOG_PREFIX_LIMIT]{0};
   _x_log_prefix<level>(prefix, X_LOG_PREFIX_LIMIT, filename, function, line);
 
-  if constexpr (sizeof...(args) == 0) {
-    if (stream == nullptr || stream == stdout || stream == stderr) {
-      fprintf(
-          stream == nullptr ? stdout : stream,
-          "%s%s%s%s\n", color_level, prefix, format, color_reset);
-    } else {
-      fprintf(stream, "%s%s\n", prefix, format);
-    }
-  } else {
-    char msg[X_LOG_MSG_LIMIT]{0};
-    size_t remain = _x_log_parse(msg, X_LOG_MSG_LIMIT, format, std::forward<Args>(args)...);
-    if (remain == sizeof...(args)) {
-      snprintf(msg, X_LOG_MSG_LIMIT, format, std::forward<Args>(args)...);
-    }
+  const char* msg{format};
 
-    if (stream == nullptr || stream == stdout || stream == stderr) {
-      fprintf(
-          stream == nullptr ? stdout : stream,
-          "%s%s%s%s\n", color_level, prefix, msg, color_reset);
-    } else {
-      fprintf(stream, "%s%s\n", prefix, msg);
-    }
+  if constexpr (sizeof...(args) > 0) {
+    char buf[X_LOG_MSG_LIMIT]{0};
+    snprintf(buf, X_LOG_MSG_LIMIT, format, std::forward<Args>(args)...);
+    msg = buf;
+  }
+
+  if (stream == nullptr || stream == stdout || stream == stderr) {
+    fprintf(
+        stream == nullptr ? stdout : stream,
+        "%s%s%s%s\n", color_level, prefix, msg, color_reset);
+  } else {
+    fprintf(stream, "%s%s\n", prefix, msg);
   }
 }
 // x_log}}}
