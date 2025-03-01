@@ -11,11 +11,11 @@ MERCHANTABILITY OR FIT FOR A PARTICULAR PURPOSE.
 See the Mulan PSL v2 for more details.
 
 
-Last update: 2025-02-25 20:50
-Version: v0.8.3
+Last update: 2025-03-01 13:32
+Version: v0.8.4
 ******************************************************************************/
 #ifndef X_H
-#define X_H x_version(0, 8, 3)
+#define X_H x_version(0, 8, 4)
 
 
 /** @internal
@@ -238,9 +238,6 @@ Version: v0.8.3
 #include <cstring>
 #include <ctime>
 
-#if ((X_CLANG >= x_version(17, 0, 0) || X_GCC >= x_version(13, 0, 0) || X_MSVC >= x_version(19, 29, 0)))
-#include <format>
-#endif
 #include <stdexcept>
 #include <string>
 
@@ -2718,6 +2715,50 @@ X_INL const char* x_memtype(const char* type, const T ptr)
 #define _X_LOG_COLOR_I _X_COLOR_GREEN
 #define _X_LOG_COLOR_D _X_COLOR_CYAN
 
+template<typename T>
+X_INL std::string _x_log_to_string(T src)
+{
+  if constexpr (std::is_same_v<T, std::string>) {
+    return src;
+  } else if constexpr (std::is_same_v<T, const char*> || std::is_same_v<T, char*>) {
+    return std::string(src);
+  } else if constexpr (std::is_pointer_v<T>) {
+    char buf[17]{0};
+    snprintf(buf, sizeof(buf), "%p", src);
+    return std::string(buf);
+  } else {
+    return std::to_string(src);
+  }
+}
+
+template<typename... Args>
+X_INL size_t _x_log_parse(
+    char* dst, const size_t dsz, const char* src, Args&&... args)
+{
+  std::string strargs[]{_x_log_to_string(std::forward<Args>(args))...};
+  std::string format{src};
+  size_t index{0};
+  size_t offset{0};
+  size_t begin{0};
+  size_t end{0};
+
+  while ((end = format.find("{}", begin)) != std::string::npos
+      && index < sizeof...(args) && offset < dsz) {
+    memcpy(dst + offset, src + begin, end - begin);
+    offset += end - begin;
+
+    memcpy(dst + offset, strargs[index].c_str(), strargs[index].size());
+    offset += strargs[index].size();
+
+    begin = end + 2;
+    index += 1;
+  }
+
+  memcpy(dst + offset, src + begin, format.size() - begin);
+
+  return sizeof...(args) - index;
+}
+
 template<char level>
 X_INL void _x_log_prefix(
     char* buf, const size_t bsz,
@@ -2787,23 +2828,28 @@ X_INL void _x_log_impl(
   char prefix[X_LOG_PREFIX_LIMIT]{0};
   _x_log_prefix<level>(prefix, X_LOG_PREFIX_LIMIT, filename, function, line);
 
-#if ((X_CLANG >= x_version(17, 0, 0) || X_GCC >= x_version(13, 0, 0) || X_MSVC >= x_version(19, 29, 0)))
-  std::string fmsg = std::vformat(format, std::make_format_args(args...));
-
-  // NOTE: Cover the case that there are no `{}`s in `format`.
-  char msg[X_LOG_MSG_LIMIT]{0};
-  snprintf(msg, X_LOG_MSG_LIMIT, fmsg.c_str(), std::forward<Args>(args)...);
-#else
-  char msg[X_LOG_MSG_LIMIT]{0};
-  snprintf(msg, X_LOG_MSG_LIMIT, format, std::forward<Args>(args)...);
-#endif
-
-  if (stream == nullptr || stream == stdout || stream == stderr) {
-    fprintf(
-        stream == nullptr ? stdout : stream,
-        "%s%s%s%s\n", color_level, prefix, msg, color_reset);
+  if constexpr (sizeof...(args) == 0) {
+    if (stream == nullptr || stream == stdout || stream == stderr) {
+      fprintf(
+          stream == nullptr ? stdout : stream,
+          "%s%s%s%s\n", color_level, prefix, format, color_reset);
+    } else {
+      fprintf(stream, "%s%s\n", prefix, format);
+    }
   } else {
-    fprintf(stream, "%s%s\n", prefix, msg);
+    char msg[X_LOG_MSG_LIMIT]{0};
+    size_t remain = _x_log_parse(msg, X_LOG_MSG_LIMIT, format, std::forward<Args>(args)...);
+    if (remain == sizeof...(args)) {
+      snprintf(msg, X_LOG_MSG_LIMIT, format, std::forward<Args>(args)...);
+    }
+
+    if (stream == nullptr || stream == stdout || stream == stderr) {
+      fprintf(
+          stream == nullptr ? stdout : stream,
+          "%s%s%s%s\n", color_level, prefix, msg, color_reset);
+    } else {
+      fprintf(stream, "%s%s\n", prefix, msg);
+    }
   }
 }
 // x_log}}}
