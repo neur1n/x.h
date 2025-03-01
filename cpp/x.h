@@ -11,7 +11,7 @@ MERCHANTABILITY OR FIT FOR A PARTICULAR PURPOSE.
 See the Mulan PSL v2 for more details.
 
 
-Last update: 2025-03-01 14:49
+Last update: 2025-03-01 21:03
 Version: v0.8.4
 ******************************************************************************/
 #ifndef X_H
@@ -1538,7 +1538,7 @@ X_INL const char* x_timestamp(char* buffer, const size_t size)
     return "";
   }
 #else
-  ctime_r(&now, buf);
+  ctime_r(&now, buffer);
 #endif
 
   buffer[strlen(buffer) - 1] = '\0';
