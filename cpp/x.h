@@ -11,11 +11,11 @@ MERCHANTABILITY OR FIT FOR A PARTICULAR PURPOSE.
 See the Mulan PSL v2 for more details.
 
 
-Last update: 2025-03-01 21:03
-Version: v0.8.4
+Last update: 2025-03-02 20:51
+Version: v0.8.5
 ******************************************************************************/
 #ifndef X_H
-#define X_H x_version(0, 8, 4)
+#define X_H x_version(0, 8, 5)
 
 
 /** @internal
@@ -1011,7 +1011,9 @@ X_INL const char* x_memtype(const char* type, const T ptr);
 /// @param buffer The buffer to store the formatted string.
 /// @param size The size of the buffer.
 /// @param format The format string.
-/// @param ... The optional arguments.
+/// @param args The optional arguments.
+/// @return The formatted string, same as `buffer`. If `buffer` is `nullptr` or
+///         `size` is 0, `format` is returned.
 /// @note This function calls `std::vformat` if C++20 is available.
 template<typename... Args>
 X_INL const char* x_fmt(
@@ -1035,7 +1037,7 @@ X_INL const char* x_fmt(
  * @{
  *****************************************************************************/
 /// @brief Copy a string with error handling.
-X_INL x_error x_strcpy(char* dst, const size_t dsz, const char* src);
+X_INL x_error x_strcpy(char* dst, const size_t size, const char* src);
 
 /// @brief Check if a string is empty.
 X_INL bool x_strmty(const char* string);
@@ -2753,8 +2755,12 @@ template<typename... Args>
 X_INL const char* x_fmt(
     char* buffer, const size_t size, const char* format, Args... args)
 {
-  if constexpr (sizeof...(args) == 0) {
+  if (buffer == nullptr || size == 0) {
     return format;
+  }
+
+  if constexpr (sizeof...(args) == 0) {
+    memcpy(buffer, format, size < strlen(format) ? size : strlen(format));
   } else {
 #if (__cplusplus >= 202002L && (X_CLANG >= x_version(17, 0, 0) || X_GCC >= x_version(13, 0, 0) || X_MSVC >= x_version(19, 29, 0)))
     std::string fmsg = std::vformat(format, std::make_format_args(args...));
@@ -2767,8 +2773,7 @@ X_INL const char* x_fmt(
     size_t begin{0};
     size_t end{0};
 
-    while ((end = fmt.find("{}", begin)) != std::string::npos
-        && index < sizeof...(args) && offset < size) {
+    while ((end = fmt.find("{}", begin)) != std::string::npos && offset < size) {
       memcpy(buffer + offset, format + begin, end - begin);
       offset += end - begin;
 
@@ -2781,9 +2786,9 @@ X_INL const char* x_fmt(
 
     memcpy(buffer + offset, format + begin, fmt.size() - begin);
 #endif
-
-    return buffer;
   }
+
+  return buffer;
 }
 
 template<char level>
@@ -2875,13 +2880,13 @@ X_INL void _x_log_impl(
 // IMPL_Standard_IO}}}
 
 //************************************************************** IMPL_String{{{
-X_INL x_error x_strcpy(char* dst, const size_t dsz, const char* src)
+X_INL x_error x_strcpy(char* dst, const size_t size, const char* src)
 {
-  if (dst == nullptr || dsz == 0) {
+  if (dst == nullptr || size == 0) {
     return x_error("posix", EINVAL);
   }
 
-  size_t cpy_sz{dsz - 1};
+  size_t cpy_sz{size - 1};
   size_t src_sz{strlen(src)};
 
   if (src_sz > 0) {
