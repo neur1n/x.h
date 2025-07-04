@@ -11,7 +11,7 @@ MERCHANTABILITY OR FIT FOR A PARTICULAR PURPOSE.
 See the Mulan PSL v2 for more details.
 
 
-Last update: 2025-07-04 20:23
+Last update: 2025-07-04 20:32
 Version: v0.8.6
 ******************************************************************************/
 #ifndef X_H
@@ -683,8 +683,6 @@ private:
 /// @param error The error object, should be an instance of @ref x_error.
 /// @param function The function to call.
 /// @param ... The arguments of the function.
-/// @return An instance of @ref x_error.
-// NOTE: `_x_log_impl` is put here to avoid a forward declaration.
 #define x_check(category, error, function, ...) do {\
   error = _x_check_impl(category, function, ##__VA_ARGS__); \
   if (error) { \
