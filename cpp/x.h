@@ -11,11 +11,11 @@ MERCHANTABILITY OR FIT FOR A PARTICULAR PURPOSE.
 See the Mulan PSL v2 for more details.
 
 
-Last update: 2025-03-02 20:51
-Version: v0.8.5
+Last update: 2025-07-04 20:23
+Version: v0.8.6
 ******************************************************************************/
 #ifndef X_H
-#define X_H x_version(0, 8, 5)
+#define X_H x_version(0, 8, 6)
 
 
 /** @internal
@@ -680,14 +680,15 @@ private:
 
 /// @brief Wrapping the error handling of a function call.
 /// @param category The error category, should be supported by @ref x_error.
+/// @param error The error object, should be an instance of @ref x_error.
 /// @param function The function to call.
 /// @param ... The arguments of the function.
 /// @return An instance of @ref x_error.
 // NOTE: `_x_log_impl` is put here to avoid a forward declaration.
-#define x_check(category, function, ...) do {\
-  x_error err = _x_check_impl(category, function, ##__VA_ARGS__); \
-  if (err) { \
-    _x_log_impl<'e'>(__FILENAME__, #function, static_cast<long long>(__LINE__), stderr, "%s", err.msg()); \
+#define x_check(category, error, function, ...) do {\
+  error = _x_check_impl(category, function, ##__VA_ARGS__); \
+  if (error) { \
+    _x_log_impl<'e'>(__FILENAME__, #function, static_cast<long long>(__LINE__), stderr, "%s", error.msg()); \
   } \
 } while (false)
 
