@@ -11,11 +11,11 @@ MERCHANTABILITY OR FIT FOR A PARTICULAR PURPOSE.
 See the Mulan PSL v2 for more details.
 
 
-Last update: 2025-07-04 20:32
-Version: v0.8.6
+Last update: 2025-07-03 14:37
+Version: v0.8.7
 ******************************************************************************/
 #ifndef X_H
-#define X_H x_version(0, 8, 6)
+#define X_H x_version(0, 8, 7)
 
 
 /** @internal
@@ -1717,7 +1717,7 @@ X_INL double _x_duration_cuda(const cudaEvent_t start, const cudaEvent_t stop)
 
 X_INL cudaEvent_t _x_now_cuda(const unsigned int flags)
 {
-  CUevent evt{0};
+  cudaEvent_t evt{0};
 
   cudaError_t cerr = cudaEventCreateWithFlags(&evt, flags);
   if (cerr != cudaSuccess) {
