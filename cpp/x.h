@@ -11,11 +11,11 @@ MERCHANTABILITY OR FIT FOR A PARTICULAR PURPOSE.
 See the Mulan PSL v2 for more details.
 
 
-Last update: 2025-07-03 14:37
-Version: v0.8.7
+Last update: 2025-07-07 15:57
+Version: v0.8.8
 ******************************************************************************/
 #ifndef X_H
-#define X_H x_version(0, 8, 7)
+#define X_H x_version(0, 8, 8)
 
 
 /** @internal
@@ -82,6 +82,13 @@ Version: v0.8.7
 ///         runtime API's prefix `cuda`.
 #ifndef X_ENABLE_CUDA
 #define X_ENABLE_CUDA (0)
+#endif
+
+/// @brief Toggle the availability of cuBLAS related functions.
+/// @remark The `_CUBLAS` suffix follows the naming convention of the cuBLAS
+///         API's prefix `cublas`.
+#ifndef X_ENABLE_CUBLAS
+#define X_ENABLE_CUBLAS (0)
 #endif
 
 #ifndef X_ENABLE_SOCKET
@@ -253,6 +260,10 @@ Version: v0.8.7
 
 #if X_ENABLE_CUDA
 #include <cuda_runtime.h>
+#endif
+
+#if X_ENABLE_CUBLAS
+#include <cublas_v2.h>
 #endif
 
 #if X_WINDOWS && X_MSVC
@@ -2072,6 +2083,11 @@ X_INL const char* x_error::msg()
     this->m_msg = cudaGetErrorString(static_cast<cudaError_t>(this->m_val));
   }
 #endif
+#if X_ENABLE_CUBLAS
+  else if (strcmp(this->m_cat, "cublas") == 0) {
+    this->m_msg = cublasGetStatusString(static_cast<cublasStatus_t>(this->m_val));
+  }
+#endif
   else {
     if (this->m_msg.empty()) {
       this->m_msg = std::string("Custom error ") + std::to_string(this->m_val);
@@ -2108,6 +2124,11 @@ X_INL x_error::operator bool() const
 #if X_ENABLE_CUDA
     else if (strcmp(this->m_cat, "cuda") == 0) {
       return static_cast<cudaError_t>(this->m_val) != cudaSuccess;
+    }
+#endif
+#if X_ENABLE_CUBLAS
+    else if (strcmp(this->m_cat, "cublas") == 0) {
+      return static_cast<cublasStatus_t>(this->m_val) != CUBLAS_STATUS_SUCCESS;
     }
 #endif
     else {
