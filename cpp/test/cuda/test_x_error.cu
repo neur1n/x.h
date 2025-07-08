@@ -43,7 +43,7 @@ int main(int argc, char** argv)
 
   ptr = nullptr;
 
-  auto faulty = [](double** ptr, size_t size) -> x_error {
+  auto faulty = [](double** ptr, size_t size, size_t dummy = 0) -> x_error {
     return x_error("cuda", cudaErrorMemoryAllocation);
   };
   x_check("cuda", err, faulty, &ptr, sizeof(double));
@@ -51,6 +51,16 @@ int main(int argc, char** argv)
     x_log('e', nullptr, "[CUDA] Faulty lambda error.");
   } else {
     x_log('i', nullptr, "[CUDA] Faulty lambda success.");
+  }
+
+  auto foo = []() -> x_error {
+    return x_error("cuda", cudaSuccess);
+  };
+  x_check("cuda", err, foo);
+  if (err) {
+    x_log('e', nullptr, "[CUDA] Foo lambda error.");
+  } else {
+    x_log('i', nullptr, "[CUDA] Foo lambda success.");
   }
 
   // cuBLAS API error

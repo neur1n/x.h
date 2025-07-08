@@ -11,11 +11,11 @@ MERCHANTABILITY OR FIT FOR A PARTICULAR PURPOSE.
 See the Mulan PSL v2 for more details.
 
 
-Last update: 2025-07-07 15:57
-Version: v0.8.8
+Last update: 2025-07-08 15:36
+Version: v0.8.9
 ******************************************************************************/
 #ifndef X_H
-#define X_H x_version(0, 8, 8)
+#define X_H x_version(0, 8, 9)
 
 
 /** @internal
@@ -695,7 +695,7 @@ private:
 /// @param function The function to call.
 /// @param ... The arguments of the function.
 #define x_check(category, error, function, ...) do {\
-  error = _x_check_impl(category, function, ##__VA_ARGS__); \
+  error = _x_check_impl(category, [&]() { return function(__VA_ARGS__); }); \
   if (error) { \
     _x_log_impl<'e'>(__FILENAME__, #function, static_cast<long long>(__LINE__), stderr, "%s", error.msg()); \
   } \
@@ -1927,18 +1927,18 @@ X_INL void _x_assert_msg(Args&&... args)
   }
 }
 
-template<typename Func, typename... Args>
-X_INL x_error _x_check_impl(const char* category, Func&& func, Args&&... args)
+template<typename Expr>
+X_INL x_error _x_check_impl(const char* category, Expr&& expression)
 {
+  using result_t = std::invoke_result_t<Expr>;
   static_assert(
-      std::is_same_v<std::invoke_result_t<Func, Args...>, x_error>
-      || std::is_convertible_v<std::invoke_result_t<Func, Args...>, int32_t>,
+      std::is_same_v<result_t, x_error> || std::is_convertible_v<result_t, int32_t>,
       "Return type of 'func' must be x_error or convertible to int32_t.");
 
-  if constexpr (std::is_same_v<std::invoke_result_t<Func, Args...>, x_error>) {
-    return func(std::forward<Args>(args)...);
+  if constexpr (std::is_same_v<result_t, x_error>) {
+    return expression();
   } else {
-    return x_error(category, static_cast<int32_t>(func(std::forward<Args>(args)...)));
+    return x_error(category, static_cast<int32_t>(expression()));
   }
 }
 
