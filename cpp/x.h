@@ -11,7 +11,7 @@ MERCHANTABILITY OR FIT FOR A PARTICULAR PURPOSE.
 See the Mulan PSL v2 for more details.
 
 
-Last update: 2025-07-08 15:36
+Last update: 2025-07-07 10:05
 Version: v0.8.9
 ******************************************************************************/
 #ifndef X_H
@@ -694,6 +694,12 @@ private:
 /// @param error The error object, should be an instance of @ref x_error.
 /// @param function The function to call.
 /// @param ... The arguments of the function.
+/// @note The function call is wrapped in a lambda to preserve support for
+///       default arguments. Passing the function and its arguments directly
+///       to _x_check_impl would fail to compile when default parameters
+///       are omitted, since default arguments are not applied during
+///       template argument deduction. Wrapping the call in a lambda ensures
+///       the defaults are correctly handled at the actual call site.
 #define x_check(category, error, function, ...) do {\
   error = _x_check_impl(category, [&]() { return function(__VA_ARGS__); }); \
   if (error) { \
