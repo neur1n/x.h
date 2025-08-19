@@ -11,11 +11,11 @@ MERCHANTABILITY OR FIT FOR A PARTICULAR PURPOSE.
 See the Mulan PSL v2 for more details.
 
 
-Last update: 2025-07-07 10:05
-Version: v0.8.9
+Last update: 2025-08-19 14:18
+Version: v0.8.10
 ******************************************************************************/
 #ifndef X_H
-#define X_H x_version(0, 8, 9)
+#define X_H x_version(0, 8, 10)
 
 
 /** @internal
@@ -1022,18 +1022,6 @@ X_INL const char* x_memtype(const char* type, const T ptr);
 #ifndef X_LOG_MSG_LIMIT
 #define X_LOG_MSG_LIMIT (256)
 #endif
-
-/// @brief A function providing similar functionality to `std::vformat`.
-/// @param buffer The buffer to store the formatted string.
-/// @param size The size of the buffer.
-/// @param format The format string.
-/// @param args The optional arguments.
-/// @return The formatted string, same as `buffer`. If `buffer` is `nullptr` or
-///         `size` is 0, `format` is returned.
-/// @note This function calls `std::vformat` if C++20 is available.
-template<typename... Args>
-X_INL const char* x_fmt(
-    char* buffer, const size_t size, const char* format, Args... args);
 
 /// @brief Log a message with a specified log level.
 /// @param level The log level, one of 'p', 'f', 'e', 'w', 'i', 'd'.
@@ -2760,62 +2748,6 @@ X_INL const char* x_memtype(const char* type, const T ptr)
 #define _X_LOG_COLOR_W _X_COLOR_YELLOW
 #define _X_LOG_COLOR_I _X_COLOR_GREEN
 #define _X_LOG_COLOR_D _X_COLOR_CYAN
-
-template<typename T>
-X_INL std::string _x_log_to_string(T src)
-{
-  if constexpr (std::is_same_v<T, std::string>) {
-    return src;
-  } else if constexpr (std::is_same_v<T, const char*> || std::is_same_v<T, char*>) {
-    return std::string(src);
-  } else if constexpr (std::is_pointer_v<T>) {
-    char buf[17]{0};
-    snprintf(buf, sizeof(buf), "%p", src);
-    return std::string(buf);
-  } else {
-    return std::to_string(src);
-  }
-}
-
-template<typename... Args>
-X_INL const char* x_fmt(
-    char* buffer, const size_t size, const char* format, Args... args)
-{
-  if (buffer == nullptr || size == 0) {
-    return format;
-  }
-
-  if constexpr (sizeof...(args) == 0) {
-    memcpy(buffer, format, size < strlen(format) ? size : strlen(format));
-  } else {
-#if (__cplusplus >= 202002L && (X_CLANG >= x_version(17, 0, 0) || X_GCC >= x_version(13, 0, 0) || X_MSVC >= x_version(19, 29, 0)))
-    std::string fmsg = std::vformat(format, std::make_format_args(args...));
-    memcpy(buffer, fmsg.c_str(), size < fmsg.size() ? size : fmsg.size());
-#else
-    std::string arg[]{_x_log_to_string(std::forward<Args>(args))...};
-    std::string fmt{format};
-    size_t index{0};
-    size_t offset{0};
-    size_t begin{0};
-    size_t end{0};
-
-    while ((end = fmt.find("{}", begin)) != std::string::npos && offset < size) {
-      memcpy(buffer + offset, format + begin, end - begin);
-      offset += end - begin;
-
-      memcpy(buffer + offset, arg[index].c_str(), arg[index].size());
-      offset += arg[index].size();
-
-      begin = end + 2;
-      index += 1;
-    }
-
-    memcpy(buffer + offset, format + begin, fmt.size() - begin);
-#endif
-  }
-
-  return buffer;
-}
 
 template<char level>
 X_INL void _x_log_prefix(

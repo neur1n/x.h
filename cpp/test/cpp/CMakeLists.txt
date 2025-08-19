@@ -20,7 +20,6 @@ SET(TEST_TARGETS
   test_x_error
   test_x_event
   test_x_gadget
-  test_x_logging
   test_x_memory
 )
 
