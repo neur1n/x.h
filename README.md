@@ -17,7 +17,7 @@
 </p>
 
 <p align="center">
-  Cross platform C/C++ utilities.
+  Cross-platform C/C++ utilities (<code>x</code> stands for cross).
 </p>
 
 
@@ -40,7 +40,7 @@ Use the C++ implementation if you can, use the C implementation when you have to
 
 ## Documentation
 See:
-- C implementation: [README.md](c/README.md) (WIP)
+- C implementation: [doxygen-style documentation](c/x.h)
 - C++ implementation: [doxygen-style documentation](cpp/x.h)
 
 

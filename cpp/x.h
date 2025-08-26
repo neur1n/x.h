@@ -11,11 +11,11 @@ MERCHANTABILITY OR FIT FOR A PARTICULAR PURPOSE.
 See the Mulan PSL v2 for more details.
 
 
-Last update: 2025-08-19 14:18
-Version: v0.8.10
+Last update: 2025-08-19 21:00
+Version: v0.8.11
 ******************************************************************************/
 #ifndef X_H
-#define X_H x_version(0, 8, 10)
+#define X_H x_version(0, 8, 11)
 
 
 /** @internal
@@ -245,9 +245,6 @@ Version: v0.8.10
 #include <cstring>
 #include <ctime>
 
-#if (__cplusplus >= 202002L && (X_CLANG >= x_version(17, 0, 0) || X_GCC >= x_version(13, 0, 0) || X_MSVC >= x_version(19, 29, 0)))
-#include <format>
-#endif
 #include <stdexcept>
 #include <string>
 
@@ -343,9 +340,6 @@ Version: v0.8.10
 #endif
 
 #define X_INL inline
-
-template<typename T>
-X_INL constexpr bool x_false = false;
 /** @} */  // Miscellaneous
 
 class x_error;
@@ -513,7 +507,7 @@ private:
 #else
   int m_hndl{-1};
 #endif
-  struct sockaddr m_addr{0};
+  struct sockaddr m_addr{};
   int m_domain{AF_UNSPEC};
 };
 #endif  // X_ENABLE_SOCKET
@@ -664,7 +658,7 @@ private:
 #if X_ENABLE_CUDA
     cudaEvent_t cuda;
 #endif
-  } m_start{0}, m_stop{0};
+  } m_start{}, m_stop{};
 
   int32_t m_type{0};  // For faster branching.
 };
@@ -1130,7 +1124,7 @@ X_INL x_socket::x_socket(const int domain, const int type, const int protocol)
   :m_domain{domain}
 {
 #if X_WINDOWS
-  WSADATA data{0};
+  WSADATA data{};
   if (WSAStartup(MAKEWORD(2, 2), &data) != 0) {
     throw std::runtime_error(
         std::string("WSAStartup: ") + x_error("socket").msg());
@@ -1170,7 +1164,7 @@ X_INL x_error x_socket::accept(x_socket* client)
     return x_error("posix", EINVAL);
   }
 
-  struct sockaddr addr{0};
+  struct sockaddr addr{};
   socklen_t len{0};
 
 #if X_WINDOWS
@@ -1223,7 +1217,7 @@ X_INL x_error x_socket::close()
 
 X_INL x_error x_socket::connect(const char* ip, const uint16_t port)
 {
-  struct sockaddr_in sin{0};
+  struct sockaddr_in sin{};
   sin.sin_family = this->m_domain;
   sin.sin_port = htons(port);
   int ierr{inet_pton(this->m_domain, ip, &sin.sin_addr)};
@@ -1252,7 +1246,7 @@ X_INL x_error x_socket::getopt(
 
 X_INL x_error x_socket::listen(const char* ip, const uint16_t port)
 {
-  struct sockaddr_in sin{0};
+  struct sockaddr_in sin{};
   sin.sin_family = this->m_domain;
   sin.sin_port = htons(port);
 
@@ -1424,7 +1418,7 @@ X_INL int _kbhit()
 {
   static bool initialized{false};
   if (!initialized) {
-    struct termios settings{0};
+    struct termios settings{};
     tcgetattr(STDIN_FILENO, &settings);
     settings.c_lflag &= ~ICANON;
     tcsetattr(STDIN_FILENO, TCSANOW, &settings);
@@ -1451,8 +1445,8 @@ X_INL int x_getch()
     return 0;
   }
 
-  struct termios old_settings{0};
-  struct termios new_settings{0};
+  struct termios old_settings{};
+  struct termios new_settings{};
   union {
     int in;
     char ch[4];
@@ -1519,8 +1513,8 @@ X_INL void x_sleep(const unsigned long ms)
 #if X_WINDOWS
   Sleep(ms);
 #else
-  struct timespec req{0};
-  struct timespec rem{0};
+  struct timespec req{};
+  struct timespec rem{};
 
   req.tv_sec = ms / 1000;
   req.tv_nsec = static_cast<long>((ms % 1000) * 1000000);
@@ -1610,7 +1604,7 @@ X_INL double _x_duration_cpu(
 
 X_INL struct timespec _x_now_cpu()
 {
-  struct timespec ts{0};
+  struct timespec ts{};
 
 #if X_WINDOWS || __STDC_VERSION__ >= 201112L
   timespec_get(&ts, TIME_UTC);
@@ -1665,7 +1659,7 @@ X_INL double _x_duration_cu(const CUevent start, const CUevent stop)
 
 X_INL CUevent _x_now_cu(const unsigned int flags)
 {
-  CUevent evt{0};
+  CUevent evt{nullptr};
   const char* msg{nullptr};
 
   CUresult cres = cuEventCreate(&evt, flags);
@@ -1722,7 +1716,7 @@ X_INL double _x_duration_cuda(const cudaEvent_t start, const cudaEvent_t stop)
 
 X_INL cudaEvent_t _x_now_cuda(const unsigned int flags)
 {
-  cudaEvent_t evt{0};
+  cudaEvent_t evt{nullptr};
 
   cudaError_t cerr = cudaEventCreateWithFlags(&evt, flags);
   if (cerr != cudaSuccess) {
@@ -2140,10 +2134,10 @@ X_INL bool x_fexist(const char* file)
   int ierr{0};
 
 #if X_WINDOWS
-  struct _stat64 s{0};
+  struct _stat64 s{};
   ierr = _stat64(file, &s);
 #else
-  struct stat s{0};
+  struct stat s{};
   ierr = stat(file, &s);
 #endif
 
@@ -2181,10 +2175,10 @@ X_INL int64_t x_fsize(const char* file)
   int ierr{0};
 
 #if X_WINDOWS
-  struct _stat64 s{0};
+  struct _stat64 s{};
   ierr = _stat64(file, &s);
 #else
-  struct stat s{0};
+  struct stat s{};
   ierr = stat(file, &s);
 #endif
 
@@ -2196,7 +2190,7 @@ X_INL x_error x_split_path(
     char *root, const size_t rsz, char *dir, const size_t dsz,
     char *file, const size_t fsz, char *ext, const size_t esz)
 {
-  char full[X_PATH_MAX]{0};
+  char full[X_PATH_MAX]{};
   x_fpath(full, path);
 
   if (!x_fexist(full)) {
@@ -2321,7 +2315,7 @@ X_INL x_error x_split_path(
 X_INL size_t x_ncpu()
 {
 #if X_WINDOWS
-  SYSTEM_INFO info{{0}};
+  SYSTEM_INFO info{{}};
   GetSystemInfo(&info);
   return static_cast<size_t>(info.dwNumberOfProcessors);
 #else
@@ -2581,7 +2575,7 @@ X_INL x_error _x_meminfo_cpu(size_t* avail, size_t* total)
   }
 
 #if X_WINDOWS
-  MEMORYSTATUSEX status{0};
+  MEMORYSTATUSEX status{};
   status.dwLength = sizeof(status);
 
   if (!GlobalMemoryStatusEx(&status)) {
@@ -2595,7 +2589,7 @@ X_INL x_error _x_meminfo_cpu(size_t* avail, size_t* total)
     *total = static_cast<size_t>(status.ullTotalPhys);
   }
 #else
-  struct sysinfo info{0};
+  struct sysinfo info{};
   if (sysinfo(&info) != 0) {
     return x_error("posix");
   }
@@ -2754,7 +2748,7 @@ X_INL void _x_log_prefix(
     char* buf, const size_t bsz,
     const char* filename, const char* function, const long long line)
 {
-  char timestamp[26]{0};
+  char timestamp[26]{};
 
 #ifdef NDEBUG
   snprintf(buf, bsz, "[%c %s] ", toupper(level), x_timestamp(timestamp, 26));
@@ -2770,8 +2764,8 @@ X_INL void _x_log_impl(
     const char* filename, const char* function, const long long line,
     FILE* stream, const char* format, Args&&... args)
 {
-  char color_level[8]{0};
-  char color_reset[8]{0};
+  char color_level[8]{};
+  char color_reset[8]{};
 
   if constexpr (level == 'p' || level == 'P') {
 #if X_LOG_LEVEL >= X_LOG_PLAIN
@@ -2815,13 +2809,13 @@ X_INL void _x_log_impl(
 
   snprintf(color_reset, 8, _X_COLOR_RESET);
 
-  char prefix[X_LOG_PREFIX_LIMIT]{0};
+  char prefix[X_LOG_PREFIX_LIMIT]{};
   _x_log_prefix<level>(prefix, X_LOG_PREFIX_LIMIT, filename, function, line);
 
   const char* msg{format};
 
   if constexpr (sizeof...(args) > 0) {
-    char buf[X_LOG_MSG_LIMIT]{0};
+    char buf[X_LOG_MSG_LIMIT]{};
     snprintf(buf, X_LOG_MSG_LIMIT, format, std::forward<Args>(args)...);
     msg = buf;
   }

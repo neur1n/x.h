@@ -1,19 +1,21 @@
 CMAKE_MINIMUM_REQUIRED(VERSION 3.18 FATAL_ERROR)
 PROJECT(x_test LANGUAGES C)
 
-INCLUDE_DIRECTORIES(
-  ../..
-)
+IF(MSVC)
+  # NOTE: `/Zc:preprocessor` is required to make x_narg work with MSVC.
+  SET(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} /W3 /WX /Zc:preprocessor /Zc:__STDC__")
+ELSE()
+  SET(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wall -Werror -Wextra")
+ENDIF()
 
 SET(CMAKE_C_STANDARD 11)
 SET(CMAKE_C_STANDARD_REQUIRED ON)
 
-# NOTE: This is required to make x_narg work with MSVC.
-IF(MSVC)
-  SET(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} /Zc:preprocessor")
-ENDIF()
-
 ADD_COMPILE_DEFINITIONS(X_ENABLE_SOCKET=1)
+
+INCLUDE_DIRECTORIES(
+  ../..
+)
 
 SET(TEST_TARGETS
   test_x_error

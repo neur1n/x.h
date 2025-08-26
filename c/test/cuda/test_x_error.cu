@@ -35,14 +35,14 @@ int main(int argc, char** argv)
   x_error_msg(msg, msz, err);
   x_log('e', NULL, "%s", msg);
 
-  x_check("cuda", cudaMalloc<double>, &ptr, sizeof(double));
-  x_check("cuda", cudaFree, ptr);
+  x_check("cuda", err, cudaMalloc<double>, &ptr, sizeof(double));
+  x_check("cuda", err, cudaFree, ptr);
   ptr = NULL;
 
   auto faulty = [](double** ptr, size_t size) -> int {
     return cudaErrorMemoryAllocation;
   };
-  x_check("cuda", faulty, &ptr, sizeof(double));
+  x_check("cuda", err, faulty, &ptr, sizeof(double));
 
   return 0;
 }

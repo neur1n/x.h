@@ -1,5 +1,5 @@
 /******************************************************************************
-Copyright (c) 2022 Jihang Li
+Copyright (c) 2023 Jihang Li
 x.h is licensed under Mulan PSL v2.
 You can use this software according to the terms and conditions of the Mulan
 PSL v2.
@@ -11,11 +11,11 @@ MERCHANTABILITY OR FIT FOR A PARTICULAR PURPOSE.
 See the Mulan PSL v2 for more details.
 
 
-Last update: 2025-02-25 20:36
-Version: v0.8.3
+Last update: 2025-08-26 21:00
+Version: v0.8.11
 ******************************************************************************/
 #ifndef X_H
-#define X_H x_version(0, 8, 3)
+#define X_H x_version(0, 8, 11)
 
 
 /** @internal
@@ -82,6 +82,13 @@ Version: v0.8.3
 ///         runtime API's prefix `cuda`.
 #ifndef X_ENABLE_CUDA
 #define X_ENABLE_CUDA (0)
+#endif
+
+/// @brief Toggle the availability of cuBLAS related functions.
+/// @remark The `_CUBLAS` suffix follows the naming convention of the cuBLAS
+///         API's prefix `cublas`.
+#ifndef X_ENABLE_CUBLAS
+#define X_ENABLE_CUBLAS (0)
 #endif
 
 #ifndef X_ENABLE_SOCKET
@@ -251,6 +258,10 @@ Version: v0.8.3
 #include <cuda_runtime.h>
 #endif
 
+#if X_ENABLE_CUBLAS
+#include <cublas_v2.h>
+#endif
+
 #if X_WINDOWS && X_MSVC
 #if X_ENABLE_SOCKET
 #pragma comment(lib, "Ws2_32")
@@ -333,7 +344,7 @@ Version: v0.8.3
 #define X_INL static inline
 #endif
 
-#define _x_arg_n( \
+#define _x_argc_select( \
       _1,   _2,   _3,   _4,   _5,   _6,   _7,   _8, \
       _9,  _10,  _11,  _12,  _13,  _14,  _15,  _16, \
      _17,  _18,  _19,  _20,  _21,  _22,  _23,  _24, \
@@ -350,8 +361,7 @@ Version: v0.8.3
     _105, _106, _107, _108, _109, _110, _111, _112, \
     _113, _114, _115, _116, _117, _118, _119, _120, \
     _121, _122, _123, _124, _125, _126, _127,    N, ...) N
-
-#define _x_seq_n() \
+#define _x_argc_sequence() \
   127, 126, 125, 124, 123, 122, 121, 120, \
   119, 118, 117, 116, 115, 114, 113, 112, \
   111, 110, 109, 108, 107, 106, 105, 104, \
@@ -368,10 +378,8 @@ Version: v0.8.3
    23,  22,  21,  20,  19,  18,  17,  16, \
    15,  14,  13,  12,  11,  10,   9,   8, \
     7,   6,   5,   4,   3,   2,   1,   0
-
-#define _x_narg(...) _x_arg_n(__VA_ARGS__)
-
-#define x_narg(...) _x_narg(__VA_ARGS__, _x_seq_n())
+#define _x_argc_count(...) _x_argc_select(__VA_ARGS__)
+#define x_argc(...) _x_argc_count(__VA_ARGS__, _x_argc_sequence())
 /** @} */  // Miscellaneous
 
 #ifdef __cplusplus
@@ -389,7 +397,7 @@ X_INL x_error _x_error_cat(const char* cat);
 X_INL x_error _x_error_cat_val(const char* cat, ... /*const int32_t val*/);
 
 #define x_error_set(cat,  ...) \
-  x_narg(cat, ##__VA_ARGS__) == 1 ? _x_error_cat(cat) \
+  x_argc(cat, ##__VA_ARGS__) == 1 ? _x_error_cat(cat) \
   : _x_error_cat_val(cat, ##__VA_ARGS__)
 // Forward Declarations}}}
 
@@ -450,7 +458,7 @@ typedef struct _x_heaher_
 } x_heaher;
 
 /// @brief The default initializer for @ref x_heaher.
-#define X_HDR_INIT {X_PACKET_SOF, 0, 0, X_PACKET_INF, 0, 0, 0}
+#define X_HEADER_INIT {X_PACKET_SOF, 0, 0, X_PACKET_INF, 0, 0, 0}
 
 /// @struct x_packet
 /// @brief A message packet.
@@ -465,7 +473,7 @@ typedef struct _x_packet_
 } x_packet;
 
 /// @brief The default initializer for @ref x_packet.
-#define X_PACKET_INIT {X_HDR_INIT, NULL}
+#define X_PACKET_INIT {X_HEADER_INIT, NULL}
 
 /// @struct x_iovec
 /// @brief An I/O vector.
@@ -763,18 +771,18 @@ X_INL void x_event_term(x_event* self);
 } while (false)
 
 /// @brief Wrapping the error handling of a function call.
-/// @param cat The error category, should be supported by @ref x_error.
-/// @param func The function to call.
+/// @param category The error category, should be supported by @ref x_error.
+/// @param error The error object, should be an instance of @ref x_error.
+/// @param function The function to call.
 /// @param ... The arguments of the function.
-/// @return An instance of @ref x_error.
 /// @attention Unlike the C++ version, this macro only works with functions
 ///            that return an integer value.
-#define x_check(cat, func, ...) do { \
-  x_error err = x_error_set(cat, (int32_t)(func(__VA_ARGS__))); \
-  if (x_fail(err)) { \
+#define x_check(category, error, function, ...) do { \
+  error = x_error_set(category, (int32_t)(function(__VA_ARGS__))); \
+  if (x_fail(error)) { \
     char msg[64] = {0}; \
-    x_error_msg(msg, sizeof(msg), err); \
-    _x_log_impl(__FILENAME__, #func, (long long)__LINE__, 'e', stderr, "%s", msg); \
+    x_error_msg(msg, sizeof(msg), error); \
+    _x_log_impl(__FILENAME__, #function, (long long)__LINE__, 'e', stderr, "%s", msg); \
   } \
 } while (false)
 
@@ -806,7 +814,7 @@ X_INL const char* x_error_msg(char* msg, const size_t msz, const x_error err);
 ///       API hopefully suits the most common use cases. Error messages and
 ///       the custom predicate should be handled separately.
 // #define x_error_set(cat,  ...) \
-//   x_narg(cat, ##__VA_ARGS__) == 1 ? _x_error_cat(cat) \
+//   x_argc(cat, ##__VA_ARGS__) == 1 ? _x_error_cat(cat) \
 //   : _x_error_cat_val(cat, ##__VA_ARGS__)
 /** @} */  // Error Handling
 
@@ -959,20 +967,24 @@ X_INL uint64_t x_prev_mul(const uint64_t base, const uint64_t src);
 /// @brief Get number of items in an array.
 /// @param array The array.
 /// @attention This function only works with static arrays.
-#if (!X_ENABLE_CU || !X_ENABLE_CUDA) && defined(__cplusplus)
+#ifdef __cplusplus
+}  // NOTE: Close the `extern "C"` block to use C++ features.
 template<typename T, size_t N>
 X_INL constexpr size_t x_count(const T (&array)[N]);
+extern "C" {
 #else
 #define x_count(a) ((sizeof(a) / sizeof(*(a))) / (size_t)(!(sizeof(a) % sizeof(*(a)))))
 #endif
 
-#if (!X_ENABLE_CU || !X_ENABLE_CUDA) && defined(__cplusplus)
+#ifdef __cplusplus
 /// @brief Delete a pointer, allocated by `new` or `new[]`, and set it to
 ///        `nullptr`.
 /// @tparam array Whether the pointer is allocated by `new[]`.
 /// @param ptr The pointer to delete.
+}  // NOTE: Close the `extern "C"` block to use C++ features.
 template<bool array, typename T>
 X_INL void x_delete(T*& ptr);
+extern "C" {
 #endif
 
 /// @brief Free a memory block allocated on the heap and set it to `NULL`.
@@ -1881,7 +1893,7 @@ X_INL void _x_event_toc_stats(
 
   // NOTE: Reset the stats before the first cycle.
   if (stats->cyc == 0) {
-    x_event_stats_init(stats);
+    _x_event_stats_reset(stats);
   }
 
   _x_event_toc(self, stream, flags);
@@ -1986,6 +1998,11 @@ X_INL bool x_fail(const x_error err)
       return (cudaError_t)err.val != cudaSuccess;
     }
 #endif
+#if X_ENABLE_CUBLAS
+    else if (strcmp(err.cat, "cublas") == 0) {
+      return (cublasStatus_t)err.val != CUBLAS_STATUS_SUCCESS;
+    }
+#endif
     else {
       // NOTE: Covers the "posix" case.
       return err.val != 0;
@@ -2072,6 +2089,12 @@ X_INL const char* x_error_msg(char* msg, const size_t msz, const x_error err)
 #if X_ENABLE_CUDA
   else if (strcmp(err.cat, "cuda") == 0) {
     const char* buf = cudaGetErrorString((cudaError_t)err.val);
+    x_strcpy(msg, msz, buf);
+  }
+#endif
+#if X_ENABLE_CUBLAS
+  else if (strcmp(err.cat, "cublas") == 0) {
+    const char* buf = cublasGetStatusString((cublasStatus_t)err.val);
     x_strcpy(msg, msz, buf);
   }
 #endif
@@ -2362,7 +2385,7 @@ X_INL uint64_t x_next_exp(const uint64_t base, const uint64_t src)
       count += 1;
     }
 
-    return 1 << count;
+    return (uint64_t)1 << count;
   } else {
     double exp = log((double)src) / log((double)base);
 
@@ -2370,7 +2393,7 @@ X_INL uint64_t x_next_exp(const uint64_t base, const uint64_t src)
       return src;
     }
 
-    return (uint64_t)pow(base, ceil(exp));
+    return (uint64_t)pow((double)base, ceil(exp));
   }
 }
 
@@ -2397,7 +2420,7 @@ X_INL uint64_t x_prev_exp(const uint64_t base, const uint64_t src)
       count += 1;
     }
 
-    return 1 << (count - 1);
+    return (uint64_t)1 << (count - 1);
   } else {
     double exp = log((double)src) / log((double)base);
 
@@ -2405,7 +2428,7 @@ X_INL uint64_t x_prev_exp(const uint64_t base, const uint64_t src)
       return src;
     }
 
-    return pow(base, floor(exp));
+    return (uint64_t)pow((double)base, floor(exp));
   }
 }
 
@@ -2416,7 +2439,7 @@ X_INL uint64_t x_prev_mul(const uint64_t base, const uint64_t src)
 // IMPL_Mathematics}}}
 
 //*************************************************** IMPL_Memory_Management{{{
-#if (!X_ENABLE_CU || !X_ENABLE_CUDA) && defined(__cplusplus)
+#ifdef __cplusplus
 template<typename T, size_t N>
 X_INL constexpr size_t x_count(const T (&array)[N])
 {
@@ -2424,7 +2447,7 @@ X_INL constexpr size_t x_count(const T (&array)[N])
 }
 #endif
 
-#if (!X_ENABLE_CU || !X_ENABLE_CUDA) && defined(__cplusplus)
+#ifdef __cplusplus
 template<bool array, typename T>
 X_INL void x_delete(T*& ptr)
 {
@@ -2735,13 +2758,13 @@ X_INL void _x_log_impl(
 // IMPL_Standard_IO}}}
 
 //************************************************************** IMPL_String{{{
-X_INL x_error x_strcpy(char* dst, const size_t dsz, const char* src)
+X_INL x_error x_strcpy(char* dst, const size_t size, const char* src)
 {
-  if (dst == NULL || dsz == 0) {
+  if (dst == NULL || size == 0) {
     return x_error_set("posix", EINVAL);
   }
 
-  size_t cpy_sz = dsz - 1;
+  size_t cpy_sz = size - 1;
   size_t src_sz = strlen(src);
 
   if (src_sz > 0) {
