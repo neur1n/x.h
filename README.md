@@ -39,7 +39,26 @@ This project contains several versions of implementations:
 Use the C++ implementation if you can, use the C implementation when you have to.
 
 ## Documentation
-See:
+Feature list:
+- **Feature Configuration**: Macros for toggling features.
+- **Architecture Detection**: Macros for detecting CPU architecture, e.g., x86, ARM.
+- **Compiler Detection**: Macros for identifying the compiler, e.g., Clang, GCC, MSVC.
+- **Operating System Detection**: Macros for identifying the operating system, e.g., Linux, macOS, Windows.
+- **Platform Detection**: Macros for identifying the platform, e.g., Android, MinGW.
+- **Symbol Visibility**: Macros for controlling symbol visibility in shared libraries.
+- **Miscellaneous**: Miscellaneous utility macros.
+- **Communication**: Utilities such as sockets.
+- **Console IO**: Utilities such as console interaction (e.g., get a key press).
+- **Date and Time**: Utilities such as current date and time, sleep for milliseconds.
+- ✨**Error Handling**: Utilities such as unified error systems (including POSIX, Win32, CUDA and more) and handy error handling macros.
+- **File System**: Utilities such as checking file existence, separating file paths.
+- **Hardware**: Utilities such as CPU core count.
+- **Mathematics**: Utilities such as binary size generators (e.g., KB, MB, GB), greatest common divisor (GCD), least common multiple (LCM).
+- **Memory Management**: Utilities such as used and available memory, checking memory type (e.g., host/CPU or device/GPU).
+- ✨**Standard IO**: Utilities such as levelled and colored logging.
+- **String**: Utilities such as safe string copy.
+
+Read more by searching the feature name in the documentation:
 - C implementation: [doxygen-style documentation](c/x.h)
 - C++ implementation: [doxygen-style documentation](cpp/x.h)
 
