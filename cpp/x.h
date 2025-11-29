@@ -11,11 +11,11 @@ MERCHANTABILITY OR FIT FOR A PARTICULAR PURPOSE.
 See the Mulan PSL v2 for more details.
 
 
-Last update: 2025-08-19 21:00
-Version: v0.8.11
+Last update: 2025-11-29 16:00
+Version: v0.8.12
 ******************************************************************************/
 #ifndef X_H
-#define X_H x_version(0, 8, 11)
+#define X_H x_version(0, 8, 12)
 
 
 /** @internal
@@ -1770,8 +1770,8 @@ X_INL x_event::~x_event()
       break;
 #if X_ENABLE_CU
     case 1:
-      cuEventDestroy(this->m_start.cu);
-      cuEventDestroy(this->m_stop.cu);
+      cuEventDestroy_v2(this->m_start.cu);
+      cuEventDestroy_v2(this->m_stop.cu);
       break;
 #endif
 #if X_ENABLE_CUDA
@@ -2612,7 +2612,7 @@ X_INL x_error _x_meminfo_cu(size_t* avail, size_t* total)
     return x_error("posix", EINVAL);
   }
 
-  CUresult cres = cuMemGetInfo(avail, total);
+  CUresult cres = cuMemGetInfo_v2(avail, total);
   if (cres != CUDA_SUCCESS) {
     return x_error("cu", cres);
   }
@@ -2655,11 +2655,11 @@ X_INL x_error x_meminfo(const char* type, size_t* avail, size_t* total)
 }
 
 #if X_ENABLE_CU
-X_INL const char* _x_memtype_cu(const CUdeviceptr ptr)
+X_INL const char* _x_memtype_cu(const CUdeviceptr_v2 ptr)
 {
   static const char* type[] = {"Unknown", "Host", "Device", "Array", "Unified"};
 
-  CUmemorytype attr;
+  CUmemorytype attr{};
   CUresult cres = cuPointerGetAttribute(&attr, CU_POINTER_ATTRIBUTE_MEMORY_TYPE, ptr);
   if (cres != CUDA_SUCCESS) {
     const char* msg{nullptr};
@@ -2685,7 +2685,7 @@ X_INL const char* _x_memtype_cuda(const void* ptr)
 {
   static const char* type[] = {"Unregistered", "Host", "Device", "Managed"};
 
-  cudaPointerAttributes attr;
+  cudaPointerAttributes attr{};
   cudaError_t cerr = cudaPointerGetAttributes(&attr, ptr);
   if (cerr != cudaSuccess) {
     fprintf(stderr, "cudaPointerGetAttributes: %s\n", cudaGetErrorString(cerr));
@@ -2704,7 +2704,7 @@ template<typename T>
 X_INL const char* x_memtype(const char* type, const T ptr)
 {
 #if X_ENABLE_CU
-  if constexpr (std::is_same_v<T, CUdeviceptr>) {
+  if constexpr (std::is_same_v<T, CUdeviceptr_v2>) {
     if (strcmp(type, "cu") == 0) {
       return _x_memtype_cu(ptr);
     }

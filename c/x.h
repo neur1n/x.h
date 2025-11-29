@@ -11,11 +11,11 @@ MERCHANTABILITY OR FIT FOR A PARTICULAR PURPOSE.
 See the Mulan PSL v2 for more details.
 
 
-Last update: 2025-08-26 21:00
-Version: v0.8.11
+Last update: 2025-11-29 16:00
+Version: v0.8.12
 ******************************************************************************/
 #ifndef X_H
-#define X_H x_version(0, 8, 11)
+#define X_H x_version(0, 8, 12)
 
 
 /** @internal
@@ -1956,8 +1956,8 @@ X_INL void x_event_term(x_event* self)
       break;
 #if X_ENABLE_CU
     case 1:
-      cuEventDestroy(self->m_start.cu);
-      cuEventDestroy(self->m_stop.cu);
+      cuEventDestroy_v2(self->m_start.cu);
+      cuEventDestroy_v2(self->m_stop.cu);
       break;
 #endif
 #if X_ENABLE_CUDA
@@ -2533,7 +2533,7 @@ X_INL x_error _x_meminfo_cu(size_t* avail, size_t* total)
     return x_error_set("posix", EINVAL);
   }
 
-  CUresult cres = cuMemGetInfo(avail, total);
+  CUresult cres = cuMemGetInfo_v2(avail, total);
   if (cres != CUDA_SUCCESS) {
     return x_error_set("cu", cres);
   }
@@ -2576,7 +2576,7 @@ X_INL x_error x_meminfo(const char* type, size_t* avail, size_t* total)
 }
 
 #if X_ENABLE_CU
-X_INL const char* _x_memtype_cu(const CUdeviceptr ptr)
+X_INL const char* _x_memtype_cu(const CUdeviceptr_v2 ptr)
 {
   static const char* type[] = {"Unknown", "Host", "Device", "Array", "Unified"};
 
@@ -2627,7 +2627,7 @@ X_INL const char* x_memtype(const char* type, ... /*const T* ptr*/)
   if (strcmp(type, "cu") == 0) {
     va_list args;
     va_start(args, type);
-    CUdeviceptr ptr = va_arg(args, CUdeviceptr);
+    CUdeviceptr ptr = va_arg(args, CUdeviceptr_v2);
     va_end(args);
     return _x_memtype_cu(ptr);
   }

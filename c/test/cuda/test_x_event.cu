@@ -11,7 +11,7 @@ int main(int argc, char** argv)
   cuInit(0);
 
   CUdevice device = 0;
-  cudaGetDevice(&device);
+  cuDeviceGet(&device, 0);
 
   CUcontext context{nullptr};
   cuCtxCreate(&context, 0, device);
