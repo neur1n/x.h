@@ -21,12 +21,17 @@
 </p>
 
 
+> [!NOTE]
+> Your voice matters!
+> - <a href="https://github.com/neur1n/x.h/discussions/2" target="_blank">Do you want separate headers?</a>
+
+
 <details open=true>
   <summary>Table of Contents</summary>
   <ul>
     <li><a href="#getting-started">Getting Started</a></li>
     <li><a href="#documentation">Documentation</a></li>
-    <li><a href="#license">LICENSE</a></li>
+    <li><a href="#license">License</a></li>
   </ul>
 </details>
 
