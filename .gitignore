@@ -1,9 +1,20 @@
+# Build artifacts
+build/
+compile_commands.json
+
+# Local tooling
 .cache/
+.clangd
 .clangd/
 .idea/
 .vs/
 
-build/
+# OS metadata
+.DS_Store
+Desktop.ini
+Thumbs.db
 
-.clangd
-compile_commands.json
+# Python bytecode
+*.pyc
+*.pyo
+__pycache__/

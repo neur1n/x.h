@@ -11,48 +11,60 @@ MERCHANTABILITY OR FIT FOR A PARTICULAR PURPOSE.
 See the Mulan PSL v2 for more details.
 
 
-Last update: 2025-11-29 16:00
-Version: v0.8.12
+Last update: 2026-10-12 00:39
+Version: v0.9.0
 ******************************************************************************/
+/** @file
+ * @brief Cross-platform C++ utilities.
+ * @note On Linux, include this header before any system header so its default
+ *       `_GNU_SOURCE` and `_FILE_OFFSET_BITS=64` definitions take effect.
+ *       Alternatively, define these macros in the build configuration before
+ *       any headers, including precompiled or forced includes.
+ * @note On Cygwin and Linux, keep `_FILE_OFFSET_BITS` consistent across
+ *       translation units that share file-system interfaces, and configure it
+ *       before including system headers.
+ */
 #ifndef X_H
-#define X_H x_version(0, 8, 12)
+#define X_H x_version(0, 9, 0)
 
+/// @brief Version and included modules; Core includes Error Handling.
+#define X_H_VERBOSE "0.9.0+core.log.checksum.time.fs.hw.math.mem.str.cuda"
 
 /** @internal
  * Table of Contents
  *
- * Feature Configuration
- * Architecture Detection
- * Compiler Detection
- * Operating System Detection
- * Platform Detection
+ * Feature_Configuration
+ * Architecture_Detection
+ * Compiler_Detection
+ * Operating_System_Detection
+ * Platform_Detection
  *
  * Headers
  *
- * Symbol Visibility
+ * Symbol_Visibility
  * Miscellaneous
  *
- * Communication
- * Console IO
- * Date and Time
- * Error Handling
- * File System
- * Hardware
- * Mathematics
- * Memory Management
- * Standard IO
- * String
+ * DECL_Error_Handling
+ * DECL_Logging
+ * DECL_Checksums
+ * DECL_Date_and_Time
+ * DECL_File_System
+ * DECL_Hardware
+ * DECL_Mathematics
+ * DECL_Memory
+ * DECL_String
+ * DECL_CUDA
  *
- * IMPL_Communication
- * IMPL_Console_IO
- * IMPL_Date_and_Time
  * IMPL_Error_Handling
+ * IMPL_Logging
+ * IMPL_Checksums
+ * IMPL_Date_and_Time
  * IMPL_File_System
  * IMPL_Hardware
  * IMPL_Mathematics
- * IMPL_Memory_Management
- * IMPL_Standard_IO
+ * IMPL_Memory
  * IMPL_String
+ * IMPL_CUDA
  * @endinternal
  */
 
@@ -62,85 +74,81 @@ Version: v0.8.12
 /// @param patch The patch version number, ranges in [0, 99999].
 /// @return The version number.
 /// @remark A big range of patch allow the result version number specifically
-///         work with [\_MSC\_FULL\_VER](https://learn.microsoft.com/en-us/cpp/preprocessor/predefined-macros?view=msvc-170).
+///         work with [`_MSC_FULL_VER`](https://learn.microsoft.com/en-us/cpp/preprocessor/predefined-macros?view=msvc-170).
 #define x_version(major, minor, patch) \
   (((major) % 100) * 10000000 + ((minor) % 100) * 100000 + ((patch) % 100000))
 
 /******************************************************************************
- * @name Feature Configuration
- * @{
+ * @name Feature_Configuration{{{
  *****************************************************************************/
 /// @brief Toggle the availability of CUDA driver API related functions.
-/// @remark The `_CU` suffix follows the naming convention of the CUDA driver
-///         API's prefix `cu`.
-#ifndef X_ENABLE_CU
-#define X_ENABLE_CU (0)
+#ifndef X_ENABLE_CUDA_DRIVER
+#define X_ENABLE_CUDA_DRIVER (0)
 #endif
 
 /// @brief Toggle the availability of CUDA runtime API related functions.
-/// @remark The `_CUDA` suffix follows the naming convention of the CUDA
-///         runtime API's prefix `cuda`.
-#ifndef X_ENABLE_CUDA
-#define X_ENABLE_CUDA (0)
+#ifndef X_ENABLE_CUDA_RUNTIME
+#define X_ENABLE_CUDA_RUNTIME (0)
 #endif
 
 /// @brief Toggle the availability of cuBLAS related functions.
-/// @remark The `_CUBLAS` suffix follows the naming convention of the cuBLAS
-///         API's prefix `cublas`.
 #ifndef X_ENABLE_CUBLAS
 #define X_ENABLE_CUBLAS (0)
 #endif
 
+/// @brief Toggle the built-in `"socket"` error domain.
+/// @note Captures `WSAGetLastError()` on Windows and `errno` on POSIX. This
+///       does not provide socket operations. Windows requires the Winsock
+///       library.
 #ifndef X_ENABLE_SOCKET
 #define X_ENABLE_SOCKET (0)
 #endif
-/** @} */  // Feature Configuration
+// Feature_Configuration}}}
 
 /******************************************************************************
- * @name Architecture Detection
- * @{
+ * @name Architecture_Detection{{{
  *****************************************************************************/
-#if INTPTR_MAX == INT64_MAX
-#define X_32BIT (0)
-#define X_64BIT (1)
-#elif INTPTR_MAX == INT32_MAX
-#define X_32BIT (1)
-#define X_64BIT (0)
-#else
-#error "Only 32-bit or 64-bit architecture is supported."
-#endif
-
-#if defined(__arm__) || defined(__thumb__) || defined(_M_ARM)
-#define X_ARM (1)
-#else
-#define X_ARM (0)
-#endif
-
-#if defined(__aarch64__)
+#if defined(_M_ARM64) || defined(__AARCH64EL__) \
+  || defined(__aarch64__) || defined(__arm64)
 #define X_ARM64 (1)
 #else
 #define X_ARM64 (0)
 #endif
 
-#if defined(i386) || defined(__i386) || defined(__i386__) \
+#if X_ARM64 || defined(_M_ARM) || defined(__ARM_ARCH) \
+  || defined(__ARM_ARCH_4__) || defined(__ARM_ARCH_4T__) \
+  || defined(__ARM_ARCH_5TE__) || defined(__ARM_ARCH_5TEJ__) \
+  || defined(__ARM_ARCH_6K__) || defined(__ARM_ARCH_6KZ__) \
+  || defined(__ARM_ARCH_6T2__) || defined(__ARM_ARCH_6Z__) \
+  || defined(__ARM_ARCH_7__) || defined(__ARM_ARCH_7A__) \
+  || defined(__ARM_ARCH_7M__) || defined(__ARM_ARCH_7R__) \
+  || defined(__TARGET_ARCH_ARM) || defined(__TARGET_ARCH_THUMB) \
+  || defined(__arm__) || defined(__thumb__)
+#define X_ARM (1)
+#else
+#define X_ARM (0)
+#endif
+
+#if defined(_M_IX86) || defined(_X86_) \
+  || defined(i386) || defined(__i386) || defined(__i386__) \
   || defined(__i486__) || defined(__i586__) || defined(__i686__) \
-  || defined(_M_IX86_) || defined(_X86_)
+  || defined(__I86__) || defined(__INTEL__) || defined(__THW_INTEL__)
 #define X_X86 (1)
 #else
 #define X_X86 (0)
 #endif
 
-#if defined(__amd64) || defined(__amd64__) || defined(__x86_64) \
-  || defined(__x86_64__) || defined(_M_AMD64) || defined(_M_X64)
+#if defined(_M_AMD64) || defined(_M_X64) \
+  || defined(__amd64) || defined(__amd64__) \
+  || defined(__x86_64) || defined(__x86_64__)
 #define X_X64 (1)
 #else
 #define X_X64 (0)
 #endif
-/** @} */  // Architecture detection
+// Architecture_Detection}}}
 
 /******************************************************************************
- * @name Compiler Detection
- * @{
+ * @name Compiler_Detection{{{
  *****************************************************************************/
 #if defined(__clang__)
 #define X_CLANG x_version(__clang_major__, __clang_minor__, __clang_patchlevel__)
@@ -148,36 +156,67 @@ Version: v0.8.12
 #define X_CLANG (0)
 #endif
 
-#if defined(__GNUC__)
+#if defined(__GNUC__) \
+  && !defined(__ECC) && !defined(__ICC) && !defined(__ICL) \
+  && !defined(__INTEL_COMPILER) && !defined(__INTEL_LLVM_COMPILER) \
+  && !defined(__TINYC__) && !defined(__clang__)
+#if defined(__GNUC_PATCHLEVEL__)
 #define X_GCC x_version(__GNUC__, __GNUC_MINOR__, __GNUC_PATCHLEVEL__)
+#else
+#define X_GCC x_version(__GNUC__, __GNUC_MINOR__, 0)
+#endif
 #else
 #define X_GCC (0)
 #endif
 
-#if defined(_MSC_VER)
+#if defined(_MSC_VER) \
+  && !X_CLANG && !defined(__ECC) && !defined(__ICC) && !defined(__ICL) \
+  && !defined(__INTEL_COMPILER) && !defined(__INTEL_LLVM_COMPILER)
+#ifdef _MSC_FULL_VER
 #define X_MSVC _MSC_FULL_VER
+#else
+#define X_MSVC x_version((_MSC_VER / 100) % 100, _MSC_VER % 100, 0)
+#endif
 #else
 #define X_MSVC (0)
 #endif
 
 #if defined(__NVCC__)
+#if defined(__CUDACC_VER_BUILD__) && defined(__CUDACC_VER_MAJOR__) \
+  && defined(__CUDACC_VER_MINOR__)
 #define X_NVCC x_version(__CUDACC_VER_MAJOR__, __CUDACC_VER_MINOR__, __CUDACC_VER_BUILD__)
+#else
+#define X_NVCC (1)
+#endif
 #else
 #define X_NVCC (0)
 #endif
-/** @} */  // Compiler detection
+// Compiler_Detection}}}
 
 /******************************************************************************
- * @name Operating System Detection
- * @{
+ * @name Operating_System_Detection{{{
  *****************************************************************************/
-#if defined(__CYGWIX__)
-#define X_CYGWIN x_version(CYGWIN_VERSION_API_MAJOR, CYGWIN_VERSION_API_MINOR, 0)
+#if defined(__CYGWIN__)
+#include <cygwin/version.h>
+/// @note It needs a special handling because `CYGWIN_VERSION_API_MINOR` is
+///       greater than 99.
+/// @see [Cygwin](https://github.com/cygwin/cygwin/blob/main/winsup/cygwin/include/cygwin/version.h)
+#define X_CYGWIN x_version( \
+    CYGWIN_VERSION_API_MAJOR + CYGWIN_VERSION_API_MINOR / 100, \
+    CYGWIN_VERSION_API_MINOR % 100, 0)
 #else
 #define X_CYGWIN (0)
 #endif
 
-#if defined(__gnu_linux__) || defined(__linux__)
+#if defined(__APPLE__) && defined(__MACH__) \
+  && defined(__ENVIRONMENT_IPHONE_OS_VERSION_MIN_REQUIRED__)
+#define X_IOS (__ENVIRONMENT_IPHONE_OS_VERSION_MIN_REQUIRED__ * 1000)
+#else
+#define X_IOS (0)
+#endif
+
+#if defined(__gnu_linux__) || defined(__linux) \
+  || defined(__linux__) || defined(linux)
 #define X_LINUX (1)
 #else
 #define X_LINUX (0)
@@ -185,23 +224,23 @@ Version: v0.8.12
 
 #if defined(Macintosh) || defined(macintosh)
 #define X_MACOS x_version(9, 0, 0)
-#elif defined(__APPLE__) && defined(__MACH__)
+#elif !X_IOS && defined(__APPLE__) && defined(__MACH__)
 #define X_MACOS x_version(10, 0, 0)
 #else
 #define X_MACOS (0)
 #endif
 
-#if defined(_WIN32) || defined(_WIN64) || defined(__WIN32__) \
-  || defined(__TOS_WIX__) || defined(__WINDOWS__)
+#if !X_CYGWIN && (defined(_WIN32) || defined(_WIN64) \
+  || defined(__TOS_WIN__) || defined(__TOS_WIX__) \
+  || defined(__WIN32__) || defined(__WINDOWS__))
 #define X_WINDOWS (1)
 #else
 #define X_WINDOWS (0)
 #endif
-/** @} */  // Operating system detection
+// Operating_System_Detection}}}
 
 /******************************************************************************
- * @name Platform Detection
- * @{
+ * @name Platform_Detection{{{
  *****************************************************************************/
 #if defined(__ANDROID__)
 #define X_ANDROID (1)
@@ -217,774 +256,370 @@ Version: v0.8.12
 #endif
 
 #if defined(__MINGW32__)
+#if defined(__MINGW32_VERSION_MAJOR) && defined(__MINGW32_VERSION_MINOR)
 #define X_MINGW32 x_version(__MINGW32_VERSION_MAJOR, __MINGW32_VERSION_MINOR, 0)
+#else
+#define X_MINGW32 (1)
+#endif
 #else
 #define X_MINGW32 (0)
 #endif
 
 #if defined(__MINGW64__)
+#if defined(__MINGW64_VERSION_MAJOR) && defined(__MINGW64_VERSION_MINOR)
 #define X_MINGW64 x_version(__MINGW64_VERSION_MAJOR, __MINGW64_VERSION_MINOR, 0)
+#else
+#define X_MINGW64 (1)
+#endif
 #else
 #define X_MINGW64 (0)
 #endif
-/** @} */   // Platform detection
+// Platform_Detection}}}
 
-//****************************************************************** Headers{{{
-#if X_CLANG || X_GCC
+// ********************************************************** Configurations{{{
+// Feature-test macros must be defined before including any system header.
+#if X_LINUX
 #ifndef _GNU_SOURCE
 #define _GNU_SOURCE
 #endif
 #endif
 
-#include <cassert>
-#include <cerrno>
-#include <cfloat>
-#include <cmath>
-#include <cstdint>
-#include <cstdio>
-#include <cstring>
-#include <ctime>
-
-#include <stdexcept>
-#include <string>
-
-#include <fcntl.h>
-#include <sys/stat.h>
-
-#if X_ENABLE_CU
-#include <cuda.h>
-#endif
-
-#if X_ENABLE_CUDA
-#include <cuda_runtime.h>
-#endif
-
-#if X_ENABLE_CUBLAS
-#include <cublas_v2.h>
-#endif
-
-#if X_WINDOWS && X_MSVC
-#if X_ENABLE_SOCKET
-#pragma comment(lib, "Ws2_32")
-#include <winsock2.h>
-#include <ws2tcpip.h>
-#endif
-
-#include <windows.h>
-#include <conio.h>
-#elif X_GCC || (!X_MINGW && X_CLANG)
-#if X_ENABLE_SOCKET
-#include <arpa/inet.h>
-#include <sys/socket.h>
-#endif
-
-#include <cctype>
-#include <climits>
-#include <cstdlib>
-
-#include <sys/ioctl.h>
-#include <sys/sysinfo.h>
-#include <termios.h>
-#include <unistd.h>
-#else
-#error "Unsupported build environment."
-#endif
-// Headers}}}
-
-/******************************************************************************
- * @name Symbol Visibility
- * @see [Microsoft Docs](https://docs.microsoft.com/en-us/cpp/cpp/dllexport-dllimport?view=msvc-170)
- *      and [GCC Wiki](https://gcc.gnu.org/wiki/Visibility).
- * @{
- *****************************************************************************/
-#if X_WINDOWS
-#define X_EXP __declspec(dllexport)
-#else
-#define X_EXP __attribute__ ((visibility("default")))
-#endif
-
-#if X_WINDOWS
-#define X_IMP __declspec(dllimport)
-#else
-#define X_IMP __attribute__ ((visibility("hidden")))
-#endif
-/** @} */  // Symbol Visibility
-
-/******************************************************************************
- * @name Miscellaneous
- * @{
- *****************************************************************************/
-/// @brief Just a semantic placeholder for empty arguments.
-#define X_EMPTINESS
-
-#if X_WINDOWS
-/// @brief Get the base name from a full path. (Windows)
-#define __FILENAME__ (strrchr(__FILE__, '\\') ? strrchr(__FILE__, '\\') + 1 : __FILE__)
-
-/// @brief Unify the function signature macro between Windows and Linux.
-#define __PRETTY_FUNCTION__ __FUNCSIG__
-
-/// @brief Unify the path length limit macro between Windows and Linux.
-#define X_PATH_MAX _MAX_PATH
-#else
-/// @brief Get the base name from a full path. (Linux)
-#define __FILENAME__ (strrchr(__FILE__, '/') ? strrchr(__FILE__, '/') + 1 : __FILE__)
-
-/// @brief Unify the path length limit macro between Windows and Linux.
-#define X_PATH_MAX PATH_MAX
-
-/// @brief This is set for the `stat` function on Linux.
+#if X_CYGWIN || X_LINUX
 #ifndef _FILE_OFFSET_BITS
+// Enable large-file interfaces on supported POSIX targets.
 #define _FILE_OFFSET_BITS (64)
 #endif
 #endif
 
-#define X_INL inline
-/** @} */  // Miscellaneous
-
-class x_error;
-
-/******************************************************************************
- * @name Communication
- * @brief A collection of communication utilities.
- * @{
- *****************************************************************************/
-/// @brief Calculate the CRC32 checksum of a data chunk.
-X_INL uint32_t x_checksum_crc32(
-    const void* data, const size_t size, const uint32_t* prev = nullptr);
-
-/// @brief Calculate the internet checksum of a data chunk.
-/// @see [RFC1071](https://www.rfc-editor.org/info/rfc1071)
-X_INL uint16_t x_checksum_rfc1071(
-    const void* data, const size_t size, const uint16_t* prev = nullptr);
-
-/// @brief Calculate the XOR checksum of a data chunk.
-X_INL uint8_t x_checksum_xor(
-    const void* data, const size_t size, const uint8_t* prev = nullptr);
-
-/// @brief The default start of frame for a packet.
-#ifndef X_PACKET_SOF
-#define X_PACKET_SOF (0x55AA)
+// Architecture width detection requires <cstdint>.
+#include <cstdint>
+#if INTPTR_MAX == INT64_MAX
+#define X_32BIT (0)
+#define X_64BIT (1)
+#elif INTPTR_MAX == INT32_MAX
+#define X_32BIT (1)
+#define X_64BIT (0)
+#else
+#error "Only 32-bit or 64-bit architecture is supported."
 #endif
 
-/// @brief A macro to represent an infinite number of packets.
-#ifndef X_PACKET_INF
-#define X_PACKET_INF UINT64_MAX
+#if !X_MSVC && defined(_MSC_VER)
+#define _X_MSVC_COMPAT (1)
+#else
+#define _X_MSVC_COMPAT (0)
 #endif
+// Configurations}}}
 
-/// @struct x_header
-/// @brief The header of a packet.
-/// @var x_header::sof
-///      The start of frame.
-/// @var x_header::ctl
-///      The control code.
-/// @var x_header::opt
-///      The option, just use it freely.
-/// @var x_header::cnt
-///      The total number of packets.
-/// @var x_header::idx
-///      The index of the current packet.
-/// @var x_header::dsz
-///      The size of the data chunk.
-/// @var x_header::cks
-///      The checksum of the packet, which is calculated based on the header
-///      and the data chunk.
-typedef struct _x_header_
-{
-  uint16_t sof{X_PACKET_SOF};
-  uint16_t ctl{0};
-  uint32_t opt{0};
-  uint64_t cnt{X_PACKET_INF};
-  uint64_t idx{0};
-  uint64_t dsz{0};
-  uint64_t cks{0};
-} x_header;
+// ***************************************************************** Headers{{{
+#include <cctype>
+#include <cerrno>
+#include <cfloat>
+#include <climits>
+#include <cmath>
+#include <cstddef>
+#include <cstdio>
+#include <cstdlib>
+#include <cstring>
+#include <ctime>
+#include <limits>
+#include <stdexcept>
+#include <string>
+#include <sys/stat.h>
+#include <type_traits>
+#include <utility>
 
-/// @struct x_packet
-/// @brief A message packet.
-/// @var x_packet::head
-///      The header of the packet.
-/// @var x_packet::body
-///      The data chunk of the packet.
-typedef struct _x_packet_
-{
-  x_header head;
-  void* body{nullptr};
-} x_packet;
-
-/// @struct x_iovec
-/// @brief An I/O vector.
-/// @var x_iovec::buf
-///      The buffer.
-/// @var x_iovec::len
-///      The length of the buffer.
-typedef struct _x_iovec_
-{
-  void* buf{nullptr};
-  size_t len{0};
-} x_iovec;
-
+#if X_WINDOWS
 #if X_ENABLE_SOCKET
-/// @brief A class wrapping the socket operations.
-class x_socket
-{
-public:
-  /// @brief Constructor, a wrapper of `socket`.
-  /// @note This constructor enables the `SO_KEEPALIVE` and
-  ///       `SO_EXCLUSIVEADDRUSE` options by default but does not check the
-  ///       return value of `setsockopt`.
-  X_INL x_socket(const int domain, const int type, const int protocol);
-
-  /// @brief Destructor.
-  X_INL ~x_socket();
-
-  /// @brief Accept a connection from a client.
-  /// @param client The client to be accepted.
-  /// @return An instance of @ref x_error.
-  X_INL x_error accept(x_socket* client);
-
-  /// @brief Query the IP address and port of the socket.
-  /// @param ip The buffer to store the IP address.
-  /// @param port The buffer to store the port.
-  /// @return An instance of @ref x_error.
-  X_INL x_error addr(char* ip, uint16_t* port);
-
-  /// @brief Close the socket.
-  /// @return An instance of @ref x_error.
-  X_INL x_error close();
-
-  /// @brief Connect to a server with specified IP address and port.
-  /// @param ip The IP address of the server.
-  /// @param port The port of the server.
-  /// @return An instance of @ref x_error.
-  X_INL x_error connect(const char* ip, const uint16_t port);
-
-  /// @brief Wrapper of `getsockopt` with error handling.
-  /// @see getsockopt
-  /// @return An instance of @ref x_error.
-  X_INL x_error getopt(
-      const int level, const int option, void* value, socklen_t* length);
-
-  /// @brief Listen on a specified IP address and port.
-  /// @param ip The IP address to listen on.
-  /// @param port The port to listen on.
-  /// @return An instance of @ref x_error.
-  X_INL x_error listen(const char* ip, const uint16_t port);
-
-  /// @brief Wrapper of `recv` with error handling.
-  /// @return An instance of @ref x_error.
-  /// @see recv
-  /// @remark Different from the standard `recv`, this function trys to receive
-  ///         the specified size of data before returning.
-  X_INL x_error recv(void* buffer, const size_t size, const int flags);
-
-  /// @brief Vectored version of `recv`.
-  /// @return An instance of @ref x_error.
-  /// @see @ref x_socket::recv
-  X_INL x_error recvv(x_iovec* iovec, const size_t count, const int flags);
-
-  /// @brief Wrapper of `send` with error handling.
-  /// @return An instance of @ref x_error.
-  /// @see send
-  /// @remark Different from the standard `send`, this function trys to send
-  ///         the specified size of data before returning.
-  X_INL x_error send(const void* buffer, const size_t size, const int flags);
-
-  /// @brief Vectored version of `send`.
-  /// @return An instance of @ref x_error.
-  /// @see @ref x_socket::send
-  X_INL x_error sendv(const x_iovec* iovec, const size_t count, const int flags);
-
-  /// @brief Wrapper of `setsockopt` with error handling.
-  /// @see setsockopt
-  /// @return An instance of @ref x_error.
-  X_INL x_error setopt(
-      const int level, const int option, const void* value, const socklen_t length);
-
-private:
-#if X_WINDOWS
-  SOCKET m_hndl{INVALID_SOCKET};
+#if defined(_MSC_VER)
+#pragma comment(lib, "Ws2_32")
+#endif
+#include <winsock2.h>
+#endif
+#include <windows.h>
 #else
-  int m_hndl{-1};
+#if X_LINUX
+#include <sys/sysinfo.h>
+#elif X_MACOS
+#include <mach/mach.h>
+#include <sys/sysctl.h>
 #endif
-  struct sockaddr m_addr{};
-  int m_domain{AF_UNSPEC};
-};
-#endif  // X_ENABLE_SOCKET
-/** @} */  // Communication
+#include <unistd.h>
+#endif
+
+#if X_ENABLE_CUDA_DRIVER
+#include <cuda.h>
+#endif
+#if X_ENABLE_CUDA_RUNTIME
+#include <cuda_runtime.h>
+#endif
+#if X_ENABLE_CUBLAS
+#include <cublas_v2.h>
+#endif
+// Headers}}}
 
 /******************************************************************************
- * @name Console IO
- * @brief A collection of console IO utilities.
- * @see [Virtual-Key Codes](https://learn.microsoft.com/en-us/windows/win32/inputdev/virtual-key-codes)
- * @remark X_KEY_LEFT, X_KEY_UP, X_KEY_RIGHT, and X_KEY_DOWN are defined as
- *         negative values since they are handled differently in Windows and
- *         Linux.
- * @{
+ * @name Symbol_Visibility{{{
+ * @see [Microsoft Docs](https://docs.microsoft.com/en-us/cpp/cpp/dllexport-dllimport?view=msvc-170)
+ *      and [GCC Wiki](https://gcc.gnu.org/wiki/Visibility).
  *****************************************************************************/
-#define X_KEY_ESC   (0x1B)
-#define X_KEY_A     (0x41)
-#define X_KEY_B     (0x42)
-#define X_KEY_C     (0x43)
-#define X_KEY_D     (0x44)
-#define X_KEY_Q     (0x51)
-#if X_WINDOWS
-#define X_KEY_LEFT  (0x4B)
-#define X_KEY_UP    (0x48)
-#define X_KEY_RIGHT (0x4D)
-#define X_KEY_DOWN  (0x50)
+#if X_CYGWIN || X_WINDOWS
+/// @brief Hidden-visibility annotation is not applied to Cygwin/Windows DLLs.
+#define X_HID
+
+/// @brief Mark a symbol exported by the current Cygwin or Windows DLL.
+#define X_EXP __declspec(dllexport)
+
+/// @brief Mark a symbol imported from another Cygwin or Windows DLL.
+#define X_IMP __declspec(dllimport)
 #else
-#define X_KEY_LEFT  (-1)
-#define X_KEY_UP    (-2)
-#define X_KEY_RIGHT (-3)
-#define X_KEY_DOWN  (-4)
-#endif
+/// @brief Mark a symbol as internal to the current shared library.
+#define X_HID __attribute__ ((visibility("hidden")))
 
-#if !X_WINDOWS
-/// @brief Checks the console for keyboard input. (Linux)
-/// @return Returns a non-zero value if a key is pressed, 0 otherwise.
-/// @see [_kbhit](https://learn.microsoft.com/en-us/cpp/c-runtime-library/reference/kbhit?view=msvc-170)
-X_INL int _kbhit();
-#endif
+/// @brief Mark a symbol exported by the current shared library.
+#define X_EXP __attribute__ ((visibility("default")))
 
-/// @brief A wrapper for Win32's `getch`, and an implementation for Linux.
-/// @return Returns the character read from the console, or 0 if no character
-///         is available.
-X_INL int x_getch();
-/** @} */  // Console IO
+/// @brief Mark a symbol imported from another shared library.
+/// @note ELF imports use the exported visibility; hidden visibility is for
+///       internals.
+#define X_IMP __attribute__ ((visibility("default")))
+#endif
+// Symbol_Visibility}}}
 
 /******************************************************************************
- * @name Date and Time
- * @brief A collection of date and time utilities.
- * @{
+ * @name Miscellaneous{{{
  *****************************************************************************/
-/// @brief Sleep for a specified amount of time.
-/// @param ms The amount of time to sleep in milliseconds.
-X_INL void x_sleep(const unsigned long ms);
-
-/// @brief Get the current timestamp.
-/// @param buffer The buffer to store the timestamp.
-/// @param size The size of the buffer.
-/// @return The current timestamp, same as `buf`.
-/// @remark This function calls `ctime_s` on Windows and `ctime_r` on Linux
-///         internally and uses their return values to fill the buffer.
-///         Therefore, the format is not customizable. A buffer with at least
-///         26 bytes is guaranteed to store the timestamp.
-X_INL const char* x_timestamp(char* buffer, const size_t size);
-
-/// @struct x_event_stats
-/// @brief A structure to store the statistics of a stopwatch.
-/// @var x_event_stats::ready
-///      Whether the stopwatch is ready.
-/// @var x_event_stats::cyc
-///      The number of cycles.
-/// @var x_event_stats::sum
-///      The total elapsed time.
-/// @var x_event_stats::avg
-///      The average elapsed time.
-/// @var x_event_stats::max
-///      The frame that captures the maximum elapsed time.
-/// @var x_event_stats::min
-///      The frame that captures the minimum elapsed time.
-typedef struct _x_event_stats_
-{
-  /// @brief Echo the statistics in a predefined format.
-  /// @param unit The unit of the statistics, "h", "m", "s", "ms", "us", or "ns".
-  /// @param title The title for the statistics. Default is "STATS". If the
-  ///              title is not a valid string, "STATS" will be used.
-  /// @param stream The output stream. Default is `stdout`.
-  /// @remark This helper function provides a handy way to print the
-  ///         statistics. Users may use their own format to print the
-  ///         statistics with the data members of this structure.
-  X_INL void echo(
-      const char* unit, const char* title = "STATS", FILE* const stream = stdout);
-
-  /// @brief Reset the statistics.
-  X_INL void reset();
-
-  bool ready{false};
-  size_t cyc{0};
-  double sum{0.0};
-  double avg{0.0};
-  struct
-  {
-    size_t idx;
-    double val;
-  } max{0, DBL_MIN}, min{0, DBL_MAX};
-} x_event_stats;
-
-class x_event
-{
-public:
-  X_INL x_event(const char* type, const unsigned int flags = 0);
-
-  X_INL ~x_event();
-
-  /// @brief Calculate the duration between two events.
-  /// @param unit The unit of the duration, "h", "m", "s", "ms", "us", or "ns".
-  /// @return The elapsed time.
-  /// @attention Before calling this function, @ref x_event::tic and
-  ///            @ref x_event::toc must be called.
-  X_INL double duration(const char* unit);
-
-  /// @brief Start the recording.
-  /// @param stream The optional stream to perform the recording. It is only
-  ///               used when the CUDA driver or runtime API is enabled.
-  /// @param flags The optional flags to perform the recording. It is only used
-  ///              when the CUDA driver or runtime API is enabled.
-  X_INL void tic(void* stream = nullptr, const unsigned int flags = 0);
-
-  /// @brief Stop the recording.
-  /// @param stream The optional stream to perform the recording. It is only
-  ///               used when the CUDA driver or runtime API is enabled.
-  /// @param flags The optional flags to perform the recording. It is only used
-  ///              when the CUDA driver or runtime API is enabled.
-  X_INL void toc(void* stream = nullptr, const unsigned int flags = 0);
-
-  /// @brief Stop the event recording and return the statistics.
-  /// @param stats The statistics of the event.
-  /// @param cycle The number of cycles.
-  X_INL void toc(
-      x_event_stats& stats, const size_t cycle,
-      void* stream = nullptr, const unsigned int flags = 0);
-
-private:
-  union
-  {
-    struct timespec cpu;
-#if X_ENABLE_CU
-    CUevent cu;
+/// @brief Unify the function signature macro between compilers.
+#if X_MSVC || _X_MSVC_COMPAT
+#define X_PRETTY_FUNCTION __FUNCSIG__
+#else
+#define X_PRETTY_FUNCTION __PRETTY_FUNCTION__
 #endif
-#if X_ENABLE_CUDA
-    cudaEvent_t cuda;
-#endif
-  } m_start{}, m_stop{};
 
-  int32_t m_type{0};  // For faster branching.
-};
-/** @} */  // Date and Time
+#ifdef _X_MSVC_COMPAT
+#undef _X_MSVC_COMPAT
+#endif
+
+#define X_INL inline
+
+X_INL const char* _x_filename(const char* file)
+{
+  const char* sep = std::strrchr(file, '/');
+
+#if X_WINDOWS
+  const char* alt = std::strrchr(file, '\\');
+  if (alt != nullptr && (sep == nullptr || alt > sep)) {
+    sep = alt;
+  }
+#endif
+
+  return sep == nullptr ? file : sep + 1;
+}
+
+/// @brief Get the base name from a full path.
+/// @note Windows recognizes both `'/'` and `'\\'`; POSIX recognizes only
+///       `'/'`.
+#define X_FILENAME _x_filename(__FILE__)
+
+// Shared Core helper for Logging and Date and Time.
+X_INL const char* _x_timestamp(char* const buffer, const size_t size)
+{
+  if (buffer == nullptr || size == 0) {
+    return "";
+  }
+
+  buffer[0] = '\0';
+  if (size < 26) {
+    return buffer;
+  }
+
+  const time_t now = std::time(nullptr);
+  if (now == static_cast<time_t>(-1)) {
+    return buffer;
+  }
+
+#if X_WINDOWS
+  if (ctime_s(buffer, size, &now) != 0) {
+#else
+  if (ctime_r(&now, buffer) == nullptr) {
+#endif
+    buffer[0] = '\0';
+    return buffer;
+  }
+
+  const size_t len = std::strlen(buffer);
+  if (len > 0 && buffer[len - 1] == '\n') {
+    buffer[len - 1] = '\0';
+  }
+
+  return buffer;
+}
+// Miscellaneous}}}
 
 /******************************************************************************
- * @name Error Handling
+ * @name DECL_Error_Handling{{{
  * @brief A collection of error handling utilities.
- * @{
  *****************************************************************************/
-/// @brief Assertion with optional message.
-/// @param expr The expression to assert.
-/// @param ... The optional message to print.
-/// @attention The optional message must be a C-style string.
-#define x_assert(expr, ...) do { \
-  if (!(expr)) { \
-    fprintf(stderr, "Assertion failed: %s\n", #expr); \
-    _x_assert_msg(__VA_ARGS__); \
-    fprintf(stderr, "Position: %s:%lld: %s\n", \
-        __FILENAME__, static_cast<long long>(__LINE__), __PRETTY_FUNCTION__); \
-    abort(); \
-  } \
+/// @brief Assert an expression and abort on failure.
+/// @param ... The required expression followed by an optional C string,
+///            `nullptr`, or an empty string to omit the message.
+/// @note The expression is evaluated once; the message is evaluated once only
+///       when the assertion fails. Diagnostic text reflects macro expansion.
+#define x_assert(...) \
+  _X_ASSERT_SELECT(__VA_ARGS__, _X_ASSERT_TWO, _X_ASSERT_ONE, 0)(__VA_ARGS__)
+
+/// @brief Evaluate a domain status-code or @ref x_error expression and report
+///        failure.
+/// @param domain The nonempty registered domain name for status codes;
+///               ignored for @ref x_error results.
+/// @param error A writable @ref x_error lvalue receiving the result.
+/// @param expression A complete expression yielding a code fitting `int32_t`
+///                   or @ref x_error.
+/// @note All three arguments are evaluated once. Failures print to `stderr`
+///       independently of Logging; Debug diagnostics include source context
+///       and the expression text.
+///       Status-code failures do not abort.
+/// @attention Does not capture `errno`/`GetLastError()`. APIs returning
+///            sentinel values require a failure-checking wrapper. Parenthesize
+///            expressions containing macro-visible commas, including template
+///            commas.
+#define x_check(domain, error, expression) do { \
+  (error) = _x_check_impl( \
+      (domain), [&]() { return (expression); }, \
+      X_FILENAME, #expression, static_cast<long long>(__LINE__)); \
 } while (false)
 
-/// @brief Wrapping the error handling of a function call.
-/// @param category The error category, should be supported by @ref x_error.
-/// @param error The error object, should be an instance of @ref x_error.
-/// @param function The function to call.
-/// @param ... The arguments of the function.
-/// @note The function call is wrapped in a lambda to preserve support for
-///       default arguments. Passing the function and its arguments directly
-///       to _x_check_impl would fail to compile when default parameters
-///       are omitted, since default arguments are not applied during
-///       template argument deduction. Wrapping the call in a lambda ensures
-///       the defaults are correctly handled at the actual call site.
-#define x_check(category, error, function, ...) do {\
-  error = _x_check_impl(category, [&]() { return function(__VA_ARGS__); }); \
-  if (error) { \
-    _x_log_impl<'e'>(__FILENAME__, #function, static_cast<long long>(__LINE__), stderr, "%s", error.msg()); \
-  } \
-} while (false)
+/// @brief Total registry capacity, including built-in domains.
+/// @note Use the same capacity and feature configuration in every translation
+///       unit.
+#ifndef X_ERROR_DOMAIN_LIMIT
+#define X_ERROR_DOMAIN_LIMIT (16)
+#endif
 
-/// @brief Check if an instance of @ref x_error indicates a failure.
-/// @param error The instance of @ref x_error.
-/// @return `true` if the instance is indicating a faiure, `false` otherwise.
-/// @see @ref x_succ
-/// @remark Using this function is not necessary since there is a boolean
-///         operator defined for @ref x_error. This is provided to align with
-///         the C version of this library.
-X_INL bool x_fail(const x_error& error);
+#if X_ERROR_DOMAIN_LIMIT < (2 + !!X_WINDOWS + !!X_ENABLE_SOCKET \
+    + !!X_ENABLE_CUDA_DRIVER + !!X_ENABLE_CUDA_RUNTIME + !!X_ENABLE_CUBLAS)
+#error "X_ERROR_DOMAIN_LIMIT must accommodate all enabled built-in domains."
+#endif
 
-/// @brief The counterpart of x_fail.
-/// @see @ref x_fail
-X_INL bool x_succ(const x_error& error);
+/// @brief Error interpretation and optional capture callbacks for a domain.
+/// @note A `nullptr` `failed` callback uses `value != 0`; `nullptr` `capture`
+///       means unsupported. `message` must terminate `buffer` when
+///       `buffer != nullptr` and `size > 0`.
+/// @attention Keep the domain, `name`, and callbacks valid and unchanged while
+///            registered or referenced by an @ref x_error.
+struct x_error_domain
+{
+  int32_t (*capture)();
+  bool (*failed)(const int32_t value);
+  char* (*message)(char* buffer, const size_t size, const int32_t value);
 
-/// @brief An error class that encapsulates the error category, error value,
-///        and corresponding error message.
-/// @remark The error handling class `std::error_code` is extensible but not
-///         user-friendly in my opinion. This class is designed to work with
-///         different error categories with less effort.
+  const char* name;
+};
+
+/// @brief An error value; conversion to `bool` means failure.
+/// @note `"generic"` uses 0 for success and numeric messages; capture is
+///       unsupported. All @ref x_error::set overloads return `*this` and clear
+///       the previous message override unless a new one is supplied. See
+///       @ref x_error_domain for lifetime requirements.
 class x_error
 {
 public:
-  /// @brief Default constructor, which sets the error category to "posix" and
-  ///        the error value to 0.
-  X_INL explicit x_error();
+  /// @brief Construct a successful error value in the `posix` domain.
+  X_INL x_error();
 
-  /// @brief Constructor with a error category. Corresponding error code and
-  ///        message will be queried based on the error category. For example,
-  ///        if the error category is "posix", the error value will be set to
-  ///        `errno` and the error message will be set to `strerror(errno)`.
-  /// @attention Using "custom" here is not supported since the sources of
-  ///            error value and message are unknown.
-  X_INL explicit x_error(const char* category);
+  /// @brief Capture the current error value for a registered domain name.
+  /// @attention `nullptr`/empty/unknown names or unsupported capture requests
+  ///            print a diagnostic and abort. Capture only after API failure;
+  ///            last-error state may be stale after success.
+  X_INL explicit x_error(const char* name);
 
-  /// @brief Constructor with an error category, an error value, and an
-  ///        optional failure predicate. The failure predicate is used to
-  ///        determine if the error value is a failure or not. The error
-  ///        message will be queried based on the error category and the error
-  ///        value. For example, if the error category is "posix" and the error
-  ///        value is `EINVAL`, the error message will be set to
-  ///        `strerror(EINVAL)`.
-  /// @note If the error category is "custom", the error message will be set to
-  ///       "Custom error X" where X is the error value `val`.
-  /// @attention If the error category is "custom", the failure predicate is
-  ///            mandatory.
-  X_INL explicit x_error(
-      const char* category, const int32_t value,
-      bool (*fail)(const int32_t) = nullptr);
+  /// @brief Construct an error from a registered domain name and value.
+  /// @attention `nullptr`/empty/unknown names print a diagnostic and abort.
+  X_INL x_error(const char* name, const int32_t value);
 
-  /// @brief Constructor with an error category, an error value, and a custom
-  ///        predicate.
-  X_INL explicit x_error(
-      const char* category, const int32_t value, const char* message,
-      bool (*fail)(const int32_t) = nullptr);
+  /// @brief Construct an error with a copied, user-supplied message.
+  /// @param message A C string to override domain formatting; `nullptr`
+  ///                selects domain formatting; an empty string is retained.
+  /// @attention The same name requirements as `x_error(name, value)` apply.
+  X_INL x_error(const char* name, const int32_t value, const char* message);
 
-  /// @brief Destructor.
-  X_INL ~x_error();
+  /// @brief Construct an error referring directly to a domain and value.
+  /// @note The domain need not be registered; its lifetime rules still apply.
+  X_INL x_error(const x_error_domain& domain, const int32_t value);
 
-  X_INL x_error& set(const char* category);
+  /// @brief Capture the current error value for a registered domain name.
+  /// @attention The name and capture requirements of `x_error(name)` apply.
+  X_INL x_error& set(const char* name);
 
+  /// @brief Set a registered domain name and value.
+  /// @attention The same name requirements as `x_error(name, value)` apply.
+  X_INL x_error& set(const char* name, const int32_t value);
+
+  /// @brief Set a registered domain name, value, and copied message override.
+  /// @note The name/message rules of the three-argument constructor apply.
   X_INL x_error& set(
-      const char* category, const int32_t value,
-      bool (*fail)(const int32_t) = nullptr);
+      const char* name, const int32_t value, const char* message);
 
-  X_INL x_error& set(
-      const char* category, const int32_t value, const char* message,
-      bool (*fail)(const int32_t) = nullptr);
+  /// @brief Set a domain directly and a value.
+  /// @note The domain need not be registered; its lifetime rules still apply.
+  X_INL x_error& set(const x_error_domain& domain, const int32_t value);
 
-  /// @brief Get the error category.
-  X_INL const char* cat();
+  /// @brief Get the domain name, or `"generic"` when the domain has no name.
+  X_INL const char* domain() const;
 
-  /// @brief Get the error message.
-  X_INL const char* msg();
+  /// @brief Get an owned message string.
+  /// @note A message override takes precedence and is not truncated.
+  ///       Otherwise, domain messages use 256 bytes including the terminator
+  ///       and may truncate. Text remains valid until mutation or the next
+  ///       no-argument @ref x_error::message() call. Concurrent no-argument
+  ///       calls on this object are not safe.
+  X_INL const char* message() const;
 
-  /// @brief Get the error value.
-  X_INL int32_t val() const;
+  /// @brief Format an error message into caller-provided storage.
+  /// @param buffer Writable destination buffer.
+  /// @param size Capacity in bytes, including the terminator.
+  /// @return `buffer`. A `nullptr` `buffer` or zero `size` performs no write.
+  /// @note Messages may be truncated to fit the buffer. Uses caller capacity,
+  ///       not the no-argument limit, and does not mutate cached text.
+  X_INL const char* message(char* buffer, const size_t size) const;
 
-  /// @brief A boolean operator to check if the error value is a failure. It
-  ///        calls the failure predicate if it is set.
+  /// @brief Get the domain status code.
+  X_INL int32_t value() const;
+
+  /// @brief Return whether this error value indicates failure.
+  /// @note Uses the domain's predicate; a `nullptr` predicate uses
+  ///       `value != 0`.
   X_INL operator bool() const;
 
+  /// @brief Register a named user-defined error domain.
+  /// @return 0 on success; `EINVAL` for a `nullptr` domain or `nullptr`/empty
+  ///         name; `EEXIST` for a duplicate name (including built-ins);
+  ///         `ENOSPC` when full.
+  /// @attention Register before concurrent access; registration is not
+  ///            synchronized. See @ref x_error_domain for lifetime
+  ///            requirements.
+  X_INL static int32_t register_domain(const x_error_domain* domain);
+
 private:
-  const char* m_cat{"posix"};
-  std::string m_msg;
-  int32_t m_val{0};
-  bool (*m_fail)(const int32_t){nullptr};
+  const x_error_domain* m_domain{nullptr};
+  int32_t m_value{0};
+  bool m_has_message{false};
+  mutable std::string m_message;
 };
-/** @} */  // Error Handling
+
+/// @brief Construct a successful error value.
+X_INL x_error x_ok();
+
+/// @brief Return whether an error value indicates failure.
+/// @note Uses the domain predicate; a missing predicate uses `value != 0`.
+X_INL bool x_fail(const x_error& error);
+
+/// @brief Return whether an error value indicates success.
+X_INL bool x_succ(const x_error& error);
+// DECL_Error_Handling}}}
 
 /******************************************************************************
- * @name File System
- * @brief A collection of file system utilities.
- * @{
- *****************************************************************************/
-/// @brief Query if a file or directory exists.
-/// @param file The file or directory to query.
-/// @return `true` if the file or directory exists, `false` otherwise.
-X_INL bool x_fexist(const char* file);
-
-/// @brief Open a file stream with error handling.
-/// @param stream The file stream to open.
-/// @param file The file to open.
-/// @param mode The mode to open the file.
-/// @return An instance of @ref x_error.
-/// @remark A wrapper of `fopen` with error handling, as well as for `fopen_s`
-///         on Windows to avoid the warning C4996.
-X_INL x_error x_fopen(FILE** stream, const char* file, const char* mode);
-
-/// @brief Get the full path of a file or directory.
-/// @param dst The destination buffer to store the full path.
-/// @param src The source file or directory.
-/// @return The full path of the file or directory. Same as `dst`.
-X_INL const char* x_fpath(char* dst, const char* src);
-
-/// @brief Get the size of a file.
-/// @param file The file to query.
-/// @return The size of the file. If an error occurs, the return value is -1.
-X_INL int64_t x_fsize(const char* file);
-
-/// @brief Split a path into root, directory, file, and extension.
-/// @param path The path to split.
-/// @param root The buffer to store the root.
-/// @param rsz The size of the root buffer.
-/// @param dir The buffer to store the directory.
-/// @param dsz The size of the directory buffer.
-/// @param file The buffer to store the base name.
-/// @param fsz The size of the file buffer.
-/// @param ext The buffer to store the extension.
-/// @param esz The size of the extension buffer.
-X_INL x_error x_split_path(
-    const char* path,
-    char* root, const size_t rsz, char* dir, const size_t dsz,
-    char* file, const size_t fsz, char* ext, const size_t esz);
-/** @} */  // File System
-
-/******************************************************************************
- * @name Hardware
- * @brief A collection of memory hardware utilities.
- * @{
- *****************************************************************************/
-/// @brief Get the number of CPU cores.
-X_INL size_t x_ncpu();
-
-/// @brief Get the number of GPU devices.
-/// @param api The API to query, must be one of "cu" or "cuda". If the API is
-///            not supported, the return value is 0.
-X_INL size_t x_ngpu(const char* api);
-/** @} */  // Hardware
-
-/******************************************************************************
- * @name Mathematics
- * @brief A collection of mathematical utilities.
- * @{
- *****************************************************************************/
-/// @brief Constant PI of user-defined type.
-/// @var x_Pi
-/// @param T The user-defined type.
-/// @return The constant PI.
-template<typename T>
-static constexpr T x_Pi = static_cast<T>(3.141592653589793238462643383279502884197169399375);
-
-/// @brief Kibibyte constant generator, i.e., 1 KiB = 1024 bytes.
-/// @param n The scale factor.
-template<typename T>
-X_INL constexpr T x_KiB(const T n);
-
-/// @brief Mebibyte constant generator, i.e., 1 MiB = 1048576 bytes.
-/// @param n The scale factor.
-template<typename T>
-X_INL constexpr T x_MiB(const T n);
-
-/// @brief Gibibyte constant generator, i.e., 1 GiB = 1073741824 bytes.
-/// @param n The scale factor.
-template<typename T>
-X_INL constexpr T x_GiB(const T n);
-
-/// @brief Tebibyte constant generator, i.e., 1 TiB = 1099511627776 bytes.
-/// @param n The scale factor.
-template<typename T>
-X_INL constexpr T x_TiB(const T n);
-
-/// @brief Pebibyte constant generator, i.e., 1 PiB = 1125899906842620 bytes.
-/// @param n The scale factor.
-template<typename T>
-X_INL constexpr T x_PiB(const T n);
-
-/// @brief A macro used to generate an integer with only the n-th bit set to 1.
-///        This is useful when one needs enumerations like `0b0001`, `0b0010`,
-///        `0b0100` to perform the `&`, `|`, `~` operations.
-/// @param n The n-th bit.
-/// @see C++'s `std::bitset` for a more versatile solution.
-template<typename T>
-X_INL constexpr T x_bit(const T n);
-
-/// @brief Calculate the greatest common divisor of two integers.
-/// @param m The first integer.
-/// @param n The second integer.
-/// @return The greatest common divisor.
-/// @attention This function is only available for integral types.
-template<typename T>
-X_INL constexpr T x_gcd(const T m, const T n);
-
-/// @brief Calculate the least common multiple of two integers.
-/// @param m The first integer.
-/// @param n The second integer.
-/// @return The least common multiple.
-/// @attention This function is only available for integral types.
-template<typename T>
-X_INL constexpr T x_lcm(const T m, const T n);
-
-/// @brief Calculate the next exponent of a base.
-/// @param base The base.
-/// @param src The source number.
-/// @return The next exponent of the base.
-/// @attention This function is only available for integral types.
-template<typename T>
-X_INL constexpr T x_next_exp(const T base, const T src);
-
-/// @brief Calculate the next multiple of a base.
-/// @param base The base.
-/// @param src The source number.
-/// @return The next multiple of the base.
-/// @attention This function is only available for integral types.
-template<typename T>
-X_INL constexpr T x_next_mul(const T base, const T src);
-
-/// @brief Calculate the previous exponent of a base.
-/// @param base The base.
-/// @param src The source number.
-/// @return The previous exponent of the base.
-/// @attention This function is only available for integral types.
-template<typename T>
-X_INL constexpr T x_prev_exp(const T base, const T src);
-
-/// @brief Calculate the previous multiple of a base.
-/// @param base The base.
-/// @param src The source number.
-/// @return The previous multiple of the base.
-/// @attention This function is only available for integral types.
-template<typename T>
-X_INL constexpr T x_prev_mul(const T base, const T src);
-/** @} */  // Mathematics
-
-/******************************************************************************
- * @name Memory Management
- * @brief A collection of memory management utilities.
- * @{
- *****************************************************************************/
-/// @brief Get number of items in an array.
-/// @param array The array.
-/// @attention This function only works with static arrays.
-template<typename T, size_t N>
-X_INL constexpr size_t x_count(const T (&array)[N]);
-
-/// @brief Delete a pointer, allocated by `new` or `new[]`, and set it to
-///        `nullptr`.
-/// @tparam array Whether the pointer is allocated by `new[]`.
-/// @param ptr The pointer to delete.
-template<bool array, typename T>
-X_INL void x_delete(T*& ptr);
-
-/// @brief Free a memory block allocated on the heap and set it to `nullptr`.
-/// @param ptr The memory block to free.
-/// @remark If the pointer is `nullptr`, this function does nothing.
-template<typename T>
-X_INL void x_free(T*& ptr);
-
-template<typename T>
-X_INL x_error x_malloc(T** ptr, const size_t size);
-
-X_INL x_error x_memcpy(void* dst, const void* src, const size_t size);
-
-X_INL x_error x_meminfo(const char* type, size_t* avail, size_t* total);
-
-/// @note Current supported types are:
-///            - "cu"
-///            - "cuda"
-template<typename T>
-X_INL const char* x_memtype(const char* type, const T ptr);
-/** @} */  // Memory Management
-
-/******************************************************************************
- * @name Standard IO
- * @brief A collection of standard IO utilities.
- * @{
+ * @name DECL_Logging{{{
+ * @brief A collection of logging utilities.
  *****************************************************************************/
 #define X_LOG_NONE   (-1)
 #define X_LOG_PLAIN   (0)
@@ -1003,7 +638,8 @@ X_INL const char* x_memtype(const char* type, const T ptr);
 #endif
 #endif
 
-/// @brief The maximum length of the log prefix.
+/// @brief Log prefix buffer capacity in bytes, including the terminator.
+/// @note Must be at least 1.
 #ifndef X_LOG_PREFIX_LIMIT
 #ifdef NDEBUG
 #define X_LOG_PREFIX_LIMIT (64)
@@ -1012,50 +648,1316 @@ X_INL const char* x_memtype(const char* type, const T ptr);
 #endif
 #endif
 
-/// @brief The maximum length of the log message.
+#if X_LOG_PREFIX_LIMIT < 1
+#error "X_LOG_PREFIX_LIMIT must be at least 1."
+#endif
+
+/// @brief Log message buffer capacity in bytes, including the terminator.
+/// @note Must be at least 1.
 #ifndef X_LOG_MSG_LIMIT
 #define X_LOG_MSG_LIMIT (256)
 #endif
 
+#if X_LOG_MSG_LIMIT < 1
+#error "X_LOG_MSG_LIMIT must be at least 1."
+#endif
+
 /// @brief Log a message with a specified log level.
-/// @param level The log level, one of 'p', 'f', 'e', 'w', 'i', 'd'.
-/// @param stream The optional file stream to save the log.
-/// @param format The format string as in `printf`.
-/// @param ... The optional arguments as in `printf`.
+/// @param level The log level, one of `'p'`, `'f'`, `'e'`, `'w'`, `'i'`, or
+///              `'d'`.
+/// @param stream Optional output stream for the log; defaults to `stdout`.
+/// @param ... The required format string followed by optional arguments as in
+///            `printf()`.
 /// @attention The log level is case insensitive, and must be known at compile
 ///            time.
-#define x_log(level, stream, format, ...) do { \
-  _x_log_impl<level>(__FILENAME__, __FUNCTION__, __LINE__, stream, format, ##__VA_ARGS__); \
+#define x_log(level, stream, ...) do { \
+  _x_log_impl<level>( \
+      X_FILENAME, __func__, static_cast<long long>(__LINE__), \
+      (stream), __VA_ARGS__); \
 } while (false)
-/** @} */  // Standard IO
+// DECL_Logging}}}
 
 /******************************************************************************
- * @name String
- * @brief A collection of string utilities.
- * @{
+ * @name DECL_Checksums{{{
+ * @brief Data checksum utilities.
  *****************************************************************************/
-/// @brief Copy a string with error handling.
-X_INL x_error x_strcpy(char* dst, const size_t size, const char* src);
+/// @brief Calculate the CRC-32/ISO-HDLC checksum of a data chunk.
+/// @note A `nullptr` `previous` starts a new calculation. Otherwise,
+///       `*previous` is the checksum returned by the preceding calculation.
+///       Chunks of any length may be processed incrementally. `data` need not
+///       be aligned.
+/// @note If `data` is `nullptr`, `size` is ignored. The function returns
+///       `*previous` when `previous` is non-null, or 0 otherwise.
+X_INL uint32_t x_checksum_crc32(
+    const void* data, const size_t size, const uint32_t* previous = nullptr);
+
+/// @brief Calculate the internet checksum of a data chunk.
+/// @see [RFC1071](https://www.rfc-editor.org/info/rfc1071)
+/// @note A `nullptr` `previous` starts a new calculation. Otherwise,
+///       `*previous` is the checksum returned by the preceding calculation.
+///       For incremental calculation over concatenated chunks, every chunk
+///       except the last must have even length. `data` need not be aligned.
+/// @note The result is a platform-independent numeric checksum. Convert it to
+///       network byte order before storing it in a network-order 16-bit field
+///       (e.g., using `htons()`, declared by the caller's platform headers).
+/// @note If `data` is `nullptr`, `size` is ignored. The function returns
+///       `*previous` when `previous` is non-null, or `0xFFFF` otherwise.
+X_INL uint16_t x_checksum_rfc1071(
+    const void* data, const size_t size, const uint16_t* previous = nullptr);
+
+/// @brief Calculate the XOR checksum of a data chunk.
+/// @note A `nullptr` `previous` starts a new calculation. Otherwise,
+///       `*previous` is the checksum returned by the preceding calculation.
+///       Chunks of any length may be processed incrementally. `data` need not
+///       be aligned.
+/// @note If `data` is `nullptr`, `size` is ignored. The function returns
+///       `*previous` when `previous` is non-null, or 0 otherwise.
+X_INL uint8_t x_checksum_xor(
+    const void* data, const size_t size, const uint8_t* previous = nullptr);
+// DECL_Checksums}}}
+
+/******************************************************************************
+ * @name DECL_Date_and_Time{{{
+ * @brief A collection of date and time utilities.
+ *****************************************************************************/
+/// @brief Sleep for a specified amount of time in milliseconds.
+/// @note On Windows, `ULONG_MAX` means an infinite wait. The caller is
+///       responsible for choosing a finite interval when required.
+X_INL void x_sleep(const unsigned long millisecond);
+
+/// @brief Get the current local time as a fixed-format string.
+/// @note Function alias to the shared Core helper `_x_timestamp()`.
+/// @param buffer Destination buffer to store the timestamp.
+/// @param size Buffer capacity in bytes. Requires at least 26 bytes.
+/// @return `buffer` when `buffer` is non-null and `size` is positive;
+///         otherwise an empty string literal. Insufficient capacity or a
+///         time/conversion failure produces an empty string in a nonempty
+///         destination buffer.
+/// @note Uses the `ctime()`-style format with the trailing newline removed.
+#define x_timestamp _x_timestamp
+
+/// @struct x_event_agg
+/// @brief A structure for stopwatch aggregation.
+/// @note Default construction initializes the aggregation. `min` and `max`
+///       have measurement meaning only when `cyc` is positive.
+/// @var x_event_agg::ready
+///      Whether the group has reached its target number of valid samples.
+/// @var x_event_agg::cyc
+///      The number of valid samples accumulated since construction/reset.
+/// @var x_event_agg::sum
+///      The total elapsed time in nanoseconds.
+/// @var x_event_agg::avg
+///      The average elapsed time in nanoseconds.
+/// @var x_event_agg::max
+///      Zero-based index and duration in nanoseconds of the maximum sample.
+/// @var x_event_agg::min
+///      Zero-based index and duration in nanoseconds of the minimum sample.
+struct x_event_agg
+{
+  /// @brief Print the aggregation, or a no-samples message when `cyc` is zero.
+  /// @param unit The unit, `"ns"`, `"us"`, `"ms"`, `"s"`, `"m"`, or `"h"`.
+  ///        `nullptr`, empty, and unknown units use `"ns"`.
+  /// @param title A null-terminated title, `nullptr`, or an empty string.
+  ///        `nullptr` and empty titles use a timestamp generated at echo time.
+  /// @param stream The output stream; `nullptr` selects `stdout`.
+  X_INL void echo(
+      const char* unit, const char* title = nullptr,
+      FILE* stream = stdout) const;
+
+  /// @brief Clear the samples and `ready` flag.
+  X_INL void reset();
+
+  bool ready{false};
+  size_t cyc{0};
+  double sum{0.0};
+  double avg{0.0};
+  struct {
+    size_t idx{0};
+    double val{-DBL_MAX};
+  } max;
+  struct {
+    size_t idx{0};
+    double val{DBL_MAX};
+  } min;
+};
+
+/// @class x_event
+/// @brief A CPU or CUDA elapsed-time recorder.
+/// @note CPU timing uses a monotonic clock. CUDA @ref x_event::tic and
+///       @ref x_event::toc enqueue event records; @ref x_event::dur and
+///       @ref x_event::agg wait for the stop event to calculate durations.
+/// @note Request-check failures in @ref x_event::tic, @ref x_event::toc, and
+///       @ref x_event::agg are returned without changing status or samples.
+///       Aggregation-only resets, no-ops, and count overflow also preserve
+///       @ref x_event::status. Backend recording/calculation failures
+///       update it.
+class x_event
+{
+public:
+  /// @brief Construct a CPU (`"cpu"`), CUDA driver (`"cu"`), or CUDA runtime
+  ///        (`"cuda"`) event.
+  /// @param type The non-null name of an enabled backend.
+  /// @param flags Backend creation flags; ignored for CPU.
+  /// @note CUDA events must support timing; disable-timing flags are rejected.
+  ///       Creation flags differ from the recording flags accepted by
+  ///       @ref x_event::tic and @ref x_event::toc.
+  ///       Constructor unwinding attempts to release successfully acquired
+  ///       handles, including after partial initialization.
+  /// @throws std::invalid_argument for invalid requests.
+  /// @throws std::runtime_error for backend creation/query failures.
+  X_INL explicit x_event(const char* type, unsigned int flags = 0);
+
+  /// @brief Release the owned event resources automatically.
+  /// @note Destruction is attempted for each non-null CUDA start and stop
+  ///       handle, even if destroying the other handle fails. Destruction is
+  ///       best effort, does not throw, and does not retry a failed release.
+  X_INL ~x_event() = default;
+
+  /// @brief Event resources cannot be copied.
+  x_event(const x_event&) = delete;
+  x_event& operator=(const x_event&) = delete;
+
+  /// @brief Record an endpoint and accumulate one valid sample on success.
+  /// @param aggregation The multi-cycle aggregation of the event.
+  /// @param cycle Target valid-sample count; keep it fixed within a group.
+  ///        Zero resets aggregation without recording. A ready aggregation is
+  ///        not updated; reset it to start another group.
+  /// @param stream CUDA stream; `nullptr` selects default. Ignored for CPU.
+  /// @param flags CUDA recording flags; 0 selects defaults. Ignored for CPU.
+  /// @return The result; measurement failures update @ref x_event::status.
+  /// @note Failed samples leave aggregation unchanged. Without a start sample,
+  ///       reports the recording failure, if any, or `ENODATA`. Call
+  ///       @ref x_event::tic for each cycle to measure independent intervals.
+  X_INL x_error agg(
+      x_event_agg& aggregation, size_t cycle,
+      void* stream = nullptr, unsigned int flags = 0);
+
+  /// @brief Calculate the duration between two events.
+  /// @param unit The duration unit, `"h"`, `"m"`, `"s"`, `"ms"`, `"us"`, or
+  ///        `"ns"`. `nullptr` and empty strings default to `"ns"`; unknown
+  ///        units fail.
+  /// @return The elapsed time, or -1.0 on error in every unit. Invalid event
+  ///         or unit requests leave @ref x_event::status unchanged;
+  ///         measurement failures are stored in @ref x_event::status.
+  /// @note Incomplete samples preserve an existing measurement failure, or
+  ///       set `ENODATA`. Invalid CPU frequency sets `EINVAL`; NaN sets
+  ///       `EDOM`; negative or infinite durations set `ERANGE`. A successful
+  ///       calculation clears the measurement error.
+  /// @attention Requires successful @ref x_event::tic and @ref x_event::toc
+  ///            for the current measurement.
+  X_INL double dur(const char* unit = "ns") const;
+
+  /// @brief Get the current measurement status, not the result of every call.
+  /// @note Success does not by itself imply complete samples. Successful
+  ///       backend recording/calculation clears the measurement error.
+  ///       The returned reference reflects subsequent measurement updates;
+  ///       copy it to retain a snapshot.
+  X_INL const x_error& status() const noexcept;
+
+  /// @brief Record the start of a new measurement.
+  /// @param stream CUDA stream; `nullptr` selects default. Ignored for CPU.
+  /// @param flags CUDA recording flags; 0 selects defaults. Ignored for CPU.
+  /// @return The result; backend recording updates @ref x_event::status.
+  /// @note A backend recording attempt invalidates the previous duration,
+  ///       including on failure. A successful attempt clears the old error.
+  X_INL x_error tic(void* stream = nullptr, unsigned int flags = 0);
+
+  /// @brief Record the end of the current measurement.
+  /// @param stream CUDA stream; `nullptr` selects default. Ignored for CPU.
+  /// @param flags CUDA recording flags; 0 selects defaults. Ignored for CPU.
+  /// @return The result; backend recording updates @ref x_event::status.
+  /// @note Without a start sample, returns the existing measurement failure,
+  ///       if any, or `ENODATA`, without changing status. A failed backend
+  ///       attempt invalidates the stop sample; @ref x_event::toc may be
+  ///       retried.
+  /// @attention Requires a successful @ref x_event::tic for the current
+  ///            measurement.
+  X_INL x_error toc(void* stream = nullptr, unsigned int flags = 0);
+
+private:
+  // Members own resources, including during constructor unwinding.
+  struct endpoint
+  {
+    int type{-1};
+    timespec cpu{};
+#if X_WINDOWS
+    int64_t counter{0};
+#endif
+#if X_ENABLE_CUDA_DRIVER
+    CUevent cu{nullptr};
+#endif
+#if X_ENABLE_CUDA_RUNTIME
+    cudaEvent_t cuda{nullptr};
+#endif
+    X_INL ~endpoint() noexcept;
+  } m_start, m_stop;
+
+  int m_type{-1};
+#if X_WINDOWS
+  int64_t m_frequency{0};
+#endif
+  bool m_started{false};
+  bool m_stopped{false};
+  mutable x_error m_status;
+
+  X_INL x_error dur_cpu(double& ns) const;
+
+#if X_ENABLE_CUDA_DRIVER
+  X_INL x_error dur_cuda_driver(double& ns) const;
+#endif  // X_ENABLE_CUDA_DRIVER
+
+#if X_ENABLE_CUDA_RUNTIME
+  X_INL x_error dur_cuda_runtime(double& ns) const;
+#endif  // X_ENABLE_CUDA_RUNTIME
+
+  X_INL x_error record(bool stop, void* stream, unsigned int flags);
+
+  X_INL x_error record_cpu(endpoint& target);
+
+#if X_ENABLE_CUDA_DRIVER
+  X_INL x_error record_cuda_driver(
+      endpoint& target, void* stream, unsigned int flags);
+#endif  // X_ENABLE_CUDA_DRIVER
+
+#if X_ENABLE_CUDA_RUNTIME
+  X_INL x_error record_cuda_runtime(
+      endpoint& target, void* stream, unsigned int flags);
+#endif  // X_ENABLE_CUDA_RUNTIME
+};
+// DECL_Date_and_Time}}}
+
+/******************************************************************************
+ * @name DECL_File_System{{{
+ * @brief A collection of file system utilities.
+ *****************************************************************************/
+/// @brief Query if a file or directory exists.
+/// @param file The file or directory to query.
+/// @return `true` if the status query succeeds, `false` otherwise.
+/// @note A failed query does not necessarily mean the path is absent.
+X_INL bool x_fexist(const char* file);
+
+/// @brief Open a file stream with error handling.
+/// @param stream Writable pointer receiving the opened stream.
+/// @param file A nonempty, null-terminated file path.
+/// @param mode A nonempty, null-terminated access mode supported by the
+///             platform's C runtime library.
+/// @return Success, or an error in the `"posix"` domain.
+/// @note A `nullptr` `stream` or `nullptr`/empty `file`/`mode` returns
+///       `EINVAL` without changing `*stream`. Other failures may change it;
+///       use it only after success.
+/// @attention Mode syntax is not validated. Unsupported Windows modes may
+///            invoke the CRT invalid parameter handler (terminates by
+///            default).
+X_INL x_error x_fopen(FILE** stream, const char* file, const char* mode);
+
+/// @brief Get the absolute path of a file or directory.
+/// @param destination Writable destination buffer.
+/// @param size Destination capacity in bytes, including the terminator.
+/// @param source A nonempty, null-terminated source path.
+/// @return `destination` on success, or `nullptr` on failure with `errno` set.
+/// @note Invalid arguments set `EINVAL`; insufficient capacity sets `ENOBUFS`.
+///       The destination is unchanged on failure.
+/// @note Windows `_fullpath()` does not require existence or resolve symlinks;
+///       POSIX `realpath()` requires an existing target and resolves symlinks.
+X_INL const char* x_fpath(
+    char* destination, const size_t size, const char* source);
+
+/// @brief Get the size of a file.
+/// @param file The file to query.
+/// @return The size of the file. If an error occurs, the return value is -1.
+X_INL int64_t x_fsize(const char* file);
+// DECL_File_System}}}
+
+/******************************************************************************
+ * @name DECL_Hardware{{{
+ * @brief A collection of hardware utilities.
+ *****************************************************************************/
+/// @brief Get an online logical-processor count.
+/// @return A positive count, or 0 if the query fails or yields no processors.
+/// @note This is provided as a thread-count hint. It does not account for
+///       affinity or CPU quotas and does not guarantee an optimal thread
+///       count. Older Windows targets query only the current processor group.
+///       Using all processor groups may require explicit thread placement on
+///       older Windows versions.
+/// @attention The caller must handle a zero result and choose an appropriate
+///            fallback before using the result as a thread count.
+X_INL size_t x_ncpu();
+// DECL_Hardware}}}
+
+/******************************************************************************
+ * @name DECL_Mathematics{{{
+ * @brief A collection of mathematical utilities.
+ *****************************************************************************/
+/// @brief Constant PI of user-defined type.
+/// @var x_Pi
+/// @tparam T The user-defined type.
+/// @return The constant PI.
+template<typename T>
+inline constexpr T x_Pi =
+  static_cast<T>(3.141592653589793238462643383279502884197169399375L);
+
+/// @brief Kibibyte constant generator, i.e., 1 KiB = 1024 bytes.
+/// @param scale The scaling factor.
+/// @note Capacity helpers evaluate `scale` once and do not check overflow.
+///       Choose `T` to represent the unit constant and the scaled result;
+///       multiplication follows the usual arithmetic conversions, including
+///       integer promotion. The result is returned as `T`.
+/// @note `T` is deduced from `scale` unless explicitly specified. For large
+///       integer capacities, use a suitable type, e.g., `x_TiB<uint64_t>(1)`;
+///       an `int` literal alone does not select a wider type.
+template<typename T>
+X_INL constexpr T x_KiB(T scale);
+
+/// @brief Mebibyte constant generator, i.e., 1 MiB = 1048576 bytes.
+/// @param scale The scaling factor.
+template<typename T>
+X_INL constexpr T x_MiB(T scale);
+
+/// @brief Gibibyte constant generator, i.e., 1 GiB = 1073741824 bytes.
+/// @param scale The scaling factor.
+template<typename T>
+X_INL constexpr T x_GiB(T scale);
+
+/// @brief Tebibyte constant generator, i.e., 1 TiB = 1099511627776 bytes.
+/// @param scale The scaling factor.
+template<typename T>
+X_INL constexpr T x_TiB(T scale);
+
+/// @brief Pebibyte constant generator, i.e., 1 PiB = 1125899906842624 bytes.
+/// @param scale The scaling factor.
+template<typename T>
+X_INL constexpr T x_PiB(T scale);
+
+/// @brief Generate a mask with only the specified bit set.
+/// @param bit The zero-based bit index, which must be in [0, 63].
+/// @return A `uint64_t` bit mask.
+/// @note `T` must be integral, excluding `bool`. A constant-expression index
+///       yields a constant expression.
+/// @attention The index is not checked and `errno` is not changed.
+/// @see C++'s `std::bitset` for a more versatile solution.
+template<typename T>
+X_INL constexpr uint64_t x_bit(T bit);
+
+/// @brief Calculate the greatest common divisor of two integers.
+/// @param m The first integer.
+/// @param n The second integer.
+/// @return The greatest common divisor; `gcd(0, 0)` is defined here as 0.
+/// @note Integer helpers (gcd, lcm, next/prev exp/mul) require integral `T`
+///       other than `bool` and nonnegative inputs. Negative inputs return 0
+///       with `errno = EINVAL`. Success preserves `errno`; valid calls can
+///       be `constexpr`.
+template<typename T>
+X_INL constexpr T x_gcd(T m, T n);
+
+/// @brief Calculate the least common multiple of two integers.
+/// @param m The first integer.
+/// @param n The second integer.
+/// @return The least common multiple, or 0 if either argument is 0.
+/// @note The integer-helper rules documented by @ref x_gcd apply. Overflow
+///       returns 0 with `errno = ERANGE`; clear `errno` first to distinguish a
+///       valid zero.
+template<typename T>
+X_INL constexpr T x_lcm(T m, T n);
+
+/// @brief Round up to an integer power of a base, including `base^0 == 1`.
+/// @param base The base, which must be at least 2.
+/// @param source The nonnegative source number.
+/// @return The smallest power greater than or equal to source; 0 yields 1.
+/// @note The integer-helper rules documented by @ref x_gcd apply. Invalid
+///       `base` returns 0 with `errno = EINVAL`, even for `source == 0`.
+///       Overflow returns 0 with `errno = ERANGE`.
+template<typename T>
+X_INL constexpr T x_next_exp(T base, T source);
+
+/// @brief Calculate the next multiple of a base.
+/// @param base The base, which must be positive.
+/// @param source The nonnegative source number.
+/// @return The smallest multiple strictly greater than source, including when
+///         `source` is already a multiple. A zero `source` yields `base`.
+/// @note The integer-helper rules documented by @ref x_gcd apply. Invalid
+///       `base` returns 0 with `errno = EINVAL`; overflow returns 0 with
+///       `errno = ERANGE`.
+template<typename T>
+X_INL constexpr T x_next_mul(T base, T source);
+
+/// @brief Round down to an integer power of a base, including `base^0 == 1`.
+/// @param base The base, which must be at least 2.
+/// @param source The nonnegative source number.
+/// @return The largest power less than or equal to source; 0 yields 0.
+/// @note The integer-helper rules documented by @ref x_gcd apply. Invalid
+///       `base` returns 0 with `errno = EINVAL`, even for `source == 0`.
+///       Clear `errno` first to distinguish a valid zero.
+template<typename T>
+X_INL constexpr T x_prev_exp(T base, T source);
+
+/// @brief Calculate the previous multiple of a base.
+/// @param base The base, which must be positive.
+/// @param source The nonnegative source number.
+/// @return The largest multiple less than or equal to source.
+/// @note The integer-helper rules documented by @ref x_gcd apply. Invalid
+///       `base` returns 0 with `errno = EINVAL`; clear `errno` first to
+///       distinguish a valid zero.
+template<typename T>
+X_INL constexpr T x_prev_mul(T base, T source);
+// DECL_Mathematics}}}
+
+/******************************************************************************
+ * @name DECL_Memory{{{
+ * @brief A collection of memory management utilities.
+ *****************************************************************************/
+/// @brief Get number of items in an array.
+/// @param array An array object, regardless of its storage duration.
+/// @attention Pointers, including array function parameters (which are
+///            pointers), are not supported.
+template<typename T, size_t N>
+X_INL constexpr size_t x_count(const T (&array)[N]);
+
+/// @brief Delete a dynamically allocated object or array and set its pointer
+///        to `nullptr`.
+/// @tparam array `true` selects `delete[]`; `false` selects `delete`.
+/// @param pointer A writable pointer lvalue allocated by the matching `new`.
+/// @remark If the pointer is `nullptr`, deletion has no effect.
+template<bool array, typename T>
+X_INL void x_delete(T*& pointer);
+
+/// @brief Free a memory block allocated on the heap and set it to `nullptr`.
+/// @param pointer A writable object-pointer lvalue whose non-null value is
+///                valid to pass to `free()`.
+/// @note The argument is evaluated once and bound by reference.
+///       Pointers to `const`/`volatile`-qualified types are supported.
+/// @remark If the pointer is `nullptr`, this helper does nothing.
+template<typename T>
+X_INL void x_free(T*& pointer);
+
+/// @brief Wrapper of `malloc()` with error handling.
+/// @param pointer Pointer to a writable `T*` object initialized to `nullptr`.
+/// @param size Number of bytes to allocate; must be positive.
+/// @return Success, or an error in the `posix` domain.
+/// @note A `nullptr` `pointer`, a non-null `*pointer`, or a zero `size`
+///       returns `EINVAL` without changing the output. Allocation failure
+///       leaves `*pointer` null and captures the allocator's `errno`.
+/// @attention The function reads `*pointer` before allocating. This allocates
+///            raw storage without constructing objects; callers must satisfy
+///            their objects' alignment and lifetime requirements.
+template<typename T>
+X_INL x_error x_malloc(T** pointer, const size_t size);
+
+/// @brief Wrapper of `memcpy()` with error handling.
+/// @param destination Destination buffer.
+/// @param source Source buffer.
+/// @param size Number of bytes to copy.
+/// @return Success, or `EINVAL` in the `posix` domain when `size` is nonzero
+///         and either pointer is `nullptr` or the ranges overlap.
+/// @note A zero `size` succeeds without accessing either buffer; both pointers
+///       may be `nullptr` in that case. Failure preserves the destination.
+/// @attention Provide readable/writable ranges of at least `size` bytes;
+///            pointer validity and capacity are not checked. Identical
+///            pointers are rejected. Overlap detection assumes `uintptr_t`
+///            byte-address ordering. Copying object values requires trivially
+///            copyable types and valid object lifetimes.
+X_INL x_error x_memcpy(
+    void* destination, const void* source, const size_t size);
+
+/// @brief Query size available and total memories on CPU or GPU.
+/// @param type Can be `"cpu"`, `"cu"` (via CUDA driver API), or `"cuda"`
+///             (via CUDA runtime API).
+/// @param available Size of available memory.
+/// @param total Size of total memory.
+/// @return An instance of @ref x_error.
+/// @note Either output may be `nullptr`, but not both. Query failures leave
+///       outputs unchanged. Unknown types and disabled backends return
+///       `ENOTSUP`.
+/// @note CPU queries support Linux, macOS, and Windows. Other platforms return
+///       `ENOTSUP`; an unrepresentable byte count returns `ERANGE`.
+/// @note GPU queries use the current CUDA context/device. Driver queries
+///       require prior successful `cuInit(0)` and a current context.
+/// @note CPU available is a system-wide snapshot, not an allocation guarantee:
+///       Linux `freeram`, macOS `free_count` * page size (includes speculative
+///       pages), Windows `ullAvailPhys`. Mach failures use `generic` codes;
+///       `sysctlbyname()` uses `posix`.
+X_INL x_error x_meminfo(
+    const char* type, size_t* available, size_t* total);
+// DECL_Memory}}}
+
+/******************************************************************************
+ * @name DECL_String{{{
+ * @brief A collection of string utilities.
+ *****************************************************************************/
+/// @brief Copy a string with truncation and argument checking.
+/// @param destination Writable destination buffer of at least `size` bytes.
+/// @param size Destination capacity in bytes, including the terminator.
+/// @param source A valid null-terminated source string.
+/// @return Success, or `EINVAL` in the `posix` domain for a `nullptr` pointer,
+///         zero capacity, or overlapping source and destination write ranges.
+/// @note Copies at most `size - 1` characters and appends a terminator.
+///       Truncation is successful. The destination is unchanged on failure.
+/// @attention The destination write range and full source string must not
+///            overlap, including terminators and identical pointers. Pointer
+///            validity and capacity are not checked. Detection assumes
+///            `uintptr_t` byte-address ordering.
+X_INL x_error x_strcpy(
+    char* destination, const size_t size, const char* source);
 
 /// @brief Check if a string is empty.
+/// @return `true` for `nullptr` or a string whose first character is `'\0'`.
+/// @note A non-null argument must point to a valid null-terminated string.
 X_INL bool x_strmty(const char* string);
-/** @} */  // String
+// DECL_String}}}
 
-//******************************************************* IMPL_Communication{{{
-X_INL uint32_t x_checksum_crc32(
-    const void* data, const size_t size, const uint32_t* prev)
+/******************************************************************************
+ * @name DECL_CUDA{{{
+ * @brief A collection of CUDA utilities.
+ *****************************************************************************/
+#if (X_ENABLE_CUDA_DRIVER || X_ENABLE_CUDA_RUNTIME)
+/// @brief Query the type of a block of memory.
+/// @param api The API to which the memory is corresponding. Must be `"cu"`
+///            (CUDA driver) or `"cuda"` (CUDA runtime).
+/// @param pointer The memory. This argument is always required and must be:
+///                exactly `CUdeviceptr` for `"cu"`, or an object pointer
+///                (including `const`/`volatile` pointers) or `nullptr` for
+///                `"cuda"`.
+/// @return The underlying API's memory type name, `"Unknown"` on query failure
+///         or an unrecognized memory type, or `"N/A"` for a `nullptr`/empty
+///         `api`, an unknown `api`, an unsupported pointer type, or a disabled
+///         backend.
+/// @note Driver queries require prior successful `cuInit(0)` and unified
+///       virtual addressing as required by `cuPointerGetAttribute()`. Driver
+///       and runtime memory classifications are not normalized to each other.
+/// @attention For `"cu"`, cast a zero address to `CUdeviceptr` rather than
+///            passing an integer literal or pointer. For `"cuda"`, typed
+///            object pointers and `nullptr` are accepted directly. The memory
+///            is not modified.
+template<typename T>
+X_INL const char* x_memtype(const char* api, T pointer);
+
+/// @brief Query the number of GPU devices.
+/// @param api `"cu"` (CUDA driver) or `"cuda"` (CUDA runtime).
+/// @return The device count, or 0 on query failure, a `nullptr`/empty or
+///         unknown `api`, or a disabled backend. Query failures are reported
+///         to `stderr`.
+/// @note For `"cu"`, the caller must first successfully call `cuInit(0)`.
+X_INL size_t x_ngpu(const char* api);
+#endif
+// DECL_CUDA}}}
+
+// ***************************************************** IMPL_Error_Handling{{{
+X_INL int32_t _x_error_capture_posix();
+#if X_ENABLE_SOCKET
+X_INL int32_t _x_error_capture_socket();
+#endif  // X_ENABLE_SOCKET
+#if X_WINDOWS
+X_INL int32_t _x_error_capture_win32();
+#endif  // X_WINDOWS
+
+X_INL char* _x_error_copy(char* buffer, const size_t size, const char* text);
+X_INL char* _x_error_number(
+    char* buffer, const size_t size, const char* prefix, const int32_t value);
+X_INL char* _x_error_message_generic(
+    char* buffer, const size_t size, const int32_t value);
+X_INL char* _x_error_message_posix(
+    char* buffer, const size_t size, const int32_t value);
+#if X_ENABLE_SOCKET
+X_INL char* _x_error_message_socket(
+    char* buffer, const size_t size, const int32_t value);
+#endif  // X_ENABLE_SOCKET
+#if X_WINDOWS
+X_INL char* _x_error_message_win32(
+    char* buffer, const size_t size, const int32_t value);
+#endif  // X_WINDOWS
+
+X_INL bool _x_error_failed_nonzero(const int32_t value);
+X_INL const x_error_domain* _x_error_domain_lookup(const char* name);
+X_INL const x_error_domain* _x_error_domain_require(const char* name);
+X_INL char* _x_error_domain_message(
+    char* buffer, const size_t size, const int32_t value,
+    const x_error_domain* domain);
+
+inline const x_error_domain error_domain_generic{
+  nullptr,
+  _x_error_failed_nonzero,
+  _x_error_message_generic,
+  "generic"
+};
+
+inline const x_error_domain error_domain_posix{
+  _x_error_capture_posix,
+  _x_error_failed_nonzero,
+  _x_error_message_posix,
+  "posix"
+};
+
+#if X_ENABLE_SOCKET
+inline const x_error_domain error_domain_socket{
+  _x_error_capture_socket,
+  _x_error_failed_nonzero,
+  _x_error_message_socket,
+  "socket"
+};
+#endif  // X_ENABLE_SOCKET
+
+#if X_WINDOWS
+inline const x_error_domain error_domain_win32{
+  _x_error_capture_win32,
+  _x_error_failed_nonzero,
+  _x_error_message_win32,
+  "win32"
+};
+#endif  // X_WINDOWS
+
+#if X_ENABLE_CUDA_DRIVER
+X_INL bool _x_error_failed_cuda_driver(const int32_t value);
+X_INL char* _x_error_message_cuda_driver(
+    char* buffer, const size_t size, const int32_t value);
+
+inline const x_error_domain error_domain_cuda_driver{
+  nullptr,
+  _x_error_failed_cuda_driver,
+  _x_error_message_cuda_driver,
+  "cu"
+};
+#endif  // X_ENABLE_CUDA_DRIVER
+
+#if X_ENABLE_CUDA_RUNTIME
+X_INL bool _x_error_failed_cuda_runtime(const int32_t value);
+X_INL char* _x_error_message_cuda_runtime(
+    char* buffer, const size_t size, const int32_t value);
+
+inline const x_error_domain error_domain_cuda_runtime{
+  nullptr,
+  _x_error_failed_cuda_runtime,
+  _x_error_message_cuda_runtime,
+  "cuda"
+};
+#endif  // X_ENABLE_CUDA_RUNTIME
+
+#if X_ENABLE_CUBLAS
+X_INL bool _x_error_failed_cublas(const int32_t value);
+X_INL char* _x_error_message_cublas(
+    char* buffer, const size_t size, const int32_t value);
+
+inline const x_error_domain error_domain_cublas{
+  nullptr,
+  _x_error_failed_cublas,
+  _x_error_message_cublas,
+  "cublas"
+};
+#endif  // X_ENABLE_CUBLAS
+
+struct x_error_domain_registry
 {
-  const uint8_t* d{static_cast<const uint8_t*>(data)};
-  size_t cnt{size / sizeof(uint8_t)};
-  int i{0};
+  const x_error_domain* list[X_ERROR_DOMAIN_LIMIT];
+  size_t count;
+};
 
-  uint32_t cks{prev ? ~(*prev) : 0xFFFFFFFF};
+inline x_error_domain_registry error_domain_registry{
+  {
+    &error_domain_generic,
+    &error_domain_posix,
+#if X_ENABLE_SOCKET
+    &error_domain_socket,
+#endif
+#if X_WINDOWS
+    &error_domain_win32,
+#endif
+#if X_ENABLE_CUDA_DRIVER
+    &error_domain_cuda_driver,
+#endif
+#if X_ENABLE_CUDA_RUNTIME
+    &error_domain_cuda_runtime,
+#endif
+#if X_ENABLE_CUBLAS
+    &error_domain_cublas,
+#endif
+  },
+  static_cast<size_t>(2 + !!X_WINDOWS + !!X_ENABLE_SOCKET
+      + !!X_ENABLE_CUDA_DRIVER + !!X_ENABLE_CUDA_RUNTIME + !!X_ENABLE_CUBLAS)
+};
 
-  while (cnt--) {
-    cks ^= *d++;
+X_INL x_error x_ok()
+{
+  return x_error{};
+}
 
-    for (i = 0; i < 8; ++i) {
-      cks = (cks >> 1) ^ (-static_cast<int32_t>(cks & 1) & 0xEDB88320);
+X_INL bool x_fail(const x_error& error)
+{
+  return static_cast<bool>(error);
+}
+
+X_INL bool x_succ(const x_error& error)
+{
+  return !x_fail(error);
+}
+
+// x_error_capture{{{
+X_INL int32_t _x_error_capture_posix()
+{
+  return static_cast<int32_t>(errno);
+}
+
+#if X_ENABLE_SOCKET
+X_INL int32_t _x_error_capture_socket()
+{
+#if X_WINDOWS
+  return static_cast<int32_t>(WSAGetLastError());
+#else
+  return static_cast<int32_t>(errno);
+#endif
+}
+#endif  // X_ENABLE_SOCKET
+
+#if X_WINDOWS
+X_INL int32_t _x_error_capture_win32()
+{
+  return static_cast<int32_t>(GetLastError());
+}
+#endif  // X_WINDOWS
+// x_error_capture}}}
+
+// x_error_domain{{{
+X_INL bool _x_error_failed_nonzero(const int32_t value)
+{
+  return value != 0;
+}
+
+X_INL const x_error_domain* _x_error_domain_lookup(const char* name)
+{
+  if (name == nullptr || name[0] == '\0') {
+    return nullptr;
+  }
+
+  const x_error_domain* domain = nullptr;
+  for (size_t i = 0; i < error_domain_registry.count; ++i) {
+    domain = error_domain_registry.list[i];
+    if (domain != nullptr && domain->name != nullptr
+        && std::strcmp(name, domain->name) == 0) {
+      return domain;
+    }
+  }
+
+  return nullptr;
+}
+
+X_INL const x_error_domain* _x_error_domain_require(const char* name)
+{
+  const auto* domain = _x_error_domain_lookup(name);
+  if (domain == nullptr) {
+    std::fprintf(
+        stderr, "Unknown error domain: \"%s\".\n",
+        name == nullptr ? "(null)" : name);
+    std::abort();
+  }
+
+  return domain;
+}
+
+X_INL char* _x_error_domain_message(
+    char* buffer, const size_t size, const int32_t value,
+    const x_error_domain* domain)
+{
+  if (buffer == nullptr || size == 0) {
+    return buffer;
+  }
+
+  if (domain == nullptr || domain->message == nullptr) {
+    return _x_error_number(buffer, size, "Unknown error", value);
+  }
+
+  return domain->message(buffer, size, value);
+}
+// x_error_domain}}}
+
+// x_error_message{{{
+X_INL char* _x_error_copy(char* buffer, const size_t size, const char* text)
+{
+  if (buffer == nullptr || size == 0) {
+    return buffer;
+  }
+
+  const size_t len = std::strlen(text);
+  const size_t cnt = len < size - 1 ? len : size - 1;
+  if (cnt > 0) {
+    std::memmove(buffer, text, cnt);
+  }
+
+  buffer[cnt] = '\0';
+
+  return buffer;
+}
+
+X_INL char* _x_error_number(
+    char* buffer, const size_t size,
+    const char* prefix, const int32_t value)
+{
+  if (buffer == nullptr || size == 0) {
+    return buffer;
+  }
+
+  // Format numeric fallbacks in sufficiently large storage, then truncate
+  // explicitly. Small caller buffers are valid, including under -Werror.
+  char msg[64]{};
+  std::snprintf(msg, sizeof(msg), "%s %d", prefix, value);
+
+  return _x_error_copy(buffer, size, msg);
+}
+
+X_INL char* _x_error_message_generic(
+    char* buffer, const size_t size, const int32_t value)
+{
+  return _x_error_number(buffer, size, "Generic error", value);
+}
+
+X_INL char* _x_error_message_posix(
+    char* buffer, const size_t size, const int32_t value)
+{
+  if (buffer == nullptr || size == 0) {
+    return buffer;
+  }
+
+#if X_WINDOWS
+  char msg[256]{};
+  if (strerror_s(msg, sizeof(msg), value) != 0 || msg[0] == '\0') {
+    _x_error_number(buffer, size, "Unknown error", value);
+  } else {
+    _x_error_copy(buffer, size, msg);
+  }
+#else
+  buffer[0] = '\0';
+#if defined(_GNU_SOURCE) && (defined(__GLIBC__) || X_CYGWIN)
+  // GNU strerror_r may return immutable text instead of using buffer.
+  const char* msg = strerror_r(value, buffer, size);
+  if (msg == nullptr || msg[0] == '\0') {
+    _x_error_number(buffer, size, "Unknown error", value);
+  } else if (msg != buffer) {
+    _x_error_copy(buffer, size, msg);
+  }
+#else
+  int perr = strerror_r(value, buffer, size);
+  // An XSI ERANGE result need not leave a terminated buffer.
+  buffer[size - 1] = '\0';
+  if ((perr != 0 && perr != ERANGE) || buffer[0] == '\0') {
+    _x_error_number(buffer, size, "Unknown error", value);
+  }
+#endif
+#endif
+
+  return buffer;
+}
+
+#if X_ENABLE_SOCKET
+X_INL char* _x_error_message_socket(
+    char* buffer, const size_t size, const int32_t value)
+{
+#if X_WINDOWS
+  return _x_error_message_win32(buffer, size, value);
+#else
+  return _x_error_message_posix(buffer, size, value);
+#endif
+}
+#endif  // X_ENABLE_SOCKET
+
+#if X_WINDOWS
+X_INL char* _x_error_message_win32(
+    char* buffer, const size_t size, const int32_t value)
+{
+  if (buffer == nullptr || size == 0) {
+    return buffer;
+  }
+
+  DWORD len = FormatMessageA(
+      FORMAT_MESSAGE_FROM_SYSTEM
+      | FORMAT_MESSAGE_IGNORE_INSERTS
+      | FORMAT_MESSAGE_MAX_WIDTH_MASK,
+      nullptr, static_cast<DWORD>(value),
+      MAKELANGID(LANG_ENGLISH, SUBLANG_ENGLISH_US), buffer,
+      static_cast<DWORD>(size), nullptr);
+  if (len == 0) {
+    _x_error_number(buffer, size, "Win32 error", value);
+  } else {
+    while (len > 0 && (buffer[len - 1] == '\n' || buffer[len - 1] == '\r')) {
+      buffer[--len] = '\0';
+    }
+  }
+
+  return buffer;
+}
+#endif  // X_WINDOWS
+// x_error_message}}}
+
+// x_error_set{{{
+X_INL x_error::x_error()
+  :m_domain{&error_domain_posix}
+{
+}
+
+X_INL x_error::x_error(const char* name)
+{
+  this->set(name);
+}
+
+X_INL x_error::x_error(const char* name, const int32_t value)
+{
+  this->set(name, value);
+}
+
+X_INL x_error::x_error(const x_error_domain& domain, const int32_t value)
+{
+  this->set(domain, value);
+}
+
+X_INL x_error::x_error(
+    const char* name, const int32_t value, const char* message)
+{
+  this->set(name, value, message);
+}
+
+X_INL x_error& x_error::set(const char* name)
+{
+  const auto* domain = _x_error_domain_require(name);
+  if (domain->capture == nullptr) {
+    std::fprintf(
+        stderr, "Error domain \"%s\" does not support error capturing.\n",
+        domain->name);
+    std::abort();
+  }
+
+  // Capture before touching string storage or doing any further library work.
+  return this->set(*domain, domain->capture());
+}
+
+X_INL x_error& x_error::set(const char* name, const int32_t value)
+{
+  return this->set(*_x_error_domain_require(name), value);
+}
+
+X_INL x_error& x_error::set(const x_error_domain& domain, const int32_t value)
+{
+  this->m_domain = &domain;
+  this->m_value = value;
+  this->m_has_message = false;
+  this->m_message.clear();
+
+  return *this;
+}
+
+X_INL x_error& x_error::set(
+    const char* name, const int32_t value, const char* message)
+{
+  // Copy first: message may refer to this value's previous message() text.
+  std::string msg = message == nullptr ? "" : message;
+  this->set(name, value);
+  this->m_message = std::move(msg);
+  this->m_has_message = message != nullptr;
+
+  return *this;
+}
+// x_error_set}}}
+
+X_INL const char* x_error::domain() const
+{
+  if (this->m_domain != nullptr && this->m_domain->name != nullptr) {
+    return this->m_domain->name;
+  } else {
+    return "generic";
+  }
+}
+
+X_INL const char* x_error::message() const
+{
+  if (!this->m_has_message) {
+    char buf[256]{};
+    this->message(buf, sizeof(buf));
+    this->m_message = buf;
+  }
+
+  return this->m_message.c_str();
+}
+
+X_INL const char* x_error::message(char* buffer, const size_t size) const
+{
+  if (buffer == nullptr || size == 0) {
+    return buffer;
+  }
+
+  if (this->m_has_message) {
+    _x_error_copy(buffer, size, this->m_message.c_str());
+  } else {
+    const auto* domain = this->m_domain == nullptr
+        ? &error_domain_generic : this->m_domain;
+    _x_error_domain_message(buffer, size, this->m_value, domain);
+  }
+
+  return buffer;
+}
+
+X_INL int32_t x_error::value() const
+{
+  return this->m_value;
+}
+
+X_INL x_error::operator bool() const
+{
+  if (this->m_domain != nullptr && this->m_domain->failed != nullptr) {
+    return this->m_domain->failed(this->m_value);
+  } else {
+    return this->m_value != 0;
+  }
+}
+
+X_INL int32_t x_error::register_domain(const x_error_domain* domain)
+{
+  if (domain == nullptr || domain->name == nullptr || domain->name[0] == '\0') {
+    return EINVAL;
+  }
+
+  if (_x_error_domain_lookup(domain->name) != nullptr) {
+    return EEXIST;
+  }
+
+  if (error_domain_registry.count >= X_ERROR_DOMAIN_LIMIT) {
+    return ENOSPC;
+  }
+
+  error_domain_registry.list[error_domain_registry.count++] = domain;
+
+  return 0;
+}
+
+// Support optional assertion messages in strict C++17. The trailing dummy
+// argument in x_assert keeps the selector's variadic tail nonempty.
+#define _X_ASSERT_SELECT(_1, _2, function, ...) function
+#define _X_ASSERT_ONE(expression) _X_ASSERT_TWO(expression, nullptr)
+#define _X_ASSERT_TWO(expression, message) do { \
+  if (!(expression)) { \
+    _x_assert_fail( \
+        #expression, (message), X_FILENAME, static_cast<long long>(__LINE__), \
+        X_PRETTY_FUNCTION); \
+  } \
+} while (false)
+
+X_INL void _x_assert_fail(
+    const char* expression, const char* message,
+    const char* file, const long long line, const char* function)
+{
+  std::fprintf(stderr, "Assertion failed: %s\n", expression);
+
+  if (message != nullptr && message[0] != '\0') {
+    std::fprintf(stderr, "Message: %s\n", message);
+  }
+
+  std::fprintf(stderr, "Position: %s:%lld: %s\n", file, line, function);
+
+  std::abort();
+}
+
+template<typename Callable>
+X_INL x_error _x_check_impl(
+    const char* domain, Callable&& evaluate,
+    const char* file, const char* expression, const long long line)
+{
+  x_error err;
+  if constexpr (std::is_same_v<std::decay_t<decltype(evaluate())>, x_error>) {
+    err = evaluate();
+  } else {
+    err.set(domain, static_cast<int32_t>(evaluate()));
+  }
+
+  if (x_fail(err)) {
+#ifdef NDEBUG
+    (void)file;
+    (void)expression;
+    (void)line;
+    std::fprintf(stderr, "Check failed: %s\n", err.message());
+#else
+    std::fprintf(
+        stderr, "Check failed: %s\nPosition: %s:%lld: %s\n",
+        err.message(), file, line, expression);
+#endif
+  }
+
+  return err;
+}
+
+// x_error_cuda_driver{{{
+#if X_ENABLE_CUDA_DRIVER
+X_INL bool _x_error_failed_cuda_driver(const int32_t value)
+{
+  return static_cast<CUresult>(value) != CUDA_SUCCESS;
+}
+
+X_INL char* _x_error_message_cuda_driver(
+    char* buffer, const size_t size, const int32_t value)
+{
+  if (buffer == nullptr || size == 0) {
+    return buffer;
+  }
+
+  const char* msg{nullptr};
+  CUresult cres = cuGetErrorString(static_cast<CUresult>(value), &msg);
+  if (cres != CUDA_SUCCESS || msg == nullptr) {
+    _x_error_number(buffer, size, "CUDA driver error", value);
+    return buffer;
+  }
+
+  _x_error_copy(buffer, size, msg);
+
+  return buffer;
+}
+#endif  // X_ENABLE_CUDA_DRIVER
+// x_error_cuda_driver}}}
+
+// x_error_cuda_runtime{{{
+#if X_ENABLE_CUDA_RUNTIME
+X_INL bool _x_error_failed_cuda_runtime(const int32_t value)
+{
+  return static_cast<cudaError_t>(value) != cudaSuccess;
+}
+
+X_INL char* _x_error_message_cuda_runtime(
+    char* buffer, const size_t size, const int32_t value)
+{
+  if (buffer == nullptr || size == 0) {
+    return buffer;
+  }
+
+  const char* msg = cudaGetErrorString(static_cast<cudaError_t>(value));
+  _x_error_copy(buffer, size, msg == nullptr ? "CUDA runtime error" : msg);
+
+  return buffer;
+}
+#endif  // X_ENABLE_CUDA_RUNTIME
+// x_error_cuda_runtime}}}
+
+// x_error_cublas{{{
+#if X_ENABLE_CUBLAS
+X_INL bool _x_error_failed_cublas(const int32_t value)
+{
+  return static_cast<cublasStatus_t>(value) != CUBLAS_STATUS_SUCCESS;
+}
+
+X_INL char* _x_error_message_cublas(
+    char* buffer, const size_t size, const int32_t value)
+{
+  if (buffer == nullptr || size == 0) {
+    return buffer;
+  }
+
+  const char* msg = cublasGetStatusString(static_cast<cublasStatus_t>(value));
+  _x_error_copy(buffer, size, msg == nullptr ? "cuBLAS error" : msg);
+
+  return buffer;
+}
+#endif  // X_ENABLE_CUBLAS
+// x_error_cublas}}}
+// IMPL_Error_Handling}}}
+
+// ************************************************************ IMPL_Logging{{{
+#define _X_COLOR_WHITE   "\033[97m"
+#define _X_COLOR_RED     "\033[91m"
+#define _X_COLOR_GREEN   "\033[92m"
+#define _X_COLOR_YELLOW  "\033[93m"
+#define _X_COLOR_MAGENTA "\033[95m"
+#define _X_COLOR_CYAN    "\033[96m"
+#define _X_COLOR_RESET   "\033[0m"
+
+template<unsigned char level>
+X_INL void _x_log_prefix(
+    char* buffer, const size_t size,
+    const char* file, const char* function, long long line)
+{
+  char ts[26]{};
+
+#ifdef NDEBUG
+  (void)file;
+  (void)function;
+  (void)line;
+  std::snprintf(
+      buffer, size, "[%c %s] ",
+      std::toupper(level), _x_timestamp(ts, sizeof(ts)));
+#else
+  std::snprintf(
+      buffer, size, "[%c %s | %s - %s - %lld] ",
+      std::toupper(level), _x_timestamp(ts, sizeof(ts)),
+      file, function, line);
+#endif
+}
+
+template<unsigned char level, typename... Args>
+X_INL void _x_log_impl(
+    const char* file, const char* function, const long long line,
+    FILE* stream, const char* format, Args&&... args)
+{
+  int lvl{X_LOG_NONE};
+  const char* color{""};
+
+  switch (level) {
+    case 'P':
+    case 'p':
+      lvl = X_LOG_PLAIN;
+      color = _X_COLOR_WHITE;
+      break;
+    case 'F':
+    case 'f':
+      lvl = X_LOG_FATAL;
+      color = _X_COLOR_MAGENTA;
+      break;
+    case 'E':
+    case 'e':
+      lvl = X_LOG_ERROR;
+      color = _X_COLOR_RED;
+      break;
+    case 'W':
+    case 'w':
+      lvl = X_LOG_WARNING;
+      color = _X_COLOR_YELLOW;
+      break;
+    case 'I':
+    case 'i':
+      lvl = X_LOG_INFO;
+      color = _X_COLOR_GREEN;
+      break;
+    case 'D':
+    case 'd':
+      lvl = X_LOG_DEBUG;
+      color = _X_COLOR_CYAN;
+      break;
+    default:
+      return;
+  }
+
+  if (lvl > X_LOG_LEVEL) {
+    return;
+  }
+
+  char prefix[X_LOG_PREFIX_LIMIT]{};
+  _x_log_prefix<level>(prefix, sizeof(prefix), file, function, line);
+
+  char msg[X_LOG_MSG_LIMIT]{};
+  std::snprintf(msg, sizeof(msg), format, std::forward<Args>(args)...);
+
+  FILE* output = stream == nullptr ? stdout : stream;
+  if (output == stdout || output == stderr) {
+    std::fprintf(output, "%s%s%s%s\n", color, prefix, msg, _X_COLOR_RESET);
+  } else {
+    std::fprintf(output, "%s%s\n", prefix, msg);
+  }
+}
+// IMPL_Logging}}}
+
+// ********************************************************** IMPL_Checksums{{{
+X_INL uint32_t x_checksum_crc32(
+    const void* data, const size_t size, const uint32_t* previous)
+{
+  const auto* bytes{static_cast<const uint8_t*>(data)};
+  uint32_t cks{previous == nullptr ? 0xFFFFFFFFu : ~*previous};
+
+  if (bytes == nullptr) {
+    return ~cks;
+  }
+
+  for (size_t i{0}; i < size; ++i) {
+    cks ^= bytes[i];
+    for (size_t bit{0}; bit < 8; ++bit) {
+      cks = (cks >> 1) ^ (-static_cast<int32_t>(cks & 1u) & 0xEDB88320u);
     }
   }
 
@@ -1063,1796 +1965,1122 @@ X_INL uint32_t x_checksum_crc32(
 }
 
 X_INL uint16_t x_checksum_rfc1071(
-    const void* data, const size_t size, const uint16_t* prev)
+    const void* data, const size_t size, const uint16_t* previous)
 {
-  const uint16_t* d{static_cast<const uint16_t*>(data)};
-  size_t cnt{size / sizeof(uint8_t)};
-  uint32_t cks{prev ? static_cast<uint32_t>(~(*prev)) : 0};
+  const auto* bytes{static_cast<const uint8_t*>(data)};
+  uint32_t cks{previous == nullptr ? 0u : static_cast<uint16_t>(~*previous)};
 
-  while (cnt > 1) {
-    cks += *d++;
-    cnt -= 2;
+  if (bytes == nullptr) {
+    return static_cast<uint16_t>(~cks);
   }
 
-  if (cnt > 0) {
-    cks += *d;
+  size_t idx{0};
+
+  while (size - idx >= 2) {
+    cks += (static_cast<uint32_t>(bytes[idx]) << 8) | bytes[idx + 1];
+    cks = (cks & 0xFFFFu) + (cks >> 16);
+    idx += 2;
   }
 
-  while (cks >> 16) {
-    cks = (cks & 0xFFFF) + (cks >> 16);
+  if (idx < size) {
+    cks += static_cast<uint32_t>(bytes[idx]) << 8;
+  }
+
+  while ((cks >> 16) != 0) {
+    cks = (cks & 0xFFFFu) + (cks >> 16);
   }
 
   return static_cast<uint16_t>(~cks);
 }
 
 X_INL uint8_t x_checksum_xor(
-    const void* data, const size_t size, const uint8_t* prev)
+    const void* data, const size_t size, const uint8_t* previous)
 {
-  const uint8_t* d8{static_cast<const uint8_t*>(data)};
-  const uint64_t* d64{(const uint64_t*)data};
-  const size_t dsz{sizeof(uint64_t)};
-  const size_t cnt{size / dsz};
+  const auto* bytes{static_cast<const uint8_t*>(data)};
+  uint64_t cks{previous == nullptr ? 0u : static_cast<uint64_t>(*previous)};
 
-  union {
-    uint8_t u8[8];
-    uint64_t u64;
-  } cks{{0}};
-
-  if (prev) {
-    cks.u8[0] = *prev;
+  if (bytes == nullptr) {
+    return static_cast<uint8_t>(cks);
   }
 
-  size_t i{0};
-  for (i = 0; i < (cnt & (~0x07)); i += 8) {
-    cks.u64 ^= d64[i] ^ d64[i + 1] ^ d64[i + 2] ^ d64[i + 3]
-      ^ d64[i + 4] ^ d64[i + 5] ^ d64[i + 6] ^ d64[i + 7];
+  uint64_t blk[8]{};
+  size_t idx{0};
+
+  while (size - idx >= sizeof(blk)) {
+    std::memcpy(blk, bytes + idx, sizeof(blk));
+
+    cks ^= blk[0] ^ blk[1] ^ blk[2] ^ blk[3]
+        ^  blk[4] ^ blk[5] ^ blk[6] ^ blk[7];
+
+    idx += sizeof(blk);
   }
 
-  for (size_t j = i * dsz; j < size; ++j) {
-    cks.u8[0] ^= d8[j];
+  while (idx < size) {
+    cks ^= bytes[idx];
+    idx += 1;
   }
 
-  cks.u8[0] ^= cks.u8[1] ^ cks.u8[2] ^ cks.u8[3]
-    ^ cks.u8[4] ^ cks.u8[5] ^ cks.u8[6] ^ cks.u8[7];
+  cks ^= cks >> 32;
+  cks ^= cks >> 16;
+  cks ^= cks >> 8;
 
-  return cks.u8[0];
+  return static_cast<uint8_t>(cks);
 }
+// IMPL_Checksums}}}
 
-#if X_ENABLE_SOCKET
-// class x_socket{{{
-X_INL x_socket::x_socket(const int domain, const int type, const int protocol)
-  :m_domain{domain}
+// ****************************************************** IMPL_Date_and_Time{{{
+X_INL void x_sleep(const unsigned long millisecond)
 {
 #if X_WINDOWS
-  WSADATA data{};
-  if (WSAStartup(MAKEWORD(2, 2), &data) != 0) {
-    throw std::runtime_error(
-        std::string("WSAStartup: ") + x_error("socket").msg());
-  }
-#endif
-
-  this->m_hndl = socket(domain, type, protocol);
-#if X_WINDOWS
-  if (this->m_hndl  == INVALID_SOCKET) {
-    throw std::runtime_error(std::string("socket: ") + x_error("socket").msg());
-  }
+  Sleep(millisecond);
 #else
-  if (this->m_hndl  == -1) {
-    throw std::runtime_error(std::string("posix: ") + x_error("socket").msg());
-  }
-#endif
-
-  int val{1};
-  socklen_t len{static_cast<socklen_t>(sizeof(val))};
-  setsockopt(this->m_hndl, SOL_SOCKET, SO_KEEPALIVE, (char*)&val, len);
-#if X_WINDOWS
-  setsockopt(this->m_hndl, SOL_SOCKET, SO_EXCLUSIVEADDRUSE, (char*)&val, len);
-#else
-  val = 0;
-  setsockopt(this->m_hndl, SOL_SOCKET, SO_REUSEADDR, (char*)&val, len);
-#endif
-}
-
-X_INL x_socket::~x_socket()
-{
-  this->close();
-}
-
-X_INL x_error x_socket::accept(x_socket* client)
-{
-  if (client == nullptr) {
-    return x_error("posix", EINVAL);
-  }
-
-  struct sockaddr addr{};
-  socklen_t len{0};
-
-#if X_WINDOWS
-  SOCKET hndl = ::accept(this->m_hndl, &addr, &len);
-  if (hndl == INVALID_SOCKET) {
-    return x_error("socket");
-  }
-#else
-  int hndl = ::accept(this->m_hndl, &addr, &len);
-  if (hndl == -1) {
-    return x_error("socket");
-  }
-#endif
-
-  client->m_addr = std::move(addr);
-  client->m_hndl = std::move(hndl);
-
-  return x_error();
-}
-
-X_INL x_error x_socket::addr(char* ip, uint16_t* port)
-{
-  if (ip == nullptr || port == nullptr) {
-    return x_error("posix", EINVAL);
-  }
-
-  struct sockaddr_in* sin{reinterpret_cast<struct sockaddr_in*>(&this->m_addr)};
-
-  if (inet_ntop(this->m_domain, &sin->sin_addr, ip, 16) == nullptr) {
-    return x_error("socket");
-  }
-
-  *port = sin->sin_port;
-
-  return x_error();
-}
-
-X_INL x_error x_socket::close()
-{
-#if X_WINDOWS
-  if (closesocket(this->m_hndl) != 0) {
-    return x_error("socket");
-  }
-
-  return WSACleanup() == 0 ? x_error() : x_error("socket");
-#else
-  return ::close(this->m_hndl) == 0 ? x_error() : x_error("socket");
-#endif
-}
-
-X_INL x_error x_socket::connect(const char* ip, const uint16_t port)
-{
-  struct sockaddr_in sin{};
-  sin.sin_family = this->m_domain;
-  sin.sin_port = htons(port);
-  int ierr{inet_pton(this->m_domain, ip, &sin.sin_addr)};
-  if (ierr == 0) {
-    return x_error("posix", EFAULT);
-  } else if (ierr == -1) {
-    return x_error("socket");
-  }
-
-  memcpy(&this->m_addr, &sin, sizeof(struct sockaddr));
-
-  return ::connect(this->m_hndl, &this->m_addr, sizeof(struct sockaddr)) == 0
-    ? x_error() : x_error("socket");
-}
-
-X_INL x_error x_socket::getopt(
-    const int level, const int option, void* value, socklen_t* length)
-{
-  if (value == nullptr || length == nullptr) {
-    return x_error("posix", EINVAL);
-  }
-
-  return getsockopt(this->m_hndl, level, option, (char*)value, length) == 0
-    ? x_error() : x_error("socket");
-}
-
-X_INL x_error x_socket::listen(const char* ip, const uint16_t port)
-{
-  struct sockaddr_in sin{};
-  sin.sin_family = this->m_domain;
-  sin.sin_port = htons(port);
-
-  int ierr{inet_pton(this->m_domain, ip, &sin.sin_addr)};
-  if (ierr == 0) {
-    return x_error("posix", EFAULT);
-  } else if (ierr == -1) {
-    return x_error("socket");
-  }
-
-  memcpy(&this->m_addr, &sin, sizeof(struct sockaddr));
-
-  ierr = bind(this->m_hndl, &this->m_addr, sizeof(struct sockaddr_in));
-  if (ierr == 0) {
-    ierr = ::listen(this->m_hndl, SOMAXCONN);
-  }
-
-  return ierr == 0 ? x_error() : x_error("socket");
-}
-
-X_INL x_error x_socket::recv(void* buffer, const size_t size, const int flags)
-{
-  if (buffer == nullptr || size == 0) {
-    return x_error("posix", EINVAL);
-  }
-
-#if X_WINDOWS
-  int remain{static_cast<int>(size)};
-  int bytes{0};
-#else
-  size_t remain{size};
-  ssize_t bytes{0};
-#endif
-  size_t offset{0};
-
-  while (remain > 0) {
-    bytes = ::recv(this->m_hndl, (char*)(buffer) + offset, remain, flags);
-    if (bytes <= 0) {
-      return x_error("socket");
-    }
-
-    offset += bytes;
-    remain -= bytes;
-  }
-
-  return x_error();
-}
-
-X_INL x_error x_socket::recvv(
-    x_iovec* iovec, const size_t count, const int flags)
-{
-  if (iovec == nullptr || count == 0) {
-    return x_error("posix", EINVAL);
-  }
-
-  size_t total{0};
-  for (size_t i = 0; i < count; ++i) {
-    if (iovec[i].buf == nullptr || iovec[i].len == 0) {
-      return x_error("posix", EINVAL);
-    }
-
-    if (iovec[i].len > (SIZE_MAX - total)) {
-      return x_error("posix", EOVERFLOW);
-    }
-
-    total += iovec[i].len;
-  }
-
-  // NOTE: _alloca/alloca may be used if all data received are rather small.
-  void* buf = malloc(total);
-  if (buf == nullptr) {
-    return x_error("posix");
-  }
-
-  x_error err = this->recv(buf, total, flags);
-  if (!err) {
-    size_t offset{0};
-    for (size_t i = 0; i < count; ++i) {
-      memcpy(iovec[i].buf, (char*)buf + offset, iovec[i].len);
-      offset += iovec[i].len;
-    }
-  }
-
-  free(buf);
-
-  return err;
-}
-
-X_INL x_error x_socket::send(
-    const void* buffer, const size_t size, const int flags)
-{
-#if X_WINDOWS
-  int remain{static_cast<int>(size)};
-#else
-  size_t remain{size};
-#endif
-  size_t offset{0};
-  int bytes{0};
-
-  while (remain > 0) {
-    bytes = ::send(this->m_hndl, (char*)(buffer) + offset, remain, flags);
-    if (bytes <= 0) {
-      return x_error("socket");
-    }
-
-    offset += bytes;
-    remain -= bytes;
-  }
-
-  return x_error();
-}
-
-X_INL x_error x_socket::sendv(
-    const x_iovec* iovec, const size_t count, const int flags)
-{
-  if (iovec == nullptr || count == 0) {
-    return x_error("posix", EINVAL);
-  }
-
-  size_t total{0};
-  for (size_t i = 0; i < count; ++i) {
-    if (iovec[i].buf == nullptr || iovec[i].len == 0) {
-      return x_error("posix", EINVAL);
-    }
-
-    if (iovec[i].len > (SIZE_MAX - total)) {
-      return x_error("posix", EOVERFLOW);
-    }
-
-    total += iovec[i].len;
-  }
-
-  // NOTE: _alloca/alloca may be used if all data sent are rather small.
-  void* buf = malloc(total);
-  if (buf == nullptr) {
-    return x_error("posix");
-  }
-
-  size_t offset{0};
-  for (size_t i = 0; i < count; ++i) {
-    memcpy(static_cast<char*>(buf) + offset, iovec[i].buf, iovec[i].len);
-    offset += iovec[i].len;
-  }
-
-  x_error err = this->send(buf, total, flags);
-
-  free(buf);
-
-  return err;
-}
-
-X_INL x_error x_socket::setopt(
-    const int level, const int option, const void* value, const socklen_t length)
-{
-  if (value == nullptr) {
-    return x_error("posix", EINVAL);
-  }
-
-  return setsockopt(this->m_hndl, level, option, (char*)value, length) == 0
-    ? x_error() : x_error("socket");
-}
-// class x_socket}}}
-#endif  // X_ENABLE_SOCKET
-// IMPL_Communication}}}
-
-//********************************************************** IMPL_Console_IO{{{
-#if !X_WINDOWS
-X_INL int _kbhit()
-{
-  static bool initialized{false};
-  if (!initialized) {
-    struct termios settings{};
-    tcgetattr(STDIN_FILENO, &settings);
-    settings.c_lflag &= ~ICANON;
-    tcsetattr(STDIN_FILENO, TCSANOW, &settings);
-    setbuf(stdin, nullptr);
-    initialized = true;
-  }
-
-  int byte{0};
-  ioctl(STDIN_FILENO, FIONREAD, &byte);
-
-  return byte;
-}
-#endif
-
-X_INL int x_getch()
-{
-#if X_WINDOWS
-  return _kbhit() ? toupper(_getch()) : 0;
-#else
-  int key{0};
-
-  int bytes_waiting{_kbhit()};
-  if (bytes_waiting <= 0) {
-    return 0;
-  }
-
-  struct termios old_settings{};
-  struct termios new_settings{};
-  union {
-    int in;
-    char ch[4];
-  } buf{0};
-  int ierr{0};
-  ssize_t bytes_read{0};
-
-  ierr = tcgetattr(0, &old_settings);
-  if (ierr != 0) {
-    return 0;
-  }
-
-  new_settings = old_settings;
-  new_settings.c_lflag &= ~ICANON;
-  new_settings.c_lflag &= ~ECHO;
-
-  ierr = tcsetattr(0, TCSANOW, &new_settings);
-  if (ierr != 0) {
-    tcsetattr(0, TCSANOW, &old_settings);
-    return 0;
-  }
-
-  bytes_read = read(STDIN_FILENO, &buf.in, bytes_waiting);
-  if (bytes_read <= 0) {
-    tcsetattr(0, TCSANOW, &old_settings);
-    return 0;
-  } else if (bytes_read >= 2) {
-    if (buf.ch[0] == 0x1B && buf.ch[1] == 0x5B) {
-      if (bytes_read == 2) {
-        key = X_KEY_ESC;
-      } else {
-        switch (buf.ch[2]) {
-          case X_KEY_A:
-            key = X_KEY_UP;
-            break;
-          case X_KEY_B:
-            key = X_KEY_DOWN;
-            break;
-          case X_KEY_C:
-            key = X_KEY_RIGHT;
-            break;
-          case X_KEY_D:
-            key = X_KEY_LEFT;
-            break;
-        }
-      }
-    } else {
-      key = buf.ch[0];
-    }
-  } else {
-    key = buf.ch[0];
-  }
-
-  tcsetattr(0, TCSADRAIN, &old_settings);
-
-  return isalpha(key) ? toupper(key) : key;
-#endif
-}
-// IMPL_Console_IO}}}
-
-//******************************************************* IMPL_Date_and_Time{{{
-X_INL void x_sleep(const unsigned long ms)
-{
-#if X_WINDOWS
-  Sleep(ms);
-#else
-  struct timespec req{};
-  struct timespec rem{};
-
-  req.tv_sec = ms / 1000;
-  req.tv_nsec = static_cast<long>((ms % 1000) * 1000000);
-
-  if (nanosleep(&req, &rem) == EINTR) {
-    nanosleep(&rem, nullptr);
+  timespec req{
+    static_cast<time_t>(millisecond / 1000),
+    static_cast<long>((millisecond % 1000) * 1000000)
+  };
+
+  while (nanosleep(&req, &req) != 0 && errno == EINTR) {
   }
 #endif
 }
 
-X_INL const char* x_timestamp(char* buffer, const size_t size)
+// x_event_internal{{{
+[[noreturn]] X_INL void _x_event_throw(const x_error& error)
 {
-  if (buffer == nullptr) {
-    return "";
-  }
+  throw std::runtime_error(std::string("x_event: ") + error.domain()
+      + ":" + std::to_string(error.value()) + ": " + error.message());
+}
 
-  time_t now{time(nullptr)};
-
-#if X_WINDOWS
-  if (ctime_s(buffer, size, &now) != 0) {
-    return "";
-  }
-#else
-  ctime_r(&now, buffer);
+X_INL bool _x_event_type_valid(const int32_t type)
+{
+  switch (type) {
+    case 0:
+#if X_ENABLE_CUDA_DRIVER
+    case 1:
 #endif
-
-  buffer[strlen(buffer) - 1] = '\0';
-
-  return buffer;
+#if X_ENABLE_CUDA_RUNTIME
+    case 2:
+#endif
+      return true;
+    default:
+      return false;
+  }
 }
 
-// struct _x_event_stats_{{{
-X_INL void x_event_stats::echo(
-    const char* unit, const char* title, FILE* const stream)
+X_INL double _x_event_unit_scale(const char* unit)
 {
-  const char* t = x_strmty(title) ? "STATS" : title;
-  std::string msg(128, '\0');
-
-  double scale{1.0};
-
-  if (strcmp(unit, "us") == 0) {
-    scale = 1000.0;
-  } else if (strcmp(unit, "ms") == 0) {
-    scale = 1000000.0;
-  } else if (strcmp(unit, "s") == 0) {
-    scale = 1000000000.0;
-  } else if (strcmp(unit, "m") == 0) {
-    scale = 60000000000.0;
-  } else if (strcmp(unit, "h") == 0) {
-    scale = 3600000000000.0;
+  if (unit == nullptr || unit[0] == '\0' || std::strcmp(unit, "ns") == 0) {
+    return 1.0;
+  } else if (std::strcmp(unit, "us") == 0) {
+    return 1e3;
+  } else if (std::strcmp(unit, "ms") == 0) {
+    return 1e6;
+  } else if (std::strcmp(unit, "s") == 0) {
+    return 1e9;
+  } else if (std::strcmp(unit, "m") == 0) {
+    return 6e10;
+  } else if (std::strcmp(unit, "h") == 0) {
+    return 3.6e12;
   }
 
-  msg = std::string("[") + t + std::string("] ")
-    + std::to_string(this->sum / scale) + unit + " in "
-    + std::to_string(this->cyc) + " cycles - avg: "
-    + std::to_string(this->avg / scale) + unit + ", min("
-    + std::to_string(this->min.idx) + "): "
-    + std::to_string(this->min.val / scale) + unit + ", max("
-    + std::to_string(this->max.idx) + "): "
-    + std::to_string(this->max.val / scale) + unit;
+  return 0.0;
+}
+// x_event_internal}}}
 
-  fprintf(stream ? stream : stdout, "%s\n", msg.c_str());
+// x_event_agg{{{
+X_INL void x_event_agg::echo(
+    const char* unit, const char* title, FILE* stream) const
+{
+  char ts[26]{};
+
+  const char* prefix{title == nullptr || title[0] == '\0'
+      ? x_timestamp(ts, sizeof(ts)) : title};
+
+  if (this->cyc == 0) {
+    std::fprintf(
+        stream == nullptr ? stdout : stream,
+        "[%s] no samples (0 cycles)\n", prefix);
+    return;
+  }
+
+  const char* suffix{unit == nullptr || unit[0] == '\0' ? "ns" : unit};
+
+  double scale = _x_event_unit_scale(suffix);
+  if (scale == 0.0) {
+    suffix = "ns";
+    scale = 1.0;
+  }
+
+  std::fprintf(
+      stream == nullptr ? stdout : stream,
+      "[%s] %f%s in %zu cycles - avg: %f%s, min(%zu): %f%s, max(%zu): %f%s\n",
+      prefix, this->sum / scale, suffix, this->cyc, this->avg / scale, suffix,
+      this->min.idx, this->min.val / scale, suffix,
+      this->max.idx, this->max.val / scale, suffix);
 }
 
-X_INL void x_event_stats::reset()
+X_INL void x_event_agg::reset()
 {
   this->ready = false;
   this->cyc = 0;
   this->sum = 0.0;
   this->avg = 0.0;
-  this->max.idx = 0;
-  this->max.val = DBL_MIN;
-  this->min.idx = 0;
-  this->min.val = DBL_MAX;
+  this->max = {0, -DBL_MAX};
+  this->min = {0, DBL_MAX};
 }
-// struct _x_event_stats_}}}
+// x_event_agg}}}
 
-// class x_event{{{
-X_INL double _x_duration_cpu(
-    const struct timespec& start, const struct timespec& stop)
+// x_event{{{
+X_INL x_event::x_event(const char* type, unsigned int flags)
 {
-  int64_t s{static_cast<int64_t>(stop.tv_sec - start.tv_sec)};
-  int64_t ns{static_cast<int64_t>(stop.tv_nsec - start.tv_nsec)};
+  (void)flags;
 
-  return static_cast<double>(s * 1e9 + ns);
-}
+  if (type == nullptr) {
+    throw std::invalid_argument("x_event: type is null");
+  }
 
-X_INL struct timespec _x_now_cpu()
-{
-  struct timespec ts{};
+  if (std::strcmp(type, "cpu") == 0) {
+#if X_WINDOWS
+    LARGE_INTEGER freq{};
+    if (!QueryPerformanceFrequency(&freq)) {
+      _x_event_throw(x_error("win32"));
+    }
 
-#if X_WINDOWS || __STDC_VERSION__ >= 201112L
-  timespec_get(&ts, TIME_UTC);
-#else
-  clock_gettime(CLOCK_MONOTONIC, &ts);
+    if (freq.QuadPart <= 0) {
+      throw std::invalid_argument("x_event: invalid frequency");
+    }
+
+    this->m_frequency = static_cast<int64_t>(freq.QuadPart);
 #endif
-
-  return ts;
-}
-
-X_INL void _x_tic_cpu(struct timespec& ts)
-{
-#if X_WINDOWS || __STDC_VERSION__ >= 201112L
-  timespec_get(&ts, TIME_UTC);
-#else
-  clock_gettime(CLOCK_MONOTONIC, &ts);
-#endif
-}
-
-#define _x_toc_cpu _x_tic_cpu
-
-#if X_ENABLE_CU
-X_INL double _x_duration_cu(const CUevent start, const CUevent stop)
-{
-  const char* msg{nullptr};
-
-  CUresult cres = cuEventSynchronize(stop);
-  if (cres != CUDA_SUCCESS) {
-    cres = cuGetErrorString(cres, &msg);
-    if (cres == CUDA_SUCCESS) {
-      fprintf(stderr, "cuEventSynchronize: %s\n", msg);
-    } else {
-      fprintf(stderr, "cuEventSynchronize: unknown error %d\n", cres);
-    }
-    return -1.0;
-  }
-
-  float ms{0.0f};
-  cres = cuEventElapsedTime(&ms, start, stop);
-  if (cres != CUDA_SUCCESS) {
-    cres = cuGetErrorString(cres, &msg);
-    if (cres == CUDA_SUCCESS) {
-      fprintf(stderr, "cuEventElapsedTime: %s\n", msg);
-    } else {
-      fprintf(stderr, "cuEventElapsedTime: unknown error %d\n", cres);
-    }
-    return -1.0;
-  }
-
-  return static_cast<double>(ms) * 1000000.0;
-}
-
-X_INL CUevent _x_now_cu(const unsigned int flags)
-{
-  CUevent evt{nullptr};
-  const char* msg{nullptr};
-
-  CUresult cres = cuEventCreate(&evt, flags);
-  if (cres != CUDA_SUCCESS) {
-    cres = cuGetErrorString(cres, &msg);
-    if (cres == CUDA_SUCCESS) {
-      throw std::runtime_error(std::string("cuEventCreate: ") + msg);
-    } else {
-      throw std::runtime_error(
-          std::string("cuEventCreate: unknown error ") + std::to_string(cres));
-    }
-  }
-
-  return evt;
-}
-
-X_INL void _x_tic_cu(CUevent event, CUstream stream, const unsigned int flags)
-{
-  const char* msg{nullptr};
-
-  CUresult cres = cuEventRecordWithFlags(event, stream, flags);
-  if (cres != CUDA_SUCCESS) {
-    cres = cuGetErrorString(cres, &msg);
-    if (cres == CUDA_SUCCESS) {
-      throw std::runtime_error(std::string("cuEventRecordWithFlags: ") + msg);
-    } else {
-      throw std::runtime_error(
-          std::string("cuEventRecordWithFlags: unknown error ") + std::to_string(cres));
-    }
-  }
-}
-
-#define _x_toc_cu _x_tic_cu
-#endif  // X_ENABLE_CU
-
-#if X_ENABLE_CUDA
-X_INL double _x_duration_cuda(const cudaEvent_t start, const cudaEvent_t stop)
-{
-  cudaError_t cerr = cudaEventSynchronize(stop);
-  if (cerr != cudaSuccess) {
-    fprintf(stderr, "cudaEventSynchronize: %s\n", cudaGetErrorString(cerr));
-    return -1.0;
-  }
-
-  float ms{0.0f};
-  cerr = cudaEventElapsedTime(&ms, start, stop);
-  if (cerr != cudaSuccess) {
-    fprintf(stderr, "cudaEventElapsedTime: %s\n", cudaGetErrorString(cerr));
-    return -1.0;
-  }
-
-  return static_cast<double>(ms) * 1000000.0;
-}
-
-X_INL cudaEvent_t _x_now_cuda(const unsigned int flags)
-{
-  cudaEvent_t evt{nullptr};
-
-  cudaError_t cerr = cudaEventCreateWithFlags(&evt, flags);
-  if (cerr != cudaSuccess) {
-    throw std::runtime_error(
-        std::string("cudaEventCreateWithFlags: ") + cudaGetErrorString(cerr));
-  }
-
-  return evt;
-}
-
-X_INL void _x_tic_cuda(
-    cudaEvent_t event, cudaStream_t stream, const unsigned int flags)
-{
-  cudaError_t cerr = cudaEventRecordWithFlags(event, stream, flags);
-  if (cerr != cudaSuccess) {
-    throw std::runtime_error(
-        std::string("cudaEventRecordWithFlags: ") + cudaGetErrorString(cerr));
-  }
-}
-
-#define _x_toc_cuda _x_tic_cuda
-#endif  // X_ENABLE_CUDA
-
-X_INL x_event::x_event(const char* type, const unsigned int flags)
-{
-  if (strcmp(type, "cpu") == 0) {
     this->m_type = 0;
-#if X_ENABLE_CU
-  } else if (strcmp(type, "cu") == 0) {
-    this->m_type = 1;
-    this->m_start.cu = _x_now_cu(flags);
-    this->m_stop.cu = _x_now_cu(flags);
+#if X_ENABLE_CUDA_DRIVER
+  } else if (std::strcmp(type, "cu") == 0) {
+    if ((flags & CU_EVENT_DISABLE_TIMING) != 0) {
+      throw std::invalid_argument("x_event: CUDA driver timing is disabled");
+    }
+
+    this->m_type = this->m_start.type = this->m_stop.type = 1;
+    CUevent handle{nullptr};
+    CUresult cres = cuEventCreate(&handle, flags);
+    if (cres == CUDA_SUCCESS) {
+      this->m_start.cu = handle;
+      handle = nullptr;
+      cres = cuEventCreate(&handle, flags);
+      if (cres == CUDA_SUCCESS) {
+        this->m_stop.cu = handle;
+      }
+    }
+
+    if (cres != CUDA_SUCCESS) {
+      _x_event_throw(x_error("cu", static_cast<int32_t>(cres)));
+    }
 #endif
-#if X_ENABLE_CUDA
-    this->m_type = 2;
-  } else if (strcmp(type, "cuda") == 0) {
-    this->m_start.cuda = _x_now_cuda(flags);
-    this->m_stop.cuda = _x_now_cuda(flags);
+#if X_ENABLE_CUDA_RUNTIME
+  } else if (std::strcmp(type, "cuda") == 0) {
+    if ((flags & cudaEventDisableTiming) != 0) {
+      throw std::invalid_argument("x_event: CUDA runtime timing is disabled");
+    }
+
+    this->m_type = this->m_start.type = this->m_stop.type = 2;
+    cudaEvent_t handle{nullptr};
+    cudaError_t cerr = cudaEventCreateWithFlags(&handle, flags);
+    if (cerr == cudaSuccess) {
+      this->m_start.cuda = handle;
+      handle = nullptr;
+      cerr = cudaEventCreateWithFlags(&handle, flags);
+      if (cerr == cudaSuccess) {
+        this->m_stop.cuda = handle;
+      }
+    }
+
+    if (cerr != cudaSuccess) {
+      _x_event_throw(x_error("cuda", static_cast<int32_t>(cerr)));
+    }
 #endif
   } else {
-    this->m_type = -1;
     throw std::invalid_argument(
         std::string("x_event: unsupported type ") + type);
   }
 }
 
-X_INL x_event::~x_event()
+X_INL x_error x_event::agg(
+    x_event_agg& aggregation, size_t cycle, void* stream, unsigned int flags)
 {
-  switch (this->m_type) {
-    case 0:
-      break;
-#if X_ENABLE_CU
-    case 1:
-      cuEventDestroy_v2(this->m_start.cu);
-      cuEventDestroy_v2(this->m_stop.cu);
-      break;
-#endif
-#if X_ENABLE_CUDA
-    case 2:
-      cudaEventDestroy(this->m_start.cuda);
-      cudaEventDestroy(this->m_stop.cuda);
-      break;
-#endif
-    default:
-      break;
+  if (!_x_event_type_valid(this->m_type)) {
+    return x_error("posix", EINVAL);
   }
+
+  if (cycle == 0) {
+    aggregation.reset();
+    return x_ok();
+  }
+
+  // NOTE: If the statistics are ready, do not update them.
+  if (aggregation.ready) {
+    return x_ok();
+  }
+
+  if (aggregation.cyc == SIZE_MAX) {
+    return x_error("posix", EOVERFLOW);
+  }
+
+  x_error err = this->toc(stream, flags);
+  if (x_fail(err)) {
+    return err;
+  }
+
+  const double dur = this->dur("ns");
+  if (dur < 0.0) {
+    return this->m_status;
+  }
+
+  // Only mutate statistics after obtaining a valid sample.
+  if (aggregation.cyc == 0) {
+    aggregation.reset();
+  }
+
+  if (dur > aggregation.max.val) {
+    aggregation.max = {aggregation.cyc, dur};
+  }
+
+  if (dur < aggregation.min.val) {
+    aggregation.min = {aggregation.cyc, dur};
+  }
+
+  aggregation.sum += dur;
+  aggregation.cyc += 1;
+  aggregation.avg = aggregation.sum / static_cast<double>(aggregation.cyc);
+
+  if (aggregation.cyc % cycle == 0) {
+    aggregation.ready = true;
+  }
+
+  return x_ok();
 }
 
-X_INL double x_event::duration(const char* unit)
+X_INL double x_event::dur(const char* unit) const
 {
+  if (!_x_event_type_valid(this->m_type)) {
+    return -1.0;
+  }
+
+  const double scale = _x_event_unit_scale(unit);
+  if (scale == 0.0) {
+    return -1.0;
+  }
+
+  if (!this->m_started || !this->m_stopped) {
+    if (x_succ(this->m_status)) {
+      this->m_status.set("posix", ENODATA);
+    }
+
+    return -1.0;
+  }
+
+  x_error err;
   double ns{-1.0};
 
   switch (this->m_type) {
     case 0:
-      ns = _x_duration_cpu(this->m_start.cpu, this->m_stop.cpu);
+      err = this->dur_cpu(ns);
       break;
-#if X_ENABLE_CU
+#if X_ENABLE_CUDA_DRIVER
     case 1:
-      ns = _x_duration_cu(this->m_start.cu, this->m_stop.cu);
+      err = this->dur_cuda_driver(ns);
       break;
 #endif
-#if X_ENABLE_CUDA
+#if X_ENABLE_CUDA_RUNTIME
     case 2:
-      ns = _x_duration_cuda(this->m_start.cuda, this->m_stop.cuda);
+      err = this->dur_cuda_runtime(ns);
       break;
 #endif
     default:
-      throw std::runtime_error("x_event::duration: unsupported call");
+      return -1.0;
   }
 
-  if (strcmp(unit, "ns") == 0) {
-    return ns;
-  } else if (strcmp(unit, "us") == 0) {
-    return ns / 1000.0;
-  } else if (strcmp(unit, "ms") == 0) {
-    return ns / 1000000.0;
-  } else if (strcmp(unit, "s") == 0) {
-    return ns / 1000000000.0;
-  } else if (strcmp(unit, "m") == 0) {
-    return ns / 60000000000.0;
-  } else {  // (strcmp(unit, "h") == 0)
-    return ns / 3600000000000.0;
+  this->m_status = err;
+  if (x_fail(err)) {
+    return -1.0;
   }
+
+  return ns / scale;
 }
 
-X_INL void x_event::tic(void* stream, const unsigned int flags)
+X_INL const x_error& x_event::status() const noexcept
 {
+  return this->m_status;
+}
+
+X_INL x_error x_event::tic(void* stream, unsigned int flags)
+{
+  return this->record(false, stream, flags);
+}
+
+X_INL x_error x_event::toc(void* stream, unsigned int flags)
+{
+  return this->record(true, stream, flags);
+}
+
+X_INL x_event::endpoint::~endpoint() noexcept
+{
+#if X_ENABLE_CUDA_DRIVER
+  if (this->type == 1 && this->cu != nullptr) {
+    (void)cuEventDestroy_v2(this->cu);
+  }
+#endif
+
+#if X_ENABLE_CUDA_RUNTIME
+  if (this->type == 2 && this->cuda != nullptr) {
+    (void)cudaEventDestroy(this->cuda);
+  }
+#endif
+}
+
+// Backend helpers write nanoseconds only on success. Sample state and units
+// are checked by dur(); these helpers do not mutate m_status.
+X_INL x_error x_event::dur_cpu(double& ns) const
+{
+  double dur{0.0};
+
+#if X_WINDOWS
+  if (this->m_frequency <= 0) {
+    return x_error("posix", EINVAL);
+  }
+
+  if (this->m_stop.counter < this->m_start.counter) {
+    return x_error("posix", ERANGE);
+  }
+
+  // Subtract as unsigned integers to avoid signed overflow, then convert the
+  // difference rather than rounding the two absolute counts to double.
+  const uint64_t diff{static_cast<uint64_t>(this->m_stop.counter)
+                    - static_cast<uint64_t>(this->m_start.counter)};
+  dur = static_cast<double>(diff)
+      * (1e9 / static_cast<double>(this->m_frequency));
+#else
+  // difftime avoids overflowing time_t subtraction before conversion.
+  dur = std::difftime(this->m_stop.cpu.tv_sec, this->m_start.cpu.tv_sec) * 1e9
+      + static_cast<double>(this->m_stop.cpu.tv_nsec)
+      - static_cast<double>(this->m_start.cpu.tv_nsec);
+#endif
+
+  if (std::isnan(dur)) {
+    return x_error("posix", EDOM);
+  }
+
+  if (!std::isfinite(dur) || dur < 0.0) {
+    return x_error("posix", ERANGE);
+  }
+
+  ns = dur;
+
+  return x_ok();
+}
+
+#if X_ENABLE_CUDA_DRIVER
+X_INL x_error x_event::dur_cuda_driver(double& ns) const
+{
+  CUresult cres = cuEventSynchronize(this->m_stop.cu);
+  if (cres != CUDA_SUCCESS) {
+    return x_error("cu", static_cast<int32_t>(cres));
+  }
+
+  float ms{0.0f};
+  cres = cuEventElapsedTime(&ms, this->m_start.cu, this->m_stop.cu);
+  if (cres != CUDA_SUCCESS) {
+    return x_error("cu", static_cast<int32_t>(cres));
+  }
+
+  if (std::isnan(ms)) {
+    return x_error("posix", EDOM);
+  }
+
+  if (!std::isfinite(ms) || ms < 0.0f) {
+    return x_error("posix", ERANGE);
+  }
+
+  ns = static_cast<double>(ms) * 1e6;
+
+  return x_ok();
+}
+#endif  // X_ENABLE_CUDA_DRIVER
+
+#if X_ENABLE_CUDA_RUNTIME
+X_INL x_error x_event::dur_cuda_runtime(double& ns) const
+{
+  cudaError_t cerr = cudaEventSynchronize(this->m_stop.cuda);
+  if (cerr != cudaSuccess) {
+    return x_error("cuda", static_cast<int32_t>(cerr));
+  }
+
+  float ms{0.0f};
+  cerr = cudaEventElapsedTime(&ms, this->m_start.cuda, this->m_stop.cuda);
+  if (cerr != cudaSuccess) {
+    return x_error("cuda", static_cast<int32_t>(cerr));
+  }
+
+  if (std::isnan(ms)) {
+    return x_error("posix", EDOM);
+  }
+
+  if (!std::isfinite(ms) || ms < 0.0f) {
+    return x_error("posix", ERANGE);
+  }
+
+  ns = static_cast<double>(ms) * 1e6;
+
+  return x_ok();
+}
+#endif  // X_ENABLE_CUDA_RUNTIME
+
+X_INL x_error x_event::record(bool stop, void* stream, unsigned int flags)
+{
+  if (!_x_event_type_valid(this->m_type)) {
+    return x_error("posix", EINVAL);
+  }
+
+  if (stop && !this->m_started) {
+    if (x_fail(this->m_status)) {
+      return this->m_status;
+    }
+
+    return x_error("posix", ENODATA);
+  }
+
+  this->m_stopped = false;
+  if (!stop) {
+    this->m_started = false;
+  }
+
+  (void)stream;
+  (void)flags;
+
+  x_error err;
+  endpoint& target{stop ? this->m_stop : this->m_start};
+
   switch (this->m_type) {
     case 0:
-      _x_tic_cpu(this->m_start.cpu);
+      err = this->record_cpu(target);
       break;
-#if X_ENABLE_CU
+#if X_ENABLE_CUDA_DRIVER
     case 1:
-      _x_tic_cu(this->m_start.cu, static_cast<CUstream>(stream), flags);
+      err = this->record_cuda_driver(target, stream, flags);
       break;
 #endif
-#if X_ENABLE_CUDA
+#if X_ENABLE_CUDA_RUNTIME
     case 2:
-      _x_tic_cuda(this->m_start.cuda, static_cast<cudaStream_t>(stream), flags);
+      err = this->record_cuda_runtime(target, stream, flags);
       break;
 #endif
     default:
-      throw std::runtime_error("x_event::tic: unsupported call");
+      err = x_error("posix", EINVAL);
+      break;
   }
+
+  if (x_succ(err)) {
+    if (stop) {
+      this->m_stopped = true;
+    } else {
+      this->m_started = true;
+    }
+  }
+
+  this->m_status = err;
+
+  return err;
 }
 
-X_INL void x_event::toc(void* stream, const unsigned int flags)
+X_INL x_error x_event::record_cpu(endpoint& target)
 {
-  switch (this->m_type) {
-    case 0:
-      _x_toc_cpu(this->m_stop.cpu);
-      break;
-#if X_ENABLE_CU
-    case 1:
-      _x_toc_cu(this->m_stop.cu, static_cast<CUstream>(stream), flags);
-      break;
-#endif
-#if X_ENABLE_CUDA
-    case 2:
-      _x_toc_cuda(this->m_stop.cuda, static_cast<cudaStream_t>(stream), flags);
-      break;
-#endif
-    default:
-      throw std::runtime_error("x_event::toc: unsupported call");
+#if X_WINDOWS
+  LARGE_INTEGER counter{};
+  if (!QueryPerformanceCounter(&counter)) {
+    return x_error("win32");
   }
+
+  target.counter = static_cast<int64_t>(counter.QuadPart);
+#else
+  timespec ts{};
+  if (clock_gettime(CLOCK_MONOTONIC, &ts) != 0) {
+    return x_error("posix");
+  }
+
+  target.cpu = ts;
+#endif
+
+  return x_ok();
 }
 
-X_INL void x_event::toc(
-    x_event_stats& stats, const size_t cycle, void* stream, const unsigned int flags)
+#if X_ENABLE_CUDA_DRIVER
+X_INL x_error x_event::record_cuda_driver(
+    endpoint& target, void* stream, unsigned int flags)
 {
-  if (cycle == 0) {
-    stats.reset();
-    return;
+  CUresult cres =
+    cuEventRecordWithFlags(target.cu, static_cast<CUstream>(stream), flags);
+  if (cres != CUDA_SUCCESS) {
+    return x_error("cu", static_cast<int32_t>(cres));
   }
 
-  // NOTE: If the statistics are ready, do not update them.
-  if (stats.ready) {
-    return;
-  }
-
-  // NOTE: Reset the stats before the first cycle.
-  if (stats.cyc == 0) {
-    stats.reset();
-  }
-
-  this->toc(stream, flags);
-
-  double ns = this->duration("ns");
-
-  if (ns > stats.max.val) {
-    stats.max.idx = stats.cyc;
-    stats.max.val = ns;
-  }
-  if (ns < stats.min.val) {
-    stats.min.idx = stats.cyc;
-    stats.min.val = ns;
-  }
-
-  stats.sum += ns;
-  stats.cyc += 1;
-  stats.avg = stats.sum / stats.cyc;
-
-  if (stats.cyc % cycle == 0) {
-    stats.ready = true;
-  }
+  return x_ok();
 }
-// class x_event}}}
+#endif  // X_ENABLE_CUDA_DRIVER
+
+#if X_ENABLE_CUDA_RUNTIME
+X_INL x_error x_event::record_cuda_runtime(
+    endpoint& target, void* stream, unsigned int flags)
+{
+  cudaError_t cerr =
+    cudaEventRecordWithFlags(
+        target.cuda, static_cast<cudaStream_t>(stream), flags);
+  if (cerr != cudaSuccess) {
+    return x_error("cuda", static_cast<int32_t>(cerr));
+  }
+
+  return x_ok();
+}
+#endif  // X_ENABLE_CUDA_RUNTIME
+// x_event}}}
 // IMPL_Date_and_Time}}}
 
-//****************************************************** IMPL_Error_Handling{{{
-template<typename... Args>
-X_INL void _x_assert_msg(Args&&... args)
-{
-  if constexpr (sizeof...(args) > 0) {
-    fprintf(stderr, "Message: %s\n", std::forward<Args>(args)...);
-  }
-}
-
-template<typename Expr>
-X_INL x_error _x_check_impl(const char* category, Expr&& expression)
-{
-  using result_t = std::invoke_result_t<Expr>;
-  static_assert(
-      std::is_same_v<result_t, x_error> || std::is_convertible_v<result_t, int32_t>,
-      "Return type of 'func' must be x_error or convertible to int32_t.");
-
-  if constexpr (std::is_same_v<result_t, x_error>) {
-    return expression();
-  } else {
-    return x_error(category, static_cast<int32_t>(expression()));
-  }
-}
-
-X_INL bool x_fail(const x_error& error)
-{
-  return error;
-}
-
-X_INL bool x_succ(const x_error& error)
-{
-  return !error;
-}
-
-// class x_error{{{
-X_INL x_error::x_error()
-{
-}
-
-X_INL x_error::x_error(const char* category)
-{
-  this->set(category);
-}
-
-X_INL x_error::x_error(
-    const char* category, const int32_t value, bool (*fail)(const int32_t))
-{
-  this->set(category, value, fail);
-}
-
-X_INL x_error::x_error(
-    const char* category, const int32_t value, const char* message,
-    bool (*fail)(const int32_t))
-{
-  this->set(category, value, message, fail);
-}
-
-X_INL x_error::~x_error()
-{
-}
-
-X_INL x_error& x_error::set(const char* category)
-{
-  this->m_cat = category;
-
-  if (strcmp(category, "posix") == 0) {
-    this->m_val = static_cast<int32_t>(errno);
-#if X_WINDOWS
-  } else if (strcmp(category, "win32") == 0) {
-    this->m_val = static_cast<int32_t>(GetLastError());
-  } else if (strcmp(category, "socket") == 0) {
-    this->m_val = static_cast<int32_t>(WSAGetLastError());
-#endif
-#if X_ENABLE_CUDA
-  } else if (strcmp(category, "cuda") == 0) {
-    this->m_val = static_cast<int32_t>(cudaGetLastError());
-#endif
-  } else {
-    throw std::invalid_argument(
-        std::string("x_error: unsupported error category ") + category);
-  }
-
-  return *this;
-}
-
-X_INL x_error& x_error::set(
-    const char* category, const int32_t value, bool (*fail)(const int32_t))
-{
-  if (strcmp(category, "custom") == 0 && this->m_fail == nullptr && fail == nullptr) {
-    throw std::invalid_argument(
-        "x_error: a failure predicate is required for a custom error");
-  }
-
-  this->m_cat = category;
-  this->m_val = value;
-  this->m_msg.clear();
-  this->m_fail = fail;
-
-  return *this;
-}
-
-X_INL x_error& x_error::set(
-    const char* category, const int32_t value, const char* message,
-    bool (*fail)(const int32_t))
-{
-  if (strcmp(category, "custom") == 0 && this->m_fail == nullptr && fail == nullptr) {
-    throw std::invalid_argument(
-        "x_error: a failure predicate is required for a custom error");
-  }
-
-  this->m_cat = category;
-  this->m_val = value;
-  this->m_msg = message;
-  this->m_fail = fail;
-
-  return *this;
-}
-
-X_INL const char* x_error::cat()
-{
-  return this->m_cat;
-}
-
-X_INL const char* x_error::msg()
-{
-#if X_WINDOWS
-  if (strcmp(this->m_cat, "posix") == 0) {
-    if (this->m_msg.empty()) {
-      this->m_msg.resize(64);
-    }
-    strerror_s(
-        this->m_msg.data(), this->m_msg.size(), static_cast<int>(this->m_val));
-  } else if (strcmp(this->m_cat, "win32") == 0 || strcmp(this->m_cat, "socket") == 0) {
-    if (this->m_msg.empty()) {
-      this->m_msg.resize(128);
-    }
-    FormatMessageA(
-        FORMAT_MESSAGE_FROM_SYSTEM
-        | FORMAT_MESSAGE_IGNORE_INSERTS
-        | FORMAT_MESSAGE_MAX_WIDTH_MASK,
-        nullptr, static_cast<DWORD>(this->m_val),
-        MAKELANGID(LANG_ENGLISH, SUBLANG_ENGLISH_US),
-        this->m_msg.data(), static_cast<DWORD>(this->m_msg.size()), nullptr);
-  }
-#else
-  if (strcmp(this->m_cat, "posix") == 0 || strcmp(this->m_cat, "socket") == 0) {
-    this->m_msg = strerror(static_cast<int>(this->m_val));
-  }
-#endif
-#if X_ENABLE_CU
-  else if (strcmp(this->m_cat, "cu") == 0) {
-    const char* msg{nullptr};
-    CUresult cres = cuGetErrorString(static_cast<CUresult>(this->m_val), &msg);
-    if (cres == CUDA_SUCCESS) {
-      this->m_msg = msg;
-    } else {
-      this->m_msg = std::string("Unknown CUDA driver error ") + std::to_string(cres);
-    }
-  }
-#endif
-#if X_ENABLE_CUDA
-  else if (strcmp(this->m_cat, "cuda") == 0) {
-    this->m_msg = cudaGetErrorString(static_cast<cudaError_t>(this->m_val));
-  }
-#endif
-#if X_ENABLE_CUBLAS
-  else if (strcmp(this->m_cat, "cublas") == 0) {
-    this->m_msg = cublasGetStatusString(static_cast<cublasStatus_t>(this->m_val));
-  }
-#endif
-  else {
-    if (this->m_msg.empty()) {
-      this->m_msg = std::string("Custom error ") + std::to_string(this->m_val);
-    }
-  }
-
-  return this->m_msg.c_str();
-}
-
-X_INL int32_t x_error::val() const
-{
-  return this->m_val;
-}
-
-X_INL x_error::operator bool() const
-{
-  if (this->m_fail) {
-    // NOTE: Covers the "custom" and other customized cases.
-    return this->m_fail(this->m_val);
-  } else {
-    if (strcmp(this->m_cat, "socket") == 0) {
-      return this->m_val != 0;
-    }
-#if X_WINDOWS
-    else if (strcmp(this->m_cat, "win32") == 0) {
-      return this->m_val != 0;
-    }
-#endif
-#if X_ENABLE_CU
-    else if (strcmp(this->m_cat, "cu") == 0) {
-      return static_cast<CUresult>(this->m_val) != CUDA_SUCCESS;
-    }
-#endif
-#if X_ENABLE_CUDA
-    else if (strcmp(this->m_cat, "cuda") == 0) {
-      return static_cast<cudaError_t>(this->m_val) != cudaSuccess;
-    }
-#endif
-#if X_ENABLE_CUBLAS
-    else if (strcmp(this->m_cat, "cublas") == 0) {
-      return static_cast<cublasStatus_t>(this->m_val) != CUBLAS_STATUS_SUCCESS;
-    }
-#endif
-    else {
-      // NOTE: Covers the "posix" case.
-      return this->m_val != 0;
-    }
-  }
-}
-// class x_error}}}
-// IMPL_Error_Handling}}}
-
-//********************************************************* IMPL_File_System{{{
+// ******************************************************** IMPL_File_System{{{
 X_INL bool x_fexist(const char* file)
 {
-  int ierr{0};
+  if (file == nullptr) {
+    return false;
+  }
 
 #if X_WINDOWS
-  struct _stat64 s{};
-  ierr = _stat64(file, &s);
+  struct _stat64 st{};
+  return _stat64(file, &st) == 0;
 #else
-  struct stat s{};
-  ierr = stat(file, &s);
+  struct stat st{};
+  return stat(file, &st) == 0;
 #endif
-
-  return ierr == 0;
 }
 
 X_INL x_error x_fopen(FILE** stream, const char* file, const char* mode)
 {
-#if X_WINDOWS
-  errno_t ierr = fopen_s(stream, file, mode);
-  if (ierr != 0) {
-    return x_error("posix", ierr);
+  if (stream == nullptr
+      || file == nullptr || file[0] == '\0'
+      || mode == nullptr || mode[0] == '\0') {
+    return x_error("posix", EINVAL);
   }
-#else
-  *stream = fopen(file, mode);
-  if (*stream == nullptr) {
-    return x_error("posix");
-  }
-#endif
 
-  return x_error();
+#if X_WINDOWS
+  const errno_t perr{fopen_s(stream, file, mode)};
+  return perr == 0 ? x_ok() : x_error("posix", static_cast<int32_t>(perr));
+#else
+  *stream = std::fopen(file, mode);
+  return *stream == nullptr ? x_error("posix") : x_ok();
+#endif
 }
 
-X_INL const char* x_fpath(char* dst, const char* src)
+X_INL const char* x_fpath(
+    char* destination, const size_t size, const char* source)
 {
+  if (destination == nullptr || size == 0
+      || source == nullptr || source[0] == '\0') {
+    errno = EINVAL;
+    return nullptr;
+  }
+
 #if X_WINDOWS
-  return dst != nullptr ? _fullpath(dst, src, X_PATH_MAX) : nullptr;
+  char* path = _fullpath(nullptr, source, size);
 #else
-  return dst != nullptr ? realpath(src, dst) : nullptr;
+  char* path = realpath(source, nullptr);
 #endif
+  if (path == nullptr) {
+    return nullptr;
+  }
+
+  const size_t len{std::strlen(path)};
+  if (len >= size) {
+    std::free(path);
+    errno = ENOBUFS;
+    return nullptr;
+  }
+
+  std::memcpy(destination, path, len + 1);
+  std::free(path);
+
+  return destination;
 }
 
 X_INL int64_t x_fsize(const char* file)
 {
-  int ierr{0};
-
-#if X_WINDOWS
-  struct _stat64 s{};
-  ierr = _stat64(file, &s);
-#else
-  struct stat s{};
-  ierr = stat(file, &s);
-#endif
-
-  return ierr == 0 ? static_cast<int64_t>(s.st_size) : -1;
-}
-
-X_INL x_error x_split_path(
-    const char *path,
-    char *root, const size_t rsz, char *dir, const size_t dsz,
-    char *file, const size_t fsz, char *ext, const size_t esz)
-{
-  char full[X_PATH_MAX]{};
-  x_fpath(full, path);
-
-  if (!x_fexist(full)) {
-    return x_error("posix", ENOENT);
+  if (file == nullptr) {
+    return -1;
   }
 
 #if X_WINDOWS
-  return x_error(
-      "posix", _splitpath_s(full, root, rsz, dir, dsz, file, fsz, ext, esz));
+  struct _stat64 st{};
+  return _stat64(file, &st) == 0 ? static_cast<int64_t>(st.st_size) : -1;
 #else
-  if (root == nullptr || rsz == 0 || dir == nullptr || dsz == 0
-      || file == nullptr || fsz == 0 || ext == nullptr || esz == 0) {
-    return x_error("posix", EINVAL);
-  }
-
-  if (root != nullptr) { root[0] = '\0'; }
-  if (dir != nullptr) { dir[0] = '\0'; }
-  if (file != nullptr) { file[0] = '\0'; }
-  if (ext != nullptr) { ext[0] = '\0'; }
-
-  size_t psz{strlen(full)};
-  size_t sz{0};
-  char* begin{nullptr};
-  char* end{nullptr};
-
-  // root
-  begin = strchr((char*)path, '/');
-  if (begin == nullptr) {
-    return x_error("posix", ENOENT);
-  }
-
-  end = strchr(begin + 1, '/');
-  if (end == nullptr) {
-    end = full + psz;
-  }
-
-  if (root != nullptr) {
-    sz = end - begin;
-    if (sz >= rsz) {
-      return x_error("posix", ENOBUFS);
-    }
-
-    memcpy(root, begin, sz);
-    root[sz] = '\0';
-
-    if (end == nullptr) {
-      return x_error();
-    }
-  }
-
-  // dir
-  begin = strchr(end, '/');
-  if (begin == nullptr) {
-    return x_error();
-  }
-
-  end = strrchr((char*)path, '/');
-  if (end <= begin) {
-    return x_error();
-  }
-  if (end == nullptr) {
-    end = full + psz;
-  }
-
-  if (dir != nullptr) {
-    sz = end - begin;
-    if (sz >= dsz) {
-      return x_error("posix", ENOBUFS);
-    }
-
-    memcpy(dir, begin, sz);
-    dir[sz] = '\0';
-
-    if (end == nullptr) {
-      return x_error();
-    }
-  }
-
-  // file
-  begin = end + 1;
-  if ((begin - full) >= 0) {
-    return x_error();
-  }
-
-  end = strrchr((char*)path, '.');
-  if (end <= begin) {
-    return x_error();
-  }
-  if (end == nullptr) {
-    end = full + psz;
-  }
-
-  if (file != nullptr) {
-    sz = end - begin;
-    if (sz >= fsz) {
-      return x_error("posix", ENOBUFS);
-    }
-
-    memcpy(file, begin, sz);
-    file[sz] = '\0';
-  }
-
-  // ext
-  if (ext != nullptr) {
-    begin = end;
-    end = full + psz;
-    if (end <= begin) {
-      return x_error();
-    }
-
-    sz = end - begin;
-    memcpy(ext, begin, sz);
-    ext[sz] = '\0';
-  }
-
-  return x_error();
+  struct stat st{};
+  return stat(file, &st) == 0 ? static_cast<int64_t>(st.st_size) : -1;
 #endif
 }
 // IMPL_File_System}}}
 
-//************************************************************ IMPL_Hardware{{{
+// *********************************************************** IMPL_Hardware{{{
 X_INL size_t x_ncpu()
 {
 #if X_WINDOWS
-  SYSTEM_INFO info{{}};
+#if defined(_WIN32_WINNT) && _WIN32_WINNT >= 0x0601
+  return static_cast<size_t>(
+      GetActiveProcessorCount(ALL_PROCESSOR_GROUPS));
+#else
+  SYSTEM_INFO info{};
   GetSystemInfo(&info);
   return static_cast<size_t>(info.dwNumberOfProcessors);
-#else
-  return static_cast<size_t>(sysconf(_SC_NPROCESSORS_ONLN));
 #endif
-}
-
-X_INL size_t x_ngpu(const char* api)
-{
-  if (x_strmty(api)) {
-    return 0;
-  }
-
-  if (strcmp(api, "cu") == 0) {
-#if X_ENABLE_CU
-    int count{0};
-    CUresult cres = cuDeviceGetCount(&count);
-    if (cres != CUDA_SUCCESS) {
-      const char* msg{nullptr};
-      cres = cuGetErrorString(cres, &msg);
-      if (cres == CUDA_SUCCESS) {
-        fprintf(stderr, "cuDeviceGetCount: %s\n", msg);
-      } else {
-        fprintf(stderr, "cuDeviceGetCount: unknown error %d\n", cres);
-      }
-      return 0;
-    }
-
-    return static_cast<size_t>(count);
 #else
-    return 0;
+  const long cnt = sysconf(_SC_NPROCESSORS_ONLN);
+  return cnt < 0 ? 0 : static_cast<size_t>(cnt);
 #endif
-  } else if (strcmp(api, "cuda") == 0) {
-#if X_ENABLE_CUDA
-    int count{0};
-    cudaError_t cerr = cudaGetDeviceCount(&count);
-    if (cerr != cudaSuccess) {
-      fprintf(stderr, "cudaGetDeviceCount: %s\n", cudaGetErrorString(cerr));
-      return 0;
-    }
-
-    return static_cast<size_t>(count);
-#else
-    return 0;
-#endif
-  }
-
-  return 0;
 }
 // IMPL_Hardware}}}
 
-//********************************************************* IMPL_Mathematics{{{
+// ******************************************************** IMPL_Mathematics{{{
 template<typename T>
-X_INL constexpr T x_KiB(const T n)
+X_INL constexpr T x_KiB(T scale)
 {
-  return n * static_cast<T>(1024);
+  return scale * static_cast<T>(1024);
 }
 
 template<typename T>
-X_INL constexpr T x_MiB(const T n)
+X_INL constexpr T x_MiB(T scale)
 {
-  return n * static_cast<T>(1048576);
+  return scale * static_cast<T>(1048576);
 }
 
 template<typename T>
-X_INL constexpr T x_GiB(const T n)
+X_INL constexpr T x_GiB(T scale)
 {
-  return n * static_cast<T>(1073741824);
+  return scale * static_cast<T>(1073741824);
 }
 
 template<typename T>
-X_INL constexpr T x_TiB(const T n)
+X_INL constexpr T x_TiB(T scale)
 {
-  return n * static_cast<T>(1099511627776);
+  return scale * static_cast<T>(1099511627776);
 }
 
 template<typename T>
-X_INL constexpr T x_PiB(const T n)
+X_INL constexpr T x_PiB(T scale)
 {
-  return n * static_cast<T>(1125899906842620);
+  return scale * static_cast<T>(1125899906842624);
 }
 
 template<typename T>
-X_INL constexpr T x_bit(const T n)
+X_INL constexpr uint64_t x_bit(T bit)
 {
-  static_assert(std::is_integral_v<T>, "x_bit: an integral type is required");
+  static_assert(
+      std::is_integral_v<T> && !std::is_same_v<T, bool>,
+      "x_bit requires an integer index");
 
-  return static_cast<T>(1) << n;
+  return UINT64_C(1) << bit;
 }
 
 template<typename T>
-X_INL constexpr T x_gcd(const T m, const T n)
+X_INL constexpr bool _x_math_negative(T value)
 {
-  static_assert(std::is_integral_v<T>, "x_gcd: an integral type is required");
+  (void)value;
+  static_assert(
+      std::is_integral_v<T> && !std::is_same_v<T, bool>,
+      "An integral type other than bool is required.");
 
-  return n == 0 ? m : x_gcd(n, m % n);
+  if constexpr (std::is_signed_v<T>) {
+    return value < 0;
+  }
+
+  return false;
 }
 
 template<typename T>
-X_INL constexpr T x_lcm(const T m, const T n)
+X_INL constexpr T x_gcd(T m, T n)
 {
-  static_assert(std::is_integral_v<T>, "x_lcm: an integral type is required");
+  if (_x_math_negative(m) || _x_math_negative(n)) {
+    errno = EINVAL;
+    return 0;
+  }
+
+  while (n != 0) {
+    const T rest = m % n;
+    m = n;
+    n = rest;
+  }
+
+  return m;
+}
+
+template<typename T>
+X_INL constexpr T x_lcm(T m, T n)
+{
+  if (_x_math_negative(m) || _x_math_negative(n)) {
+    errno = EINVAL;
+    return 0;
+  }
 
   if (m == 0 || n == 0) {
     return 0;
   }
 
-  return m / x_gcd(m, n) * n;
-}
-
-template<typename T>
-X_INL constexpr T x_next_exp(const T base, const T src)
-{
-  static_assert(std::is_integral_v<T>, "x_next_exp: an integral type is required");
-
-  if (src == 0) {
-    return 1;
-  }
-
-  if (base == 2) {
-    if ((src & (src - 1)) == 0) {
-      return src;
-    }
-
-    T s{src};
-    T count{0};
-    while (s != 0) {
-      s >>= 1;
-      count += 1;
-    }
-
-    return 1 << count;
-  } else {
-    double exp =
-      std::log(static_cast<double>(src)) / std::log(static_cast<double>(base));
-
-    if (exp == std::round(exp)) {
-      return src;
-    }
-
-    return std::pow(base, static_cast<int>(std::ceil(exp)));
-  }
-}
-
-template<typename T>
-X_INL constexpr T x_next_mul(const T base, const T src)
-{
-  static_assert(std::is_integral_v<T>, "x_next_mul: an integral type is required");
-
-  return (src / base + 1) * base;
-}
-
-template<typename T>
-X_INL constexpr T x_prev_exp(const T base, const T src)
-{
-  static_assert(std::is_integral_v<T>, "x_prev_exp: an integral type is required");
-
-  if (src == 0) {
+  const T factor = m / x_gcd(m, n);
+  if (factor > (std::numeric_limits<T>::max)() / n) {
+    errno = ERANGE;
     return 0;
   }
 
-  if (base == 2) {
-    if ((src & (src - 1)) == 0) {
-      return src;
-    }
-
-    T s{src};
-    T count{0};
-    while (s != 0) {
-      s >>= 1;
-      count += 1;
-    }
-
-    return 1 << (count - 1);
-  } else {
-    double exp =
-      std::log(static_cast<double>(src)) / std::log(static_cast<double>(base));
-
-    if (exp == std::round(exp)) {
-      return src;
-    }
-
-    return std::pow(base, static_cast<int>(std::floor(exp)));
-  }
+  return factor * n;
 }
 
 template<typename T>
-X_INL constexpr T x_prev_mul(const T base, const T src)
+X_INL constexpr T x_next_exp(T base, T source)
 {
-  static_assert(std::is_integral_v<T>, "x_prev_mul: an integral type is required");
+  if (base < 2 || _x_math_negative(base) || _x_math_negative(source)) {
+    errno = EINVAL;
+    return 0;
+  }
 
-  return (src / base) * base;
+  T power{1};
+  while (power < source) {
+    if (power > (std::numeric_limits<T>::max)() / base) {
+      errno = ERANGE;
+      return 0;
+    }
+
+    power *= base;
+  }
+
+  return power;
+}
+
+template<typename T>
+X_INL constexpr T x_next_mul(T base, T source)
+{
+  if (base == 0 || _x_math_negative(base) || _x_math_negative(source)) {
+    errno = EINVAL;
+    return 0;
+  }
+
+  const T step = base - source % base;
+  if (source > (std::numeric_limits<T>::max)() - step) {
+    errno = ERANGE;
+    return 0;
+  }
+
+  return source + step;
+}
+
+template<typename T>
+X_INL constexpr T x_prev_exp(T base, T source)
+{
+  if (base < 2 || _x_math_negative(base) || _x_math_negative(source)) {
+    errno = EINVAL;
+    return 0;
+  }
+
+  if (source == 0) {
+    return 0;
+  }
+
+  T power{1};
+  const T limit = source / base;
+  while (power <= limit) {
+    // The quotient bound guarantees power * base <= source, without overflow.
+    power *= base;
+  }
+
+  return power;
+}
+
+template<typename T>
+X_INL constexpr T x_prev_mul(T base, T source)
+{
+  if (base == 0 || _x_math_negative(base) || _x_math_negative(source)) {
+    errno = EINVAL;
+    return 0;
+  }
+
+  return source - source % base;
 }
 // IMPL_Mathematics}}}
 
-//*************************************************** IMPL_Memory_Management{{{
+// ************************************************************* IMPL_Memory{{{
 template<typename T, size_t N>
-X_INL constexpr size_t x_count(const T (&array)[N])
+X_INL constexpr size_t x_count(const T (&)[N])
 {
   return N;
 }
 
 template<bool array, typename T>
-X_INL void x_delete(T*& ptr)
+X_INL void x_delete(T*& pointer)
 {
-  if (ptr != nullptr) {
-    if constexpr (array) {
-      delete[] ptr;
-    } else {
-      delete ptr;
-    }
-    ptr = nullptr;
+  if constexpr (array) {
+    delete[] pointer;
+  } else {
+    delete pointer;
+  }
+
+  pointer = nullptr;
+}
+
+template<typename T>
+X_INL void x_free(T*& pointer)
+{
+  if (pointer != nullptr) {
+    std::free(const_cast<void*>(static_cast<const volatile void*>(pointer)));
+    pointer = nullptr;
   }
 }
 
 template<typename T>
-X_INL void x_free(T*& ptr)
+X_INL x_error x_malloc(T** pointer, const size_t size)
 {
-  if (ptr != nullptr) {
-    free(ptr);
-    ptr = nullptr;
-  }
-}
-
-template<typename T>
-X_INL x_error x_malloc(T** ptr, const size_t size)
-{
-  if (*ptr != nullptr) {
+  if (pointer == nullptr || *pointer != nullptr || size == 0) {
     return x_error("posix", EINVAL);
   }
 
-  *ptr = static_cast<T*>(malloc(size));
-  if (*ptr == nullptr) {
-    return x_error("posix");
-  }
+  *pointer = static_cast<T*>(std::malloc(size));
 
-  return x_error();
+  return *pointer == nullptr ? x_error("posix") : x_ok();
 }
 
-X_INL x_error x_memcpy(void* dst, const void* src, const size_t size)
+X_INL x_error x_memcpy(
+    void* destination, const void* source, const size_t size)
 {
-  if (dst == nullptr || src == nullptr) {
+  if (size == 0) {
+    return x_ok();
+  }
+
+  if (destination == nullptr || source == nullptr) {
     return x_error("posix", EINVAL);
   }
 
-  if (size != 0) {
-    memcpy(dst, src, size);
-  }
+  const uintptr_t dst{reinterpret_cast<uintptr_t>(destination)};
+  const uintptr_t src{reinterpret_cast<uintptr_t>(source)};
 
-  return x_error();
-}
-
-X_INL x_error _x_meminfo_cpu(size_t* avail, size_t* total)
-{
-  if (avail == nullptr && total == nullptr) {
+  // Subtract addresses to avoid overflowing either range endpoint.
+  if ((dst >= src && dst - src < size) || (dst < src && src - dst < size)) {
     return x_error("posix", EINVAL);
   }
 
-#if X_WINDOWS
-  MEMORYSTATUSEX status{};
-  status.dwLength = sizeof(status);
+  // Reject overlap first. `memmove()` avoids optimizer `restrict` warnings
+  // on rejected calls whose integer-address guard is not understood by GCC.
+  std::memmove(destination, source, size);
 
-  if (!GlobalMemoryStatusEx(&status)) {
-    return x_error("win32");
+  return x_ok();
+}
+
+X_INL x_error _x_meminfo_cpu(size_t* available, size_t* total)
+{
+  if (available == nullptr && total == nullptr) {
+    return x_error("posix", EINVAL);
   }
 
-  if (avail != nullptr) {
-    *avail = static_cast<size_t>(status.ullAvailPhys);
-  }
-  if (total != nullptr) {
-    *total = static_cast<size_t>(status.ullTotalPhys);
-  }
-#else
+  size_t avail_size{0};
+  size_t total_size{0};
+
+#if X_LINUX
   struct sysinfo info{};
   if (sysinfo(&info) != 0) {
     return x_error("posix");
   }
 
-  if (avail != nullptr) {
-    *avail = static_cast<size_t>(info.freeram);
+  if (info.mem_unit == 0
+      || (available != nullptr && info.freeram > SIZE_MAX / info.mem_unit)
+      || (total != nullptr && info.totalram > SIZE_MAX / info.mem_unit)) {
+    return x_error("posix", ERANGE);
+  }
+
+  if (available != nullptr) {
+    avail_size = static_cast<size_t>(info.freeram) * info.mem_unit;
   }
   if (total != nullptr) {
-    *total = static_cast<size_t>(info.totalram);
+    total_size = static_cast<size_t>(info.totalram) * info.mem_unit;
   }
+#elif X_MACOS
+  if (total != nullptr) {
+    uint64_t mem{0};
+    size_t msz{sizeof(mem)};
+    if (sysctlbyname("hw.memsize", &mem, &msz, nullptr, 0) != 0) {
+      return x_error("posix");
+    }
+    if (msz != sizeof(mem)) {
+      return x_error("posix", EIO);
+    }
+    if (mem > SIZE_MAX) {
+      return x_error("posix", ERANGE);
+    }
+    total_size = static_cast<size_t>(mem);
+  }
+
+  if (available != nullptr) {
+    const host_t host{mach_host_self()};
+    vm_size_t page_size{0};
+    vm_statistics64_data_t info{};
+    mach_msg_type_number_t cnt{HOST_VM_INFO64_COUNT};
+
+    kern_return_t ret = host_page_size(host, &page_size);
+    if (ret == KERN_SUCCESS) {
+      ret = host_statistics64(host, HOST_VM_INFO64,
+          reinterpret_cast<host_info64_t>(&info), &cnt);
+    }
+
+    const kern_return_t rel_ret{mach_port_deallocate(mach_task_self(), host)};
+    if (ret == KERN_SUCCESS) {
+      ret = rel_ret;
+    }
+    if (ret != KERN_SUCCESS) {
+      return x_error("generic", static_cast<int32_t>(ret));
+    }
+    if (page_size == 0 || info.free_count > SIZE_MAX / page_size) {
+      return x_error("posix", ERANGE);
+    }
+
+    // free_count already includes speculative_count; do not count it twice.
+    avail_size = static_cast<size_t>(info.free_count)
+        * static_cast<size_t>(page_size);
+  }
+#elif X_WINDOWS
+  MEMORYSTATUSEX info{};
+  info.dwLength = sizeof(info);
+  if (!GlobalMemoryStatusEx(&info)) {
+    return x_error("win32");
+  }
+
+  if ((available != nullptr && info.ullAvailPhys > SIZE_MAX)
+      || (total != nullptr && info.ullTotalPhys > SIZE_MAX)) {
+    return x_error("posix", ERANGE);
+  }
+
+  if (available != nullptr) {
+    avail_size = static_cast<size_t>(info.ullAvailPhys);
+  }
+  if (total != nullptr) {
+    total_size = static_cast<size_t>(info.ullTotalPhys);
+  }
+#else
+  return x_error("posix", ENOTSUP);
 #endif
 
-  return x_error();
+  if (available != nullptr) {
+    *available = avail_size;
+  }
+  if (total != nullptr) {
+    *total = total_size;
+  }
+
+  return x_ok();
 }
 
-#if X_ENABLE_CU
-X_INL x_error _x_meminfo_cu(size_t* avail, size_t* total)
+#if X_ENABLE_CUDA_DRIVER
+X_INL x_error _x_meminfo_cuda_driver(size_t* available, size_t* total)
 {
-  if (avail == nullptr && total == nullptr) {
+  if (available == nullptr && total == nullptr) {
     return x_error("posix", EINVAL);
   }
 
-  CUresult cres = cuMemGetInfo_v2(avail, total);
-  if (cres != CUDA_SUCCESS) {
-    return x_error("cu", cres);
+  size_t avail_size{0};
+  size_t total_size{0};
+  const x_error err{"cu", static_cast<int32_t>(
+      cuMemGetInfo_v2(&avail_size, &total_size))};
+  if (x_fail(err)) {
+    return err;
   }
 
-  return x_error();
+  if (available != nullptr) {
+    *available = avail_size;
+  }
+  if (total != nullptr) {
+    *total = total_size;
+  }
+
+  return err;
 }
 #endif
 
-#if X_ENABLE_CUDA
-X_INL x_error _x_meminfo_cuda(size_t* avail, size_t* total)
+#if X_ENABLE_CUDA_RUNTIME
+X_INL x_error _x_meminfo_cuda_runtime(size_t* available, size_t* total)
 {
-  if (avail == nullptr && total == nullptr) {
+  if (available == nullptr && total == nullptr) {
     return x_error("posix", EINVAL);
   }
 
-  cudaError_t cerr = cudaMemGetInfo(avail, total);
-  if (cerr != cudaSuccess) {
-    return x_error("cuda", cerr);
+  size_t avail_size{0};
+  size_t total_size{0};
+  const x_error err{"cuda", static_cast<int32_t>(
+      cudaMemGetInfo(&avail_size, &total_size))};
+  if (x_fail(err)) {
+    return err;
   }
 
-  return x_error();
+  if (available != nullptr) {
+    *available = avail_size;
+  }
+  if (total != nullptr) {
+    *total = total_size;
+  }
+
+  return err;
 }
 #endif
 
-X_INL x_error x_meminfo(const char* type, size_t* avail, size_t* total)
+X_INL x_error x_meminfo(
+    const char* type, size_t* available, size_t* total)
 {
-  if (strcmp(type, "cpu") == 0) {
-    return _x_meminfo_cpu(avail, total);
-#if X_ENABLE_CU
-  } else if (strcmp(type, "cu") == 0) {
-    return _x_meminfo_cu(avail, total);
-#endif
-#if X_ENABLE_CUDA
-  } else if (strcmp(type, "cuda") == 0) {
-    return _x_meminfo_cuda(avail, total);
-#endif
-  } else {
-    return x_error("posix", ENOTSUP, "unspported type");
-  }
-}
-
-#if X_ENABLE_CU
-X_INL const char* _x_memtype_cu(const CUdeviceptr_v2 ptr)
-{
-  static const char* type[] = {"Unknown", "Host", "Device", "Array", "Unified"};
-
-  CUmemorytype attr{};
-  CUresult cres = cuPointerGetAttribute(&attr, CU_POINTER_ATTRIBUTE_MEMORY_TYPE, ptr);
-  if (cres != CUDA_SUCCESS) {
-    const char* msg{nullptr};
-    cres = cuGetErrorString(cres, &msg);
-    if (cres == CUDA_SUCCESS) {
-      fprintf(stderr, "cuPointerGetAttribute: %s\n", msg);
-    } else {
-      fprintf(stderr, "cuPointerGetAttribute: unknown error %d\n", cres);
-    }
-    return "Unknown";
-  }
-
-  if (attr >= CU_MEMORYTYPE_HOST && attr <= CU_MEMORYTYPE_UNIFIED) {
-    return type[attr];
-  }
-
-  return "Unknown";
-}
-#endif  // X_ENABLE_CU
-
-#if X_ENABLE_CUDA
-X_INL const char* _x_memtype_cuda(const void* ptr)
-{
-  static const char* type[] = {"Unregistered", "Host", "Device", "Managed"};
-
-  cudaPointerAttributes attr{};
-  cudaError_t cerr = cudaPointerGetAttributes(&attr, ptr);
-  if (cerr != cudaSuccess) {
-    fprintf(stderr, "cudaPointerGetAttributes: %s\n", cudaGetErrorString(cerr));
-    return "Unknown";
-  }
-
-  if (attr.type >= cudaMemoryTypeUnregistered && attr.type <= cudaMemoryTypeManaged) {
-    return type[attr.type];
-  }
-
-  return "Unknown";
-}
-#endif  // X_ENABLE_CUDA
-
-template<typename T>
-X_INL const char* x_memtype(const char* type, const T ptr)
-{
-#if X_ENABLE_CU
-  if constexpr (std::is_same_v<T, CUdeviceptr_v2>) {
-    if (strcmp(type, "cu") == 0) {
-      return _x_memtype_cu(ptr);
-    }
-  }
-#endif
-
-#if X_ENABLE_CUDA
-  if constexpr (std::is_pointer_v<T>) {
-    if (strcmp(type, "cuda") == 0) {
-      return _x_memtype_cuda(ptr);
-    }
-  }
-#endif
-
-  return "N/A";
-}
-
-// IMPL_Memory_Management}}}
-
-//********************************************************* IMPL_Standard_IO{{{
-// x_log{{{
-#define _X_COLOR_BLACK   "\033[90m"
-#define _X_COLOR_RED     "\033[91m"
-#define _X_COLOR_GREEN   "\033[92m"
-#define _X_COLOR_YELLOW  "\033[93m"
-#define _X_COLOR_BLUE    "\033[94m"
-#define _X_COLOR_MAGENTA "\033[95m"
-#define _X_COLOR_CYAN    "\033[96m"
-#define _X_COLOR_WHITE   "\033[97m"
-#define _X_COLOR_RESET   "\033[0m"
-
-#define _X_LOG_COLOR_P _X_COLOR_WHITE
-#define _X_LOG_COLOR_F _X_COLOR_MAGENTA
-#define _X_LOG_COLOR_E _X_COLOR_RED
-#define _X_LOG_COLOR_W _X_COLOR_YELLOW
-#define _X_LOG_COLOR_I _X_COLOR_GREEN
-#define _X_LOG_COLOR_D _X_COLOR_CYAN
-
-template<char level>
-X_INL void _x_log_prefix(
-    char* buf, const size_t bsz,
-    const char* filename, const char* function, const long long line)
-{
-  char timestamp[26]{};
-
-#ifdef NDEBUG
-  snprintf(buf, bsz, "[%c %s] ", toupper(level), x_timestamp(timestamp, 26));
-#else
-  snprintf(
-      buf, bsz, "[%c %s | %s - %s - %lld] ",
-      toupper(level), x_timestamp(timestamp, 26), filename, function, line);
-#endif
-}
-
-template<char level, typename... Args>
-X_INL void _x_log_impl(
-    const char* filename, const char* function, const long long line,
-    FILE* stream, const char* format, Args&&... args)
-{
-  char color_level[8]{};
-  char color_reset[8]{};
-
-  if constexpr (level == 'p' || level == 'P') {
-#if X_LOG_LEVEL >= X_LOG_PLAIN
-    snprintf(color_level, 8, _X_LOG_COLOR_P);
-#else
-    return;
-#endif
-  } else if constexpr (level == 'f' || level == 'F') {
-#if X_LOG_LEVEL >= X_LOG_FATAL
-    snprintf(color_level, 8, _X_LOG_COLOR_F);
-#else
-    return;
-#endif
-  } else if constexpr (level == 'e' || level == 'E') {
-#if X_LOG_LEVEL >= X_LOG_ERROR
-    snprintf(color_level, 8, _X_LOG_COLOR_E);
-#else
-    return;
-#endif
-  } else if constexpr (level == 'w' || level == 'W') {
-#if X_LOG_LEVEL >= X_LOG_WARNING
-    snprintf(color_level, 8, _X_LOG_COLOR_W);
-#else
-    return;
-#endif
-  } else if constexpr (level == 'i' || level == 'I') {
-#if X_LOG_LEVEL >= X_LOG_INFO
-    snprintf(color_level, 8, _X_LOG_COLOR_I);
-#else
-    return;
-#endif
-  } else if constexpr (level == 'd' || level == 'D') {
-#if X_LOG_LEVEL >= X_LOG_DEBUG
-    snprintf(color_level, 8, _X_LOG_COLOR_D);
-#else
-    return;
-#endif
-  } else {
-    return;
-  }
-
-  snprintf(color_reset, 8, _X_COLOR_RESET);
-
-  char prefix[X_LOG_PREFIX_LIMIT]{};
-  _x_log_prefix<level>(prefix, X_LOG_PREFIX_LIMIT, filename, function, line);
-
-  const char* msg{format};
-
-  if constexpr (sizeof...(args) > 0) {
-    char buf[X_LOG_MSG_LIMIT]{};
-    snprintf(buf, X_LOG_MSG_LIMIT, format, std::forward<Args>(args)...);
-    msg = buf;
-  }
-
-  if (stream == nullptr || stream == stdout || stream == stderr) {
-    fprintf(
-        stream == nullptr ? stdout : stream,
-        "%s%s%s%s\n", color_level, prefix, msg, color_reset);
-  } else {
-    fprintf(stream, "%s%s\n", prefix, msg);
-  }
-}
-// x_log}}}
-// IMPL_Standard_IO}}}
-
-//************************************************************** IMPL_String{{{
-X_INL x_error x_strcpy(char* dst, const size_t size, const char* src)
-{
-  if (dst == nullptr || size == 0) {
+  if (type == nullptr) {
     return x_error("posix", EINVAL);
   }
 
-  size_t cpy_sz{size - 1};
-  size_t src_sz{strlen(src)};
-
-  if (src_sz > 0) {
-    cpy_sz = cpy_sz < src_sz ? cpy_sz : src_sz;
-
-    x_error err = x_memcpy(dst, src, cpy_sz);
-    if (err) {
-      return err;
-    }
+  if (std::strcmp(type, "cpu") == 0) {
+    return _x_meminfo_cpu(available, total);
   }
 
-  dst[cpy_sz] = '\0';
+#if X_ENABLE_CUDA_DRIVER
+  if (std::strcmp(type, "cu") == 0) {
+    return _x_meminfo_cuda_driver(available, total);
+  }
+#endif
 
-  return x_error();
+#if X_ENABLE_CUDA_RUNTIME
+  if (std::strcmp(type, "cuda") == 0) {
+    return _x_meminfo_cuda_runtime(available, total);
+  }
+#endif
+
+  return x_error("posix", ENOTSUP);
+}
+// IMPL_Memory}}}
+
+// ************************************************************* IMPL_String{{{
+X_INL x_error x_strcpy(
+    char* destination, const size_t size, const char* source)
+{
+  if (destination == nullptr || source == nullptr || size == 0) {
+    return x_error("posix", EINVAL);
+  }
+
+  const size_t src_size{std::strlen(source)};
+  const size_t cpy_size{src_size < size - 1 ? src_size : size - 1};
+  const uintptr_t dst{reinterpret_cast<uintptr_t>(destination)};
+  const uintptr_t src{reinterpret_cast<uintptr_t>(source)};
+
+  // Include both terminators; subtract addresses to avoid endpoint overflow.
+  if ((dst >= src && dst - src <= src_size)
+      || (dst < src && src - dst <= cpy_size)) {
+    return x_error("posix", EINVAL);
+  }
+
+  if (cpy_size != 0) {
+    // As in `x_memcpy`, `memmove()` avoids spurious `restrict` warnings.
+    std::memmove(destination, source, cpy_size);
+  }
+
+  destination[cpy_size] = '\0';
+
+  return x_ok();
 }
 
 X_INL bool x_strmty(const char* string)
@@ -2861,5 +3089,133 @@ X_INL bool x_strmty(const char* string)
 }
 // IMPL_String}}}
 
+// *************************************************************** IMPL_CUDA{{{
+#if X_ENABLE_CUDA_DRIVER
+X_INL const char* _x_memtype_cuda_driver(CUdeviceptr pointer)
+{
+  unsigned int attr{0};
+  if (cuPointerGetAttribute(&attr, CU_POINTER_ATTRIBUTE_MEMORY_TYPE, pointer)
+      != CUDA_SUCCESS) {
+    return "Unknown";
+  }
+
+  switch (attr) {
+    case CU_MEMORYTYPE_HOST:
+      return "Host";
+    case CU_MEMORYTYPE_DEVICE:
+      return "Device";
+    case CU_MEMORYTYPE_ARRAY:
+      return "Array";
+    case CU_MEMORYTYPE_UNIFIED:
+      return "Unified";
+    default:
+      return "Unknown";
+  }
+}
+#endif  // X_ENABLE_CUDA_DRIVER
+
+#if X_ENABLE_CUDA_RUNTIME
+X_INL const char* _x_memtype_cuda_runtime(const void* pointer)
+{
+  struct cudaPointerAttributes attr{};
+  if (cudaPointerGetAttributes(&attr, pointer) != cudaSuccess) {
+    return "Unknown";
+  }
+
+  switch (attr.type) {
+    case cudaMemoryTypeUnregistered:
+      return "Unregistered";
+    case cudaMemoryTypeHost:
+      return "Host";
+    case cudaMemoryTypeDevice:
+      return "Device";
+    case cudaMemoryTypeManaged:
+      return "Managed";
+    default:
+      return "Unknown";
+  }
+}
+#endif  // X_ENABLE_CUDA_RUNTIME
+
+#if (X_ENABLE_CUDA_DRIVER || X_ENABLE_CUDA_RUNTIME)
+template<typename T>
+X_INL const char* x_memtype(const char* api, T pointer)
+{
+  (void)pointer;
+  if (api == nullptr || api[0] == '\0') {
+    return "N/A";
+  }
+
+#if X_ENABLE_CUDA_DRIVER
+  if constexpr (std::is_same_v<T, CUdeviceptr>) {
+    if (std::strcmp(api, "cu") == 0) {
+      return _x_memtype_cuda_driver(pointer);
+    }
+  }
+#endif
+
+#if X_ENABLE_CUDA_RUNTIME
+  if constexpr (std::is_same_v<T, std::nullptr_t>
+      || (std::is_pointer_v<T>
+          && !std::is_function_v<std::remove_pointer_t<T>>)) {
+    if (std::strcmp(api, "cuda") == 0) {
+      // The API examines the address, not the pointed-to object. Removing
+      // volatile for this query does not read or modify volatile storage.
+      return _x_memtype_cuda_runtime(
+          const_cast<const void*>(static_cast<const volatile void*>(pointer)));
+    }
+  }
+#endif
+
+  return "N/A";
+}
+
+X_INL size_t x_ngpu(const char* api)
+{
+  if (api == nullptr || api[0] == '\0') {
+    return 0;
+  }
+
+#if X_ENABLE_CUDA_DRIVER
+  if (std::strcmp(api, "cu") == 0) {
+    int cnt{0};
+    const CUresult cres = cuDeviceGetCount(&cnt);
+    if (cres != CUDA_SUCCESS) {
+      const char* msg{nullptr};
+      const CUresult msg_cres = cuGetErrorString(cres, &msg);
+      if (msg_cres == CUDA_SUCCESS && msg != nullptr) {
+        std::fprintf(stderr, "cuDeviceGetCount: %s\n", msg);
+      } else {
+        std::fprintf(
+            stderr, "cuDeviceGetCount: CUDA driver error %d\n",
+            static_cast<int>(cres));
+      }
+      return 0;
+    }
+
+    return cnt < 0 ? 0 : static_cast<size_t>(cnt);
+  }
+#endif
+
+#if X_ENABLE_CUDA_RUNTIME
+  if (std::strcmp(api, "cuda") == 0) {
+    int cnt{0};
+    const cudaError_t cerr = cudaGetDeviceCount(&cnt);
+    if (cerr != cudaSuccess) {
+      const char* msg = cudaGetErrorString(cerr);
+      std::fprintf(
+          stderr, "cudaGetDeviceCount: %s\n",
+          msg == nullptr ? "CUDA runtime error" : msg);
+      return 0;
+    }
+
+    return cnt < 0 ? 0 : static_cast<size_t>(cnt);
+  }
+#endif
+
+  return 0;
+}
+#endif  // (X_ENABLE_CUDA_DRIVER || X_ENABLE_CUDA_RUNTIME)
+// IMPL_CUDA}}}
 
 #endif  // X_H
