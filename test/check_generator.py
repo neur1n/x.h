@@ -38,9 +38,9 @@ class GeneratorTests(unittest.TestCase):
                     for source in (SOURCE, CPP_SOURCE):
                         header = render(source, list(selected))
                         labels = [label for name, _, label, _ in MODULES if name in selected]
-                        expected = "0.9.0+core" + "".join("." + label for label in labels)
+                        expected = "0.9.1+core" + "".join("." + label for label in labels)
                         self.assertIn(f'#define X_H_VERBOSE "{expected}"', header)
-                        self.assertIn("#define X_H x_version(0, 9, 0)", header)
+                        self.assertIn("#define X_H x_version(0, 9, 1)", header)
                         self.assertIn("X_INL x_error _x_check_impl(", header)
                         self.assertIn("X_INL const char* _x_timestamp(", header)
                         if "logging" not in selected:
@@ -86,7 +86,7 @@ class GeneratorTests(unittest.TestCase):
         self.assertNotIn("x_meminfo", header)
 
     def test_version_comes_from_numeric_macro(self):
-        changed = SOURCE.replace("#define X_H x_version(0, 9, 0)",
+        changed = SOURCE.replace("#define X_H x_version(0, 9, 1)",
                                  "#define X_H x_version(1, 2, 3)")
         self.assertIn('#define X_H_VERBOSE "1.2.3+core"', render(changed, ["core"]))
 
@@ -98,7 +98,7 @@ class GeneratorTests(unittest.TestCase):
             SOURCE.replace(" * DECL_String\n", ""),
             SOURCE.replace(" * DECL_String\n", " * DECL_String\n * DECL_String\n"),
             SOURCE + SOURCE,
-            SOURCE.replace("#define X_H x_version(0, 9, 0)", "#define X_H x_version(100, 9, 0)"),
+            SOURCE.replace("#define X_H x_version(0, 9, 1)", "#define X_H x_version(100, 9, 0)"),
             SOURCE.replace("#define X_H_VERBOSE", "#define OTHER_VERBOSE"),
         )
         for source in damaged:

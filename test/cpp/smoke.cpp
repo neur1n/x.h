@@ -2,7 +2,7 @@
 #include <new>
 #include "support.h"
 
-#if X_H != x_version(0, 9, 0)
+#if X_H != x_version(0, 9, 1)
 #error "X_H must retain the encoded header version"
 #endif
 

@@ -12,16 +12,14 @@ from tool.generate import render
 PROLOGUE = """/******************************************************************************
 Copyright (c) 2023 Jihang Li
 x.h is licensed under Mulan PSL v2.
-You can use this software according to the terms and conditions of the Mulan
-PSL v2.
+You can use this software according to the terms and conditions of the Mulan PSL v2.
 You may obtain a copy of Mulan PSL v2 at:
          http://license.coscl.org.cn/MulanPSL2
 THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND,
 EITHER EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT,
 MERCHANTABILITY OR FIT FOR A PARTICULAR PURPOSE.
 See the Mulan PSL v2 for more details.
-
-
+******************************************************************************/
 """
 
 
@@ -29,7 +27,7 @@ def main() -> None:
     for language in ("c", "cpp"):
         source = (ROOT / language / "x.h").read_text(encoding="utf-8")
         assert source.startswith(PROLOGUE)
-        assert "#ifndef X_H\n#define X_H x_version(0, 9, 0)\n" in source
+        assert "#ifndef X_H\n#define X_H x_version(0, 9, 1)\n" in source
         assert "X_H_MAJOR" not in source
         assert "X_H_MINOR" not in source
         assert "X_H_PATCH" not in source

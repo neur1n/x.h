@@ -53,18 +53,22 @@ X_INL x_error test_error(const char* domain, int32_t value)
   return err;
 }
 
+#if X_WINDOWS
 static unsigned long win32_error;
 
 X_INL unsigned long GetLastError(void)
 {
   return win32_error;
 }
+#endif
 
 X_INL x_error test_error_capture(const char* domain)
 {
+#if X_WINDOWS
   if (strcmp(domain, "win32") == 0) {
     return test_error(domain, (int32_t)GetLastError());
   }
+#endif
 
   return test_error(domain, errno);
 }
@@ -74,25 +78,22 @@ X_INL x_error test_error_capture(const char* domain)
 #define TEST_ERROR_SELECT(_1, _2, NAME, ...) NAME
 #define x_error_set(...) \
   TEST_ERROR_SELECT(__VA_ARGS__, TEST_ERROR_VALUE, TEST_ERROR_CAPTURE)(__VA_ARGS__)
-X_INL bool x_strmty(const char* text)
-{
-  return text == NULL || text[0] == '\0';
-}
 
 static int fail_clock;
-static int fail_frequency;
 static int fail_time;
 static int fail_conversion;
 static int clock_calls;
 static int conversion_calls;
 static int sleep_calls;
+enum { TEST_FREQUENCY_ERROR = 50, TEST_COUNTER_ERROR = 87 };
+
+#if X_WINDOWS
+static int fail_frequency;
 static int64_t counter_value;
-static struct timespec posix_value;
 static int64_t counter_frequency = 10000000;
 typedef struct {
   int64_t QuadPart;
 } LARGE_INTEGER;
-enum { TEST_FREQUENCY_ERROR = 50, TEST_COUNTER_ERROR = 87 };
 
 X_INL int QueryPerformanceFrequency(LARGE_INTEGER* output)
 {
@@ -115,6 +116,14 @@ X_INL int QueryPerformanceCounter(LARGE_INTEGER* output)
   output->QuadPart = counter_value;
   return 1;
 }
+X_INL void Sleep(unsigned long interval)
+{
+  CHECK(interval == 1234);
+  ++sleep_calls;
+}
+#else
+static struct timespec posix_value;
+
 // Use a recognizable test-only clock identifier to catch accidental realtime.
 #ifdef CLOCK_MONOTONIC
 #undef CLOCK_MONOTONIC
@@ -144,18 +153,16 @@ X_INL int test_nanosleep(const struct timespec* request, struct timespec* remain
   CHECK(request->tv_sec == 0 && request->tv_nsec == 500000000);
   return 0;
 }
-X_INL void Sleep(unsigned long interval)
-{
-  CHECK(interval == 1234);
-  ++sleep_calls;
-}
+#define clock_gettime test_clock_gettime
+#define nanosleep test_nanosleep
+#endif
 
 X_INL time_t test_time(time_t* ignored)
 {
   (void)ignored;
   return fail_time ? (time_t)-1 : (time_t)123;
 }
-X_INL int test_ctime_s(char* output, size_t size, const time_t* now)
+X_INL int test_time_conversion(char* output, size_t size, const time_t* now)
 {
   ++conversion_calls;
   CHECK(size >= 26 && *now == 123);
@@ -165,15 +172,20 @@ X_INL int test_ctime_s(char* output, size_t size, const time_t* now)
   memcpy(output, "Sat Oct  3 12:00:00 2026\n", 26);
   return 0;
 }
+#if X_WINDOWS
+X_INL int test_ctime_s(char* output, size_t size, const time_t* now)
+{
+  return test_time_conversion(output, size, now);
+}
+#define ctime_s test_ctime_s
+#else
 X_INL char* test_ctime_r(const time_t* now, char* output)
 {
-  return test_ctime_s(output, 26, now) == 0 ? output : NULL;
+  return test_time_conversion(output, 26, now) == 0 ? output : NULL;
 }
-#define clock_gettime test_clock_gettime
-#define nanosleep test_nanosleep
-#define time test_time
-#define ctime_s test_ctime_s
 #define ctime_r test_ctime_r
+#endif
+#define time test_time
 #define timespec_get forbidden_wall_clock
 
 // Synthetic status values used by the injected failures and missing-record
@@ -424,16 +436,22 @@ static void test_cpu(void)
 #endif
   CHECK(x_succ(x_event_init(&event, "cpu", 0)));
   check_missing_samples(&event);
+#if X_WINDOWS
   // Large absolute counts ensure conversion happens after subtraction.
   counter_value = INT64_C(1000000000000000000);
+#else
   posix_value.tv_sec = 42;
   posix_value.tv_nsec = 999999500;
+#endif
   CHECK(x_succ(event.tic(&event, NULL, 0)));
   CHECK(event.dur(&event, "ns") == -1.0);
   check_error(event.status, "posix", ENODATA);
+#if X_WINDOWS
   counter_value += 1;
+#else
   posix_value.tv_sec = 43;
   posix_value.tv_nsec = 500;
+#endif
   CHECK(x_succ(event.toc(&event, NULL, 0)));
   CHECK(event.dur(&event, "ns") == (X_WINDOWS ? 100.0 : 1000.0));
   double output = -123.0;
@@ -495,8 +513,11 @@ static void test_cpu(void)
 
   aggregation.reset(&aggregation);
   CHECK(x_succ(event.tic(&event, NULL, 0)));
+#if X_WINDOWS
   --counter_value;
+#else
   --posix_value.tv_nsec;
+#endif
   snapshot = aggregation;
   check_error(event.agg(&event, &aggregation, 1, NULL, 0), "posix", ERANGE);
   check_same_aggregation(&aggregation, &snapshot);

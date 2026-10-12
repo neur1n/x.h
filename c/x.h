@@ -1,19 +1,15 @@
 /******************************************************************************
 Copyright (c) 2023 Jihang Li
 x.h is licensed under Mulan PSL v2.
-You can use this software according to the terms and conditions of the Mulan
-PSL v2.
+You can use this software according to the terms and conditions of the Mulan PSL v2.
 You may obtain a copy of Mulan PSL v2 at:
          http://license.coscl.org.cn/MulanPSL2
 THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND,
 EITHER EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT,
 MERCHANTABILITY OR FIT FOR A PARTICULAR PURPOSE.
 See the Mulan PSL v2 for more details.
-
-
-Last update: 2026-10-12 00:39
-Version: v0.9.0
 ******************************************************************************/
+
 /** @file
  * @brief Cross-platform C utilities.
  * @note On Linux, include this header before any system header so its default
@@ -25,10 +21,10 @@ Version: v0.9.0
  *       before including system headers.
  */
 #ifndef X_H
-#define X_H x_version(0, 9, 0)
+#define X_H x_version(0, 9, 1)
 
 /// @brief Version and included modules; Core includes Error Handling.
-#define X_H_VERBOSE "0.9.0+core.log.checksum.time.fs.hw.math.mem.str.cuda"
+#define X_H_VERBOSE "0.9.1+core.log.checksum.time.fs.hw.math.mem.str.cuda"
 
 /** @internal
  * Table of Contents
@@ -1832,9 +1828,10 @@ X_INL uint8_t x_checksum_xor(
   }
 
   uint64_t blk[8] = {0};
+  const size_t bsz = sizeof(blk);
   size_t idx = 0;
 
-  while (size - idx >= sizeof(blk)) {
+  while (size - idx >= bsz) {
     memcpy(blk, bytes + idx, sizeof(blk));
 
     cks ^= blk[0] ^ blk[1] ^ blk[2] ^ blk[3]

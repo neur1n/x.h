@@ -1,19 +1,15 @@
 /******************************************************************************
 Copyright (c) 2023 Jihang Li
 x.h is licensed under Mulan PSL v2.
-You can use this software according to the terms and conditions of the Mulan
-PSL v2.
+You can use this software according to the terms and conditions of the Mulan PSL v2.
 You may obtain a copy of Mulan PSL v2 at:
          http://license.coscl.org.cn/MulanPSL2
 THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND,
 EITHER EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT,
 MERCHANTABILITY OR FIT FOR A PARTICULAR PURPOSE.
 See the Mulan PSL v2 for more details.
-
-
-Last update: 2026-10-12 00:39
-Version: v0.9.0
 ******************************************************************************/
+
 /** @file
  * @brief Cross-platform C++ utilities.
  * @note On Linux, include this header before any system header so its default
@@ -25,10 +21,10 @@ Version: v0.9.0
  *       before including system headers.
  */
 #ifndef X_H
-#define X_H x_version(0, 9, 0)
+#define X_H x_version(0, 9, 1)
 
 /// @brief Version and included modules; Core includes Error Handling.
-#define X_H_VERBOSE "0.9.0+core.log.checksum.time.fs.hw.math.mem.str.cuda"
+#define X_H_VERBOSE "0.9.1+core.log.checksum.time.fs.hw.math.mem.str.cuda"
 
 /** @internal
  * Table of Contents
@@ -316,6 +312,7 @@ Version: v0.9.0
 #include <cfloat>
 #include <climits>
 #include <cmath>
+#include <cstdarg>
 #include <cstddef>
 #include <cstdio>
 #include <cstdlib>
@@ -1425,8 +1422,8 @@ X_INL const x_error_domain* _x_error_domain_lookup(const char* name)
     return nullptr;
   }
 
-  const x_error_domain* domain = nullptr;
-  for (size_t i = 0; i < error_domain_registry.count; ++i) {
+  const x_error_domain* domain{nullptr};
+  for (size_t i{0}; i < error_domain_registry.count; ++i) {
     domain = error_domain_registry.list[i];
     if (domain != nullptr && domain->name != nullptr
         && std::strcmp(name, domain->name) == 0) {
@@ -1881,10 +1878,10 @@ X_INL void _x_log_prefix(
 #endif
 }
 
-template<unsigned char level, typename... Args>
+template<unsigned char level>
 X_INL void _x_log_impl(
     const char* file, const char* function, const long long line,
-    FILE* stream, const char* format, Args&&... args)
+    FILE* stream, const char* format, ...)
 {
   int lvl{X_LOG_NONE};
   const char* color{""};
@@ -1932,7 +1929,10 @@ X_INL void _x_log_impl(
   _x_log_prefix<level>(prefix, sizeof(prefix), file, function, line);
 
   char msg[X_LOG_MSG_LIMIT]{};
-  std::snprintf(msg, sizeof(msg), format, std::forward<Args>(args)...);
+  std::va_list args;
+  va_start(args, format);
+  std::vsnprintf(msg, sizeof(msg), format, args);
+  va_end(args);
 
   FILE* output = stream == nullptr ? stdout : stream;
   if (output == stdout || output == stderr) {
@@ -1948,7 +1948,7 @@ X_INL uint32_t x_checksum_crc32(
     const void* data, const size_t size, const uint32_t* previous)
 {
   const auto* bytes{static_cast<const uint8_t*>(data)};
-  uint32_t cks{previous == nullptr ? 0xFFFFFFFFu : ~*previous};
+  uint32_t cks = previous == nullptr ? 0xFFFFFFFFu : ~*previous;
 
   if (bytes == nullptr) {
     return ~cks;
@@ -1968,7 +1968,7 @@ X_INL uint16_t x_checksum_rfc1071(
     const void* data, const size_t size, const uint16_t* previous)
 {
   const auto* bytes{static_cast<const uint8_t*>(data)};
-  uint32_t cks{previous == nullptr ? 0u : static_cast<uint16_t>(~*previous)};
+  uint32_t cks = previous == nullptr ? 0u : static_cast<uint16_t>(~*previous);
 
   if (bytes == nullptr) {
     return static_cast<uint16_t>(~cks);
@@ -1997,16 +1997,17 @@ X_INL uint8_t x_checksum_xor(
     const void* data, const size_t size, const uint8_t* previous)
 {
   const auto* bytes{static_cast<const uint8_t*>(data)};
-  uint64_t cks{previous == nullptr ? 0u : static_cast<uint64_t>(*previous)};
+  uint64_t cks = previous == nullptr ? 0u : static_cast<uint64_t>(*previous);
 
   if (bytes == nullptr) {
     return static_cast<uint8_t>(cks);
   }
 
   uint64_t blk[8]{};
+  const size_t bsz{sizeof(blk)};
   size_t idx{0};
 
-  while (size - idx >= sizeof(blk)) {
+  while (size - idx >= bsz) {
     std::memcpy(blk, bytes + idx, sizeof(blk));
 
     cks ^= blk[0] ^ blk[1] ^ blk[2] ^ blk[3]
@@ -2093,8 +2094,8 @@ X_INL void x_event_agg::echo(
 {
   char ts[26]{};
 
-  const char* prefix{title == nullptr || title[0] == '\0'
-      ? x_timestamp(ts, sizeof(ts)) : title};
+  const char* prefix = title == nullptr || title[0] == '\0'
+      ? x_timestamp(ts, sizeof(ts)) : title;
 
   if (this->cyc == 0) {
     std::fprintf(
@@ -2103,7 +2104,7 @@ X_INL void x_event_agg::echo(
     return;
   }
 
-  const char* suffix{unit == nullptr || unit[0] == '\0' ? "ns" : unit};
+  const char* suffix = unit == nullptr || unit[0] == '\0' ? "ns" : unit;
 
   double scale = _x_event_unit_scale(suffix);
   if (scale == 0.0) {
@@ -2353,8 +2354,8 @@ X_INL x_error x_event::dur_cpu(double& ns) const
 
   // Subtract as unsigned integers to avoid signed overflow, then convert the
   // difference rather than rounding the two absolute counts to double.
-  const uint64_t diff{static_cast<uint64_t>(this->m_stop.counter)
-                    - static_cast<uint64_t>(this->m_start.counter)};
+  const uint64_t diff = static_cast<uint64_t>(this->m_stop.counter)
+                      - static_cast<uint64_t>(this->m_start.counter);
   dur = static_cast<double>(diff)
       * (1e9 / static_cast<double>(this->m_frequency));
 #else
@@ -2456,7 +2457,7 @@ X_INL x_error x_event::record(bool stop, void* stream, unsigned int flags)
   (void)flags;
 
   x_error err;
-  endpoint& target{stop ? this->m_stop : this->m_start};
+  endpoint& target = stop ? this->m_stop : this->m_start;
 
   switch (this->m_type) {
     case 0:
@@ -2567,7 +2568,7 @@ X_INL x_error x_fopen(FILE** stream, const char* file, const char* mode)
   }
 
 #if X_WINDOWS
-  const errno_t perr{fopen_s(stream, file, mode)};
+  const errno_t perr = fopen_s(stream, file, mode);
   return perr == 0 ? x_ok() : x_error("posix", static_cast<int32_t>(perr));
 #else
   *stream = std::fopen(file, mode);
@@ -2593,7 +2594,7 @@ X_INL const char* x_fpath(
     return nullptr;
   }
 
-  const size_t len{std::strlen(path)};
+  const size_t len = std::strlen(path);
   if (len >= size) {
     std::free(path);
     errno = ENOBUFS;
@@ -2917,7 +2918,7 @@ X_INL x_error _x_meminfo_cpu(size_t* available, size_t* total)
   }
 
   if (available != nullptr) {
-    const host_t host{mach_host_self()};
+    const host_t host = mach_host_self();
     vm_size_t page_size{0};
     vm_statistics64_data_t info{};
     mach_msg_type_number_t cnt{HOST_VM_INFO64_COUNT};
@@ -2928,7 +2929,7 @@ X_INL x_error _x_meminfo_cpu(size_t* available, size_t* total)
           reinterpret_cast<host_info64_t>(&info), &cnt);
     }
 
-    const kern_return_t rel_ret{mach_port_deallocate(mach_task_self(), host)};
+    const kern_return_t rel_ret = mach_port_deallocate(mach_task_self(), host);
     if (ret == KERN_SUCCESS) {
       ret = rel_ret;
     }
@@ -3062,8 +3063,8 @@ X_INL x_error x_strcpy(
     return x_error("posix", EINVAL);
   }
 
-  const size_t src_size{std::strlen(source)};
-  const size_t cpy_size{src_size < size - 1 ? src_size : size - 1};
+  const size_t src_size = std::strlen(source);
+  const size_t cpy_size = src_size < size - 1 ? src_size : size - 1;
   const uintptr_t dst{reinterpret_cast<uintptr_t>(destination)};
   const uintptr_t src{reinterpret_cast<uintptr_t>(source)};
 

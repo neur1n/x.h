@@ -3,7 +3,7 @@
 #include "generated_under_test.h"
 #include "generated_under_test.h"
 
-#if X_H != x_version(0, 9, 0)
+#if X_H != x_version(0, 9, 1)
 #error "X_H must retain the encoded header version"
 #endif
 #if defined(X_H_MAJOR) || defined(X_H_MINOR) || defined(X_H_PATCH)
