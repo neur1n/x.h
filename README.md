@@ -29,7 +29,8 @@
   compiler, OS, and platform detection, symbol visibility, and source
   diagnostics.
 - **Error handling:** Assertions, checked calls, and unified error domains for
-  POSIX, Win32, sockets, CUDA, cuBLAS, and custom domains.
+  POSIX, Win32, HRESULT, NTSTATUS, Mach, sockets, CUDA, cuBLAS, and custom
+  domains.
 
 ### Optional Modules
 

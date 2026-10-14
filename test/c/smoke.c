@@ -3,7 +3,7 @@
 #include "generated_under_test.h"
 #include "generated_under_test.h"
 
-#if X_H != x_version(0, 9, 1)
+#if X_H != x_version(0, 9, 2)
 #error "X_H must retain the encoded header version"
 #endif
 #if defined(X_H_MAJOR) || defined(X_H_MINOR) || defined(X_H_PATCH)
@@ -83,18 +83,25 @@ int main(void)
   /* SDK substitutes exercise Core with every GPU error domain enabled while
      the CUDA utilities, timing, and memory modules are absent. */
 #if X_ENABLE_CUDA_DRIVER
-  err = x_error_set("cu", CUDA_SUCCESS);
+  err = x_error_set("cudadrv", CUDA_SUCCESS);
   CHECK(x_succ(err));
-  err = x_error_set("cu", CUDA_ERROR_TEST);
+  err = x_error_set("cudadrv", CUDA_ERROR_TEST);
   CHECK(x_fail(err));
   CHECK(strcmp(x_error_message(message, sizeof(message), err), "driver:test") == 0);
 #endif
 #if X_ENABLE_CUDA_RUNTIME
-  err = x_error_set("cuda", cudaSuccess);
+  test_cuda_last_error = cudaErrorTest;
+  err = x_error_set("cudart");
+  CHECK(err.value == cudaErrorTest && x_fail(err));
+  CHECK(test_cuda_capture_calls == 1 && test_cuda_last_error == cudaSuccess);
+  CHECK(x_succ(x_error_set("cudart")) && test_cuda_capture_calls == 2);
+  CHECK(err.value == cudaErrorTest);
+  err = x_error_set("cudart", cudaSuccess);
   CHECK(x_succ(err));
-  err = x_error_set("cuda", cudaErrorTest);
+  err = x_error_set("cudart", cudaErrorTest);
   CHECK(x_fail(err));
   CHECK(strcmp(x_error_message(message, sizeof(message), err), "runtime:test") == 0);
+  CHECK(test_cuda_capture_calls == 2);
 #endif
 #if X_ENABLE_CUBLAS
   err = x_error_set("cublas", CUBLAS_STATUS_SUCCESS);

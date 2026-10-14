@@ -385,6 +385,14 @@ static void test_cross_tu(void)
 #if X_WINDOWS
 static void test_win32(void)
 {
+  CHECK(x_succ(x_error_set("wincom", S_OK)));
+  CHECK(x_succ(x_error_set("wincom", S_FALSE)));
+  CHECK(x_fail(x_error_set("wincom", E_FAIL)));
+  CHECK(x_succ(x_error_set("winnt", 0x40000000)));
+  CHECK(x_fail(x_error_set("winnt", (int32_t)UINT32_C(0x80000005))));
+  CHECK(x_fail(x_error_set("winnt", (int32_t)UINT32_C(0xC0000001))));
+  CHECK(_x_error_domain_lookup("wincom")->capture == NULL);
+  CHECK(_x_error_domain_lookup("winnt")->capture == NULL);
   SetLastError(ERROR_ACCESS_DENIED);
   x_error error = x_error_set("win32");
   CHECK(error.value == ERROR_ACCESS_DENIED && x_fail(error));
@@ -401,6 +409,27 @@ static void test_win32(void)
   CHECK(tiny[0] == '\0');
   x_error_message(buffer, sizeof(buffer), x_error_set("win32", -1));
   CHECK(strcmp(buffer, "Win32 error -1") == 0);
+  x_error_message(buffer, sizeof(buffer), x_error_set("wincom", E_ACCESSDENIED));
+  CHECK(buffer[0] != '\0' && memchr(buffer, '\0', sizeof(buffer)) != NULL);
+  x_error_message(buffer, sizeof(buffer), x_error_set("winnt", (int32_t)UINT32_C(0xC0000001)));
+  CHECK(buffer[0] != '\0' && memchr(buffer, '\0', sizeof(buffer)) != NULL);
+}
+#endif
+
+#if X_IOS || X_MACOS
+static void test_mach(void)
+{
+  CHECK(x_succ(x_error_set("mach", KERN_SUCCESS)));
+  x_error error = x_error_set("mach", KERN_INVALID_ARGUMENT);
+  CHECK(x_fail(error) && strcmp(error.domain->name, "mach") == 0);
+  CHECK(error.domain->capture == NULL);
+  x_error peer = error_peer_set("mach", KERN_INVALID_ARGUMENT);
+  CHECK(peer.domain == error.domain && peer.value == error.value);
+  char buffer[256];
+  x_error_message(buffer, sizeof(buffer), error);
+  CHECK(strcmp(buffer, mach_error_string(KERN_INVALID_ARGUMENT)) == 0);
+  x_error_domain duplicate = {NULL, NULL, NULL, "mach"};
+  CHECK(x_error_register(&duplicate) == EEXIST);
 }
 #endif
 
@@ -424,6 +453,9 @@ static const test_case cases[] = {
   {"cross_tu", test_cross_tu, false},
 #if X_WINDOWS
   {"win32", test_win32, false},
+#endif
+#if X_IOS || X_MACOS
+  {"mach", test_mach, false},
 #endif
   {"abort_unknown_value", unknown_value, true},
   {"abort_unknown_capture", unknown_capture, true},

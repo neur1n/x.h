@@ -2,6 +2,7 @@
 
 import argparse
 from pathlib import Path
+from fixture_source import extract_function
 
 
 def main():
@@ -11,13 +12,10 @@ def main():
     source = (Path(__file__).resolve().parents[1] / "c/x.h").read_text(
         encoding="utf-8"
     )
-    section = source.index("// x_error_message{{{")
-    helpers = source.index("X_INL char* _x_error_copy(", section)
-    helpers_end = source.index("X_INL char* _x_error_message_generic(", helpers)
-    start = source.index("X_INL char* _x_error_message_posix(", section)
-    end = source.index("#if X_ENABLE_SOCKET", start)
     args.output.write_text(
-        source[helpers:helpers_end] + source[start:end], encoding="utf-8"
+        "".join(extract_function(source, name) for name in (
+            "_x_error_copy", "_x_error_number", "_x_error_message_posix",
+        )), encoding="utf-8"
     )
 
 

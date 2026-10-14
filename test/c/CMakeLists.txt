@@ -110,6 +110,7 @@ ADD_CUSTOM_COMMAND(
     --output ${CMAKE_CURRENT_BINARY_DIR}/error_message_under_test.h
   DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/../../c/x.h
     ${CMAKE_CURRENT_SOURCE_DIR}/../create_error_message_fixture.py
+    ${CMAKE_CURRENT_SOURCE_DIR}/../fixture_source.py
   VERBATIM
 )
 ADD_CUSTOM_TARGET(x_error_message_fixture
@@ -160,6 +161,7 @@ ADD_CUSTOM_COMMAND(
     --output ${CMAKE_CURRENT_BINARY_DIR}/memory_under_test.h
   DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/../../c/x.h
     ${CMAKE_CURRENT_SOURCE_DIR}/../create_memory_fixture.py
+    ${CMAKE_CURRENT_SOURCE_DIR}/../fixture_source.py
   VERBATIM
 )
 ADD_CUSTOM_TARGET(x_memory_fixture
@@ -182,7 +184,7 @@ FOREACH(STANDARD IN ITEMS 99 11)
   ADD_TEST(NAME memory_c${STANDARD} COMMAND ${TARGET})
   SET_TESTS_PROPERTIES(memory_c${STANDARD} PROPERTIES TIMEOUT 15 LABELS memory)
 
-  FOREACH(PLATFORM RANGE 0 3)
+  FOREACH(PLATFORM RANGE 0 4)
     FOREACH(NARROW RANGE 0 1)
       # Unsupported platforms return ENOTSUP before checking memory sizes.
       IF(PLATFORM EQUAL 0 AND NARROW EQUAL 1)
@@ -218,6 +220,9 @@ SET(ERROR_CASES
 )
 IF(WIN32)
   LIST(APPEND ERROR_CASES win32)
+ENDIF()
+IF(APPLE)
+  LIST(APPEND ERROR_CASES mach)
 ENDIF()
 SET(ERROR_ABORT_CASES
   abort_unknown_value abort_unknown_capture abort_null_name abort_empty_name
@@ -277,6 +282,37 @@ FOREACH(LOG_MODE IN ITEMS enabled disabled)
         --expect ${EXPECT} --context ${ERROR_CONTEXT}
     )
     SET_TESTS_PROPERTIES(${TEST_NAME} PROPERTIES TIMEOUT 15 LABELS error)
+  ENDFOREACH()
+ENDFOREACH()
+
+ADD_CUSTOM_COMMAND(
+  OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/native_error_under_test.h
+  COMMAND ${Python3_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/../create_native_error_fixture.py
+    --lang c --output ${CMAKE_CURRENT_BINARY_DIR}/native_error_under_test.h
+  DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/../../c/x.h
+    ${CMAKE_CURRENT_SOURCE_DIR}/../create_native_error_fixture.py
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../tool/generate.py
+  VERBATIM
+)
+ADD_CUSTOM_TARGET(x_native_error_fixture
+  DEPENDS ${CMAKE_CURRENT_BINARY_DIR}/native_error_under_test.h)
+FOREACH(STANDARD IN ITEMS 99 11)
+  FOREACH(PLATFORM IN ITEMS 0 2 3 4)
+    SET(TARGET x_test_native_error_${PLATFORM}_c${STANDARD})
+    ADD_EXECUTABLE(${TARGET} native_error_faults.c)
+    ADD_DEPENDENCIES(${TARGET} x_native_error_fixture)
+    TARGET_INCLUDE_DIRECTORIES(${TARGET} PRIVATE ${CMAKE_CURRENT_BINARY_DIR})
+    TARGET_COMPILE_DEFINITIONS(${TARGET} PRIVATE TEST_PLATFORM=${PLATFORM})
+    SET_TARGET_PROPERTIES(${TARGET} PROPERTIES
+      C_STANDARD ${STANDARD} C_STANDARD_REQUIRED YES C_EXTENSIONS NO)
+    IF(MSVC)
+      TARGET_COMPILE_OPTIONS(${TARGET} PRIVATE /W4 /WX)
+    ELSE()
+      TARGET_COMPILE_OPTIONS(${TARGET} PRIVATE -Wall -Wextra -Werror -pedantic-errors)
+    ENDIF()
+    ADD_TEST(NAME native_error_${PLATFORM}_c${STANDARD} COMMAND ${TARGET})
+    SET_TESTS_PROPERTIES(native_error_${PLATFORM}_c${STANDARD} PROPERTIES
+      TIMEOUT 15 LABELS "error;platform")
   ENDFOREACH()
 ENDFOREACH()
 

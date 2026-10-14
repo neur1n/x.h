@@ -2,12 +2,13 @@
 #include <new>
 #include "support.h"
 
-#if X_H != x_version(0, 9, 1)
+#if X_H != x_version(0, 9, 2)
 #error "X_H must retain the encoded header version"
 #endif
 
 const x_error_domain* peer_posix();
 const x_error_domain_registry* peer_registry();
+const x_error_domain* peer_lookup(const char* name);
 int32_t peer_register();
 x_error peer_error();
 
@@ -16,6 +17,13 @@ int main()
   CHECK(strcmp(X_H_VERBOSE, TEST_DESCRIPTION) == 0);
   CHECK(peer_registry() == &error_domain_registry);
   CHECK(peer_posix() == &error_domain_posix);
+#if X_WINDOWS
+  CHECK(peer_lookup("wincom") == &error_domain_wincom);
+  CHECK(peer_lookup("winnt") == &error_domain_winnt);
+#endif
+#if X_IOS || X_MACOS
+  CHECK(peer_lookup("mach") == &error_domain_mach);
+#endif
   CHECK(peer_register() == 0);
   CHECK(strcmp(x_error("peer", 9).message(), "peer:9") == 0);
   CHECK(strcmp(peer_error().domain(), "peer") == 0);
@@ -41,9 +49,16 @@ int main()
 #endif
 #endif
 #if TEST_GPU_ERRORS
-  CHECK(x_fail(x_error("cu", 1)) && x_fail(x_error("cuda", 1)));
+  test_cuda_last_error = cudaErrorTest;
+  const x_error captured{"cudart"};
+  CHECK(captured.value() == cudaErrorTest && x_fail(captured));
+  CHECK(test_cuda_capture_calls == 1 && test_cuda_last_error == cudaSuccess);
+  CHECK(x_succ(x_error("cudart")) && test_cuda_capture_calls == 2);
+  CHECK(captured.value() == cudaErrorTest);
+  CHECK(x_fail(x_error("cudadrv", 1)) && x_fail(x_error("cudart", 1)));
   CHECK(x_fail(x_error("cublas", 1)));
-  CHECK(!std::string(x_error("cu", 1).message()).empty());
+  CHECK(!std::string(x_error("cudadrv", 1).message()).empty());
+  CHECK(test_cuda_capture_calls == 2);
 #endif
 #if TEST_CHECKSUM
   CHECK(x_checksum_crc32("123456789", 9) == 0xCBF43926u);

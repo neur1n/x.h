@@ -27,7 +27,7 @@ def main() -> None:
     for language in ("c", "cpp"):
         source = (ROOT / language / "x.h").read_text(encoding="utf-8")
         assert source.startswith(PROLOGUE)
-        assert "#ifndef X_H\n#define X_H x_version(0, 9, 1)\n" in source
+        assert "#ifndef X_H\n#define X_H x_version(0, 9, 2)\n" in source
         assert "X_H_MAJOR" not in source
         assert "X_H_MINOR" not in source
         assert "X_H_PATCH" not in source

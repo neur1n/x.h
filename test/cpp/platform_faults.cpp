@@ -18,6 +18,7 @@
 #define X_LINUX (TEST_PLATFORM == 1)
 #define X_MACOS (TEST_PLATFORM == 2)
 #define X_WINDOWS (TEST_PLATFORM == 3)
+#define X_IOS (TEST_PLATFORM == 4)
 #define X_ENABLE_CUDA_DRIVER 0
 #define X_ENABLE_CUDA_RUNTIME 0
 #if TEST_NARROW
@@ -111,7 +112,7 @@ static int sysinfo(struct sysinfo* info)
   info->mem_unit = memory_unit;
   return 0;
 }
-#elif X_MACOS
+#elif X_IOS || X_MACOS
 using host_t = unsigned int;
 using vm_size_t = uint64_t;
 using kern_return_t = int;
@@ -168,19 +169,19 @@ static void test_memory()
   CHECK(!x_meminfo("cpu", &available, &total));
   CHECK(available == 4096 && total == 65536);
   available = 7; total = 9;
-#if X_MACOS
+#if X_IOS || X_MACOS
   const int before_total{total_queries};
 #endif
   CHECK(!x_meminfo("cpu", &available, nullptr));
   CHECK(available == 4096 && total == 9);
-#if X_MACOS
+#if X_IOS || X_MACOS
   CHECK(total_queries == before_total);
   const int before_host{acquired};
 #endif
   available = 7;
   CHECK(!x_meminfo("cpu", nullptr, &total));
   CHECK(available == 7 && total == 65536);
-#if X_MACOS
+#if X_IOS || X_MACOS
   CHECK(acquired == before_host);
 #endif
   available = 7; total = 9;
@@ -213,7 +214,7 @@ static void test_memory()
   CHECK(available == 7);
   free_bytes = 4096;
 #endif
-#if X_MACOS
+#if X_IOS || X_MACOS
   CHECK(acquired == released);
   short_sysctl = true;
   CHECK(x_meminfo("cpu", nullptr, &total).value() == EIO);
@@ -222,7 +223,7 @@ static void test_memory()
     available = 7; total = 9;
     *failure = 17;
     const x_error result = x_meminfo("cpu", &available, &total);
-    CHECK(result.value() == 17 && strcmp(result.domain(), "generic") == 0);
+    CHECK(result.value() == 17 && strcmp(result.domain(), "mach") == 0);
     CHECK(available == 7 && total == 9 && acquired == released);
     *failure = 0;
   }
@@ -232,7 +233,7 @@ static void test_memory()
     release_error = 18;
     const int before_stats{stats_queries};
     const x_error result{x_meminfo("cpu", &available, &total)};
-    CHECK(result.value() == 17 && strcmp(result.domain(), "generic") == 0);
+    CHECK(result.value() == 17 && strcmp(result.domain(), "mach") == 0);
     CHECK(available == 7 && total == 9 && acquired == released);
     CHECK(stats_queries == before_stats + (failure == &stats_error ? 1 : 0));
     *failure = 0;

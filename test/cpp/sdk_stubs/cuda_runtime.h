@@ -10,6 +10,13 @@ enum cudaMemoryType : unsigned int {
 };
 struct cudaPointerAttributes { cudaMemoryType type; };
 inline constexpr unsigned int cudaEventDisableTiming = 2;
+inline cudaError_t cudaGetLastError()
+{
+  ++runtime.capture_calls;
+  const cudaError_t value{static_cast<cudaError_t>(runtime.pending_error)};
+  runtime.pending_error = 0;
+  return value;
+}
 inline const char* cudaGetErrorString(cudaError_t error)
 {
   ++runtime.message_calls;

@@ -546,7 +546,7 @@ static void test_cuda_recording(backend* api, const char* domain)
 
   CUevent start;
   CUevent stop;
-  if (strcmp(domain, "cu") == 0) {
+  if (strcmp(domain, "cudadrv") == 0) {
     start = event.start.cu;
     stop = event.stop.cu;
   } else {
@@ -556,7 +556,7 @@ static void test_cuda_recording(backend* api, const char* domain)
   CHECK(start != stop && start->record_count == 0 && stop->record_count == 0);
 
   x_error (*duration)(const x_event*, double*) =
-      strcmp(domain, "cu") == 0 ? _x_event_dur_cuda_driver : _x_event_dur_cuda_runtime;
+      strcmp(domain, "cudadrv") == 0 ? _x_event_dur_cuda_driver : _x_event_dur_cuda_runtime;
   double output = -123.0;
   CHECK(sync_event(api, stop) == 0);
   check_error(duration(&event, &output), domain, FAIL_UNRECORDED);
@@ -639,7 +639,7 @@ static void test_cuda(backend* api, const char* domain)
   check_error(x_event_init(&event, domain, 0), domain, FAIL_CREATE);
   CHECK(api->live == 1 && event.type != -1);
   check_error(event.status, domain, FAIL_CREATE);
-  CHECK(event.type == (strcmp(domain, "cu") == 0 ? 1 : 2));
+  CHECK(event.type == (strcmp(domain, "cudadrv") == 0 ? 1 : 2));
   CHECK(x_succ(x_event_term(&event)) && api->live == 0 && event.type == -1);
 
   reset_backend(api);
@@ -654,7 +654,7 @@ static void test_cuda(backend* api, const char* domain)
   CHECK(event.dur(&event, "ms") == 2.5 && x_succ(event.status));
   check_request_errors(&event);
   x_error (*duration)(const x_event*, double*) =
-      strcmp(domain, "cu") == 0 ? _x_event_dur_cuda_driver : _x_event_dur_cuda_runtime;
+      strcmp(domain, "cudadrv") == 0 ? _x_event_dur_cuda_driver : _x_event_dur_cuda_runtime;
   const x_event* samples = &event;
   double output = -123.0;
   CHECK(x_succ(duration(samples, &output)) && output == 2500000.0);
@@ -783,10 +783,10 @@ static void test_timestamp_and_sleep(void)
 int main(void)
 {
   test_cpu();
-  test_cuda_recording(&driver, "cu");
-  test_cuda_recording(&runtime, "cuda");
-  test_cuda(&driver, "cu");
-  test_cuda(&runtime, "cuda");
+  test_cuda_recording(&driver, "cudadrv");
+  test_cuda_recording(&runtime, "cudart");
+  test_cuda(&driver, "cudadrv");
+  test_cuda(&runtime, "cudart");
   test_timestamp_and_sleep();
   return 0;
 }

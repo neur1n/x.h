@@ -14,6 +14,7 @@
 #define X_LINUX (TEST_PLATFORM == 1)
 #define X_MACOS (TEST_PLATFORM == 2)
 #define X_WINDOWS (TEST_PLATFORM == 3)
+#define X_IOS (TEST_PLATFORM == 4)
 #define X_ENABLE_CUDA_DRIVER 1
 #define X_ENABLE_CUDA_RUNTIME 1
 #define X_ENABLE_CUBLAS 1
@@ -47,7 +48,7 @@ static bool x_fail(const x_error error) { return error.value != 0; }
 #define x_error_set(...) \
   TEST_SELECT(__VA_ARGS__, test_error, test_capture)(__VA_ARGS__)
 
-#if X_LINUX || X_MACOS || X_WINDOWS
+#if X_LINUX || X_IOS || X_MACOS || X_WINDOWS
 static uint64_t free_bytes = 4096, total_bytes = 65536;
 static int query_error;
 #endif
@@ -62,7 +63,7 @@ static int sysinfo(struct sysinfo* info)
   info->mem_unit = memory_unit;
   return 0;
 }
-#elif X_MACOS
+#elif X_IOS || X_MACOS
 typedef unsigned int host_t;
 typedef int kern_return_t;
 typedef uint64_t vm_size_t;
@@ -147,6 +148,8 @@ struct cudaPointerAttributes { enum cudaMemoryType type; };
 typedef enum { CUBLAS_STATUS_SUCCESS = 0, TEST_CUBLAS_FAILURE = 7 } cublasStatus_t;
 static CUresult driver_status;
 static cudaError_t runtime_status;
+static cudaError_t runtime_last_status;
+static int runtime_capture_calls;
 static unsigned int driver_memory_type = CU_MEMORYTYPE_HOST;
 static enum cudaMemoryType runtime_memory_type = cudaMemoryTypeHost;
 static CUdeviceptr last_driver_pointer;
@@ -215,6 +218,13 @@ static const char* cudaGetErrorString(cudaError_t value)
   last_runtime_error = (int32_t)value;
   return runtime_message;
 }
+static cudaError_t cudaGetLastError(void)
+{
+  ++runtime_capture_calls;
+  cudaError_t value = runtime_last_status;
+  runtime_last_status = cudaSuccess;
+  return value;
+}
 static const char* cublasGetStatusString(cublasStatus_t value)
 {
   ++cublas_message_calls;
@@ -250,55 +260,55 @@ static void test_cuda(void)
   static const char* driver_names[] = {"Unknown", "Host", "Device", "Array", "Unified"};
   for (unsigned int i = 0; i < 5; ++i) {
     driver_memory_type = i;
-    CHECK(strcmp(x_memtype("cu", device_pointer), driver_names[i]) == 0);
+    CHECK(strcmp(x_memtype("cudadrv", device_pointer), driver_names[i]) == 0);
     CHECK(last_driver_pointer == device_pointer);
   }
   driver_memory_type = UINT_MAX;
-  CHECK(strcmp(x_memtype("cu", device_pointer), "Unknown") == 0);
+  CHECK(strcmp(x_memtype("cudadrv", device_pointer), "Unknown") == 0);
   driver_status = TEST_CU_FAILURE;
-  CHECK(strcmp(x_memtype("cu", device_pointer), "Unknown") == 0);
+  CHECK(strcmp(x_memtype("cudadrv", device_pointer), "Unknown") == 0);
   driver_status = CUDA_SUCCESS;
   driver_memory_type = CU_MEMORYTYPE_HOST;
-  CHECK(strcmp(x_memtype("cu", (CUdeviceptr)0), "Host") == 0);
+  CHECK(strcmp(x_memtype("cudadrv", (CUdeviceptr)0), "Host") == 0);
   CHECK(last_driver_pointer == 0);
 
   static const char* runtime_names[] = {"Unregistered", "Host", "Device", "Managed"};
   for (int i = 0; i < 4; ++i) {
     runtime_memory_type = (enum cudaMemoryType)i;
-    CHECK(strcmp(x_memtype("cuda", (void*)&object), runtime_names[i]) == 0);
+    CHECK(strcmp(x_memtype("cudart", (void*)&object), runtime_names[i]) == 0);
     CHECK(last_runtime_pointer == &object && object == 1.0f);
   }
   runtime_memory_type = (enum cudaMemoryType)99;
-  CHECK(strcmp(x_memtype("cuda", (void*)&object), "Unknown") == 0);
+  CHECK(strcmp(x_memtype("cudart", (void*)&object), "Unknown") == 0);
   runtime_status = TEST_CUDA_FAILURE;
-  CHECK(strcmp(x_memtype("cuda", (void*)&object), "Unknown") == 0);
+  CHECK(strcmp(x_memtype("cudart", (void*)&object), "Unknown") == 0);
   runtime_status = cudaSuccess;
   runtime_memory_type = cudaMemoryTypeHost;
-  CHECK(strcmp(x_memtype("cuda", (void*)NULL), "Host") == 0);
+  CHECK(strcmp(x_memtype("cudart", (void*)NULL), "Host") == 0);
   CHECK(last_runtime_pointer == NULL);
 
   CHECK(x_ngpu(NULL) == 0 && x_ngpu("") == 0 && x_ngpu("unknown") == 0);
   device_count = 3;
-  CHECK(x_ngpu("cu") == 3 && x_ngpu("cuda") == 3);
+  CHECK(x_ngpu("cudadrv") == 3 && x_ngpu("cudart") == 3);
   device_count = 0;
-  CHECK(x_ngpu("cu") == 0 && x_ngpu("cuda") == 0);
+  CHECK(x_ngpu("cudadrv") == 0 && x_ngpu("cudart") == 0);
   CHECK(diagnostic_calls == 0);
   device_count = 1;
 
   driver_status = TEST_CU_FAILURE;
-  CHECK(x_ngpu("cu") == 0 && diagnostic_calls == 1);
+  CHECK(x_ngpu("cudadrv") == 0 && diagnostic_calls == 1);
   CHECK(strcmp(cuda_diagnostic, "cuDeviceGetCount: driver failure\n") == 0);
   message_status = (CUresult)101;
-  CHECK(x_ngpu("cu") == 0 && diagnostic_calls == 2);
+  CHECK(x_ngpu("cudadrv") == 0 && diagnostic_calls == 2);
   CHECK(strcmp(cuda_diagnostic, "cuDeviceGetCount: CUDA driver error 17\n") == 0);
   message_status = CUDA_SUCCESS;
   null_message = true;
-  CHECK(x_ngpu("cu") == 0 && diagnostic_calls == 3);
+  CHECK(x_ngpu("cudadrv") == 0 && diagnostic_calls == 3);
   CHECK(strcmp(cuda_diagnostic, "cuDeviceGetCount: CUDA driver error 17\n") == 0);
   null_message = false;
   driver_status = CUDA_SUCCESS;
   runtime_status = TEST_CUDA_FAILURE;
-  CHECK(x_ngpu("cuda") == 0 && diagnostic_calls == 4);
+  CHECK(x_ngpu("cudart") == 0 && diagnostic_calls == 4);
   CHECK(strcmp(cuda_diagnostic, "cudaGetDeviceCount: runtime failure\n") == 0);
   runtime_status = cudaSuccess;
 }
@@ -338,6 +348,11 @@ static void check_message_buffers(
 
 static void test_cuda_errors(void)
 {
+  runtime_last_status = TEST_CUDA_FAILURE;
+  CHECK(_x_error_capture_cuda_runtime() == TEST_CUDA_FAILURE);
+  CHECK(runtime_capture_calls == 1 && runtime_last_status == cudaSuccess);
+  CHECK(_x_error_capture_cuda_runtime() == cudaSuccess);
+  CHECK(runtime_capture_calls == 2);
   CHECK(!_x_error_failed_cublas(CUBLAS_STATUS_SUCCESS));
   CHECK(_x_error_failed_cublas(TEST_CUBLAS_FAILURE));
   CHECK(!_x_error_failed_cuda_driver(CUDA_SUCCESS));
@@ -428,7 +443,7 @@ static void test_gpu_memory(const char* type, int* calls, const int32_t failure)
   CHECK(x_meminfo(type, &aliased, &aliased).value == 0 && aliased == 256);
   CHECK(*calls == before + 4);
 
-  if (strcmp(type, "cu") == 0) {
+  if (strcmp(type, "cudadrv") == 0) {
     driver_status = (CUresult)failure;
   } else {
     runtime_status = (cudaError_t)failure;
@@ -454,7 +469,7 @@ int main(void)
   CHECK(x_meminfo(NULL, &available, &total).value == EINVAL);
   CHECK(x_meminfo("unknown", &available, &total).value == ENOTSUP);
   CHECK(available == 123 && total == 456);
-#if X_LINUX || X_MACOS || X_WINDOWS
+#if X_LINUX || X_IOS || X_MACOS || X_WINDOWS
   CHECK(x_meminfo("cpu", &available, &total).value == 0);
   CHECK(available == free_bytes && total == total_bytes);
   CHECK(x_meminfo("cpu", &available, NULL).value == 0 && available == free_bytes);
@@ -478,7 +493,7 @@ int main(void)
   CHECK(x_meminfo("cpu", NULL, &total).value == 0);
   free_bytes = 4096;
 #endif
-#if X_MACOS
+#if X_IOS || X_MACOS
   CHECK(acquired == released);
   int before = acquired;
   CHECK(x_meminfo("cpu", NULL, &total).value == 0 && acquired == before);
@@ -489,14 +504,14 @@ int main(void)
   short_sysctl = false;
   page_error = 71;
   before = stats_calls;
-  expect_failure("generic", 71);
+  expect_failure("mach", 71);
   CHECK(stats_calls == before && acquired == released);
   page_error = 0;
   stats_error = 72;
   release_error = 73;
-  expect_failure("generic", 72); // Preserve primary failure over cleanup error.
+  expect_failure("mach", 72); // Preserve primary failure over cleanup error.
   stats_error = 0;
-  expect_failure("generic", 73);
+  expect_failure("mach", 73);
   release_error = 0;
   CHECK(acquired == released && page_calls > 0);
 #endif
@@ -505,7 +520,7 @@ int main(void)
   CHECK(x_meminfo("cpu", &available, NULL).value == ENOTSUP);
   CHECK(x_meminfo("cpu", NULL, &total).value == ENOTSUP);
 #endif
-  test_gpu_memory("cu", &driver_memory_queries, TEST_CU_FAILURE);
-  test_gpu_memory("cuda", &runtime_memory_queries, TEST_CUDA_FAILURE);
+  test_gpu_memory("cudadrv", &driver_memory_queries, TEST_CU_FAILURE);
+  test_gpu_memory("cudart", &runtime_memory_queries, TEST_CUDA_FAILURE);
   return 0;
 }

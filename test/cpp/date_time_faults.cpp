@@ -395,8 +395,8 @@ static void test_echo_defaults()
 int main()
 {
   test_cpu();
-  test_cuda("cu", driver);
-  test_cuda("cuda", runtime);
+  test_cuda("cudadrv", driver);
+  test_cuda("cudart", runtime);
   test_timestamp_and_sleep();
   test_echo_defaults();
   return 0;

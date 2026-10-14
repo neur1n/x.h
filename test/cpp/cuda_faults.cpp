@@ -10,7 +10,7 @@
 
 static void test_events(const char* type, test_backend& backend)
 {
-  const int32_t create_error = strcmp(type, "cu") == 0 ? 7 : 8;
+  const int32_t create_error = strcmp(type, "cudadrv") == 0 ? 7 : 8;
   backend = {};
   expect_throw<std::invalid_argument>([&] { x_event event{type, 2}; });
   CHECK(backend.creates == 0);
@@ -150,24 +150,43 @@ static void test_memory_queries(
 
 int main()
 {
+#if X_ENABLE_CUDA_RUNTIME
+  runtime.pending_error = cudaErrorTest;
+  x_error captured{"cudart"};
+  CHECK(captured.value() == cudaErrorTest && x_fail(captured));
+  CHECK(runtime.capture_calls == 1 && runtime.pending_error == cudaSuccess);
+  CHECK(strcmp(captured.domain(), "cudart") == 0);
+  runtime.pending_error = cudaErrorTest;
+  captured.set("cudart", cudaErrorInvalidValue, "explicit message");
+  CHECK(runtime.capture_calls == 1 && runtime.pending_error == cudaErrorTest);
+  CHECK(strcmp(captured.message(), "explicit message") == 0);
+  captured.set("cudart");
+  CHECK(captured.value() == cudaErrorTest && runtime.capture_calls == 2);
+  CHECK(runtime.pending_error == cudaSuccess);
+  CHECK(strcmp(captured.message(), "runtime:test") == 0);
+  CHECK(runtime.capture_calls == 2);
+  CHECK(x_succ(x_error("cudart")) && runtime.capture_calls == 3);
+  CHECK(captured.value() == cudaErrorTest && runtime.synchronizes == 0);
+  runtime = {};
+#endif
 #if TEST_EVENTS
 #if X_ENABLE_CUDA_DRIVER
-  test_events("cu", driver);
+  test_events("cudadrv", driver);
 #endif
 #if X_ENABLE_CUDA_RUNTIME
-  test_events("cuda", runtime);
+  test_events("cudart", runtime);
 #endif
 #endif
 #if TEST_QUERIES
 #if X_ENABLE_CUDA_DRIVER
-  test_memory_queries("cu", driver, 7);
+  test_memory_queries("cudadrv", driver, 7);
 #else
-  CHECK(x_meminfo("cu", nullptr, nullptr).value() == ENOTSUP);
+  CHECK(x_meminfo("cudadrv", nullptr, nullptr).value() == ENOTSUP);
 #endif
 #if X_ENABLE_CUDA_RUNTIME
-  test_memory_queries("cuda", runtime, 8);
+  test_memory_queries("cudart", runtime, 8);
 #else
-  CHECK(x_meminfo("cuda", nullptr, nullptr).value() == ENOTSUP);
+  CHECK(x_meminfo("cudart", nullptr, nullptr).value() == ENOTSUP);
 #endif
 #endif
 #if TEST_TOOLS
@@ -178,18 +197,18 @@ int main()
   CHECK(strcmp(x_memtype(nullptr, nullptr), "N/A") == 0);
   CHECK(strcmp(x_memtype("", nullptr), "N/A") == 0);
   CHECK(strcmp(x_memtype("missing", nullptr), "N/A") == 0);
-  CHECK(strcmp(x_memtype("cu", nullptr), "N/A") == 0);
-  CHECK(strcmp(x_memtype("cu", 0), "N/A") == 0);
-  CHECK(strcmp(x_memtype("cu", &test_function), "N/A") == 0);
-  CHECK(strcmp(x_memtype("cuda", 0), "N/A") == 0);
-  CHECK(strcmp(x_memtype("cuda", &test_function), "N/A") == 0);
+  CHECK(strcmp(x_memtype("cudadrv", nullptr), "N/A") == 0);
+  CHECK(strcmp(x_memtype("cudadrv", 0), "N/A") == 0);
+  CHECK(strcmp(x_memtype("cudadrv", &test_function), "N/A") == 0);
+  CHECK(strcmp(x_memtype("cudart", 0), "N/A") == 0);
+  CHECK(strcmp(x_memtype("cudart", &test_function), "N/A") == 0);
 #if !X_ENABLE_CUDA_DRIVER
-  CHECK(x_ngpu("cu") == 0);
-  CHECK(strcmp(x_memtype("cu", UINT64_C(0)), "N/A") == 0);
+  CHECK(x_ngpu("cudadrv") == 0);
+  CHECK(strcmp(x_memtype("cudadrv", UINT64_C(0)), "N/A") == 0);
 #endif
 #if !X_ENABLE_CUDA_RUNTIME
-  CHECK(x_ngpu("cuda") == 0);
-  CHECK(strcmp(x_memtype("cuda", nullptr), "N/A") == 0);
+  CHECK(x_ngpu("cudart") == 0);
+  CHECK(strcmp(x_memtype("cudart", nullptr), "N/A") == 0);
 #endif
   CHECK(driver.pointer_queries == 0 && runtime.pointer_queries == 0);
   CHECK(driver.device_queries == 0 && runtime.device_queries == 0);
@@ -199,35 +218,35 @@ int main()
   const char* names[]{"Unknown", "Host", "Device", "Array", "Unified"};
   for (int type = 0; type < 5; ++type) {
     driver.memory_type = type;
-    CHECK(strcmp(x_memtype("cu", pointer), names[type]) == 0);
+    CHECK(strcmp(x_memtype("cudadrv", pointer), names[type]) == 0);
     CHECK(driver.last_driver_pointer == pointer);
   }
   driver.memory_type = 99;
-  CHECK(strcmp(x_memtype("cu", pointer), "Unknown") == 0);
+  CHECK(strcmp(x_memtype("cudadrv", pointer), "Unknown") == 0);
   driver.memory_type = CU_MEMORYTYPE_HOST;
-  CHECK(strcmp(x_memtype("cu", static_cast<CUdeviceptr>(0)), "Host") == 0);
+  CHECK(strcmp(x_memtype("cudadrv", static_cast<CUdeviceptr>(0)), "Host") == 0);
   CHECK(driver.last_driver_pointer == 0);
   const int driver_queries = driver.pointer_queries;
-  CHECK(strcmp(x_memtype("cu", static_cast<void*>(nullptr)), "N/A") == 0);
-  CHECK(strcmp(x_memtype("cuda", pointer), "N/A") == 0);
+  CHECK(strcmp(x_memtype("cudadrv", static_cast<void*>(nullptr)), "N/A") == 0);
+  CHECK(strcmp(x_memtype("cudart", pointer), "N/A") == 0);
   CHECK(driver.pointer_queries == driver_queries && runtime.pointer_queries == 0);
-  test_device_counts("cu", driver);
+  test_device_counts("cudadrv", driver);
   driver.query_error = 7;
-  CHECK(strcmp(x_memtype("cu", pointer), "Unknown") == 0 && x_ngpu("cu") == 0);
+  CHECK(strcmp(x_memtype("cudadrv", pointer), "Unknown") == 0 && x_ngpu("cudadrv") == 0);
   CHECK(driver.message_calls == 1 && driver.last_error == 7);
   driver.message_error = 1;
-  CHECK(x_ngpu("cu") == 0);
+  CHECK(x_ngpu("cudadrv") == 0);
   CHECK(driver.message_calls == 2 && driver.last_error == 7);
-  CHECK(std::string(x_error("cu", 7).message()) == "CUDA driver error 7");
+  CHECK(std::string(x_error("cudadrv", 7).message()) == "CUDA driver error 7");
   driver.message_error = 0;
   driver.null_message = true;
   const int driver_messages = driver.message_calls;
-  CHECK(x_ngpu("cu") == 0);
+  CHECK(x_ngpu("cudadrv") == 0);
   CHECK(driver.message_calls == driver_messages + 1 && driver.last_error == 7);
   driver.null_message = false;
   const std::string driver_text(300, 'D');
   driver.message = driver_text.c_str();
-  CHECK(x_ngpu("cu") == 0);
+  CHECK(x_ngpu("cudadrv") == 0);
   CHECK(driver.message_calls == driver_messages + 2 && driver.last_error == 7);
   driver = {};
 #endif
@@ -236,40 +255,40 @@ int main()
   const char* runtime_names[]{"Unregistered", "Host", "Device", "Managed"};
   for (int type = 0; type < 4; ++type) {
     runtime.memory_type = type;
-    CHECK(strcmp(x_memtype("cuda", &value), runtime_names[type]) == 0);
+    CHECK(strcmp(x_memtype("cudart", &value), runtime_names[type]) == 0);
     CHECK(runtime.last_pointer == &value);
   }
-  CHECK(strcmp(x_memtype("cuda", nullptr), "Managed") == 0);
+  CHECK(strcmp(x_memtype("cudart", nullptr), "Managed") == 0);
   CHECK(runtime.last_pointer == nullptr);
   void* untyped = const_cast<float*>(&value);
-  CHECK(strcmp(x_memtype("cuda", untyped), "Managed") == 0);
+  CHECK(strcmp(x_memtype("cudart", untyped), "Managed") == 0);
   CHECK(runtime.last_pointer == &value);
   volatile float volatile_value{1.0f};
-  CHECK(strcmp(x_memtype("cuda", &volatile_value), "Managed") == 0);
+  CHECK(strcmp(x_memtype("cudart", &volatile_value), "Managed") == 0);
   CHECK(runtime.last_pointer == const_cast<const float*>(&volatile_value));
   const volatile float qualified_value{2.0f};
-  CHECK(strcmp(x_memtype("cuda", &qualified_value), "Managed") == 0);
+  CHECK(strcmp(x_memtype("cudart", &qualified_value), "Managed") == 0);
   CHECK(runtime.last_pointer == const_cast<const float*>(&qualified_value));
   runtime.memory_type = 99;
-  CHECK(strcmp(x_memtype("cuda", &value), "Unknown") == 0);
+  CHECK(strcmp(x_memtype("cudart", &value), "Unknown") == 0);
   const int runtime_queries = runtime.pointer_queries;
-  CHECK(strcmp(x_memtype("cuda", 0), "N/A") == 0);
-  CHECK(strcmp(x_memtype("cuda", &test_function), "N/A") == 0);
+  CHECK(strcmp(x_memtype("cudart", 0), "N/A") == 0);
+  CHECK(strcmp(x_memtype("cudart", &test_function), "N/A") == 0);
   CHECK(runtime.pointer_queries == runtime_queries);
   CHECK(value == 1.0f && volatile_value == 1.0f && qualified_value == 2.0f);
-  test_device_counts("cuda", runtime);
+  test_device_counts("cudart", runtime);
   runtime.query_error = 8;
-  CHECK(strcmp(x_memtype("cuda", &value), "Unknown") == 0 && x_ngpu("cuda") == 0);
+  CHECK(strcmp(x_memtype("cudart", &value), "Unknown") == 0 && x_ngpu("cudart") == 0);
   CHECK(runtime.message_calls == 1 && runtime.last_error == 8);
   runtime.null_message = true;
-  CHECK(x_ngpu("cuda") == 0);
+  CHECK(x_ngpu("cudart") == 0);
   CHECK(runtime.message_calls == 2 && runtime.last_error == 8);
-  CHECK(std::string(x_error("cuda", 8).message()) == "CUDA runtime error");
+  CHECK(std::string(x_error("cudart", 8).message()) == "CUDA runtime error");
   runtime.null_message = false;
   const int runtime_messages = runtime.message_calls;
   const std::string runtime_text(300, 'R');
   runtime.message = runtime_text.c_str();
-  CHECK(x_ngpu("cuda") == 0);
+  CHECK(x_ngpu("cudart") == 0);
   CHECK(runtime.message_calls == runtime_messages + 1 && runtime.last_error == 8);
   runtime = {};
 #endif

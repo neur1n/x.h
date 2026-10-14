@@ -148,7 +148,8 @@ ENDFOREACH()
 ADD_CUSTOM_COMMAND(OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/cpp_memory_under_test.h
   COMMAND ${Python3_EXECUTABLE} ${X_ROOT}/test/create_memory_fixture.py
     --lang cpp --output ${CMAKE_CURRENT_BINARY_DIR}/cpp_memory_under_test.h
-  DEPENDS ${X_ROOT}/cpp/x.h ${X_ROOT}/test/create_memory_fixture.py VERBATIM)
+  DEPENDS ${X_ROOT}/cpp/x.h ${X_ROOT}/test/create_memory_fixture.py
+    ${X_ROOT}/test/fixture_source.py VERBATIM)
 ADD_CUSTOM_TARGET(x_cpp_memory_fixture
   DEPENDS ${CMAKE_CURRENT_BINARY_DIR}/cpp_memory_under_test.h)
 ADD_EXECUTABLE(x_test_cpp_memory_malloc_faults memory.cpp)
@@ -240,7 +241,7 @@ ADD_CUSTOM_COMMAND(OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/cpp_platform_under_test.h
   DEPENDS ${X_ROOT}/cpp/x.h ${X_ROOT}/test/create_cpp_platform_fixture.py
     ${X_ROOT}/tool/generate.py VERBATIM)
 ADD_CUSTOM_TARGET(x_cpp_platform_fixture DEPENDS ${CMAKE_CURRENT_BINARY_DIR}/cpp_platform_under_test.h)
-FOREACH(PLATFORM RANGE 0 3)
+FOREACH(PLATFORM RANGE 0 4)
   FOREACH(NARROW RANGE 0 1)
     # Unsupported platforms return ENOTSUP before checking memory sizes.
     IF(PLATFORM EQUAL 0 AND NARROW EQUAL 1)
@@ -266,7 +267,7 @@ x_cpp_test(x_test_cpp_platform_windows_legacy)
 ADD_TEST(NAME cpp_platform_windows_legacy COMMAND x_test_cpp_platform_windows_legacy)
 SET_TESTS_PROPERTIES(cpp_platform_windows_legacy PROPERTIES TIMEOUT 15 LABELS "cpp;platform")
 
-SET(ERROR_CASES values check logging
+SET(ERROR_CASES values platform check logging
   abort_unknown_value abort_unknown_capture abort_null_name abort_empty_name
   abort_unsupported_capture abort_unsupported_custom_capture
   abort_null_assertion abort_empty_assertion abort_message_assertion)
@@ -301,6 +302,25 @@ FOREACH(MODE IN ITEMS enabled disabled)
         --context ${ERROR_CONTEXT})
     SET_TESTS_PROPERTIES(${TEST_NAME} PROPERTIES TIMEOUT 15 LABELS "cpp;error")
   ENDFOREACH()
+ENDFOREACH()
+
+ADD_CUSTOM_COMMAND(OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/cpp_native_error_under_test.h
+  COMMAND ${Python3_EXECUTABLE} ${X_ROOT}/test/create_native_error_fixture.py
+    --lang cpp --output ${CMAKE_CURRENT_BINARY_DIR}/cpp_native_error_under_test.h
+  DEPENDS ${X_ROOT}/cpp/x.h ${X_ROOT}/test/create_native_error_fixture.py
+    ${X_ROOT}/tool/generate.py VERBATIM)
+ADD_CUSTOM_TARGET(x_cpp_native_error_fixture
+  DEPENDS ${CMAKE_CURRENT_BINARY_DIR}/cpp_native_error_under_test.h)
+FOREACH(PLATFORM IN ITEMS 0 2 3 4)
+  SET(TARGET x_test_cpp_native_error_${PLATFORM})
+  ADD_EXECUTABLE(${TARGET} native_error_faults.cpp)
+  ADD_DEPENDENCIES(${TARGET} x_cpp_native_error_fixture)
+  TARGET_INCLUDE_DIRECTORIES(${TARGET} PRIVATE ${CMAKE_CURRENT_BINARY_DIR})
+  TARGET_COMPILE_DEFINITIONS(${TARGET} PRIVATE TEST_PLATFORM=${PLATFORM})
+  x_cpp_test(${TARGET})
+  ADD_TEST(NAME cpp_native_error_${PLATFORM} COMMAND ${TARGET})
+  SET_TESTS_PROPERTIES(cpp_native_error_${PLATFORM} PROPERTIES
+    TIMEOUT 15 LABELS "cpp;error;platform")
 ENDFOREACH()
 
 ADD_EXECUTABLE(x_test_cpp_checksums checksums.cpp)

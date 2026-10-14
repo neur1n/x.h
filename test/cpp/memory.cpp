@@ -147,13 +147,13 @@ static void check_queries()
   size_t available{7}, total{9};
   check_invalid(x_meminfo("cpu", nullptr, nullptr));
   check_invalid(x_meminfo(nullptr, &available, &total));
-  for (const char* type : {"", "missing", "cu", "cuda"}) {
+  for (const char* type : {"", "missing", "cudadrv", "cudart"}) {
     const x_error error{x_meminfo(type, &available, &total)};
     CHECK(x_fail(error) && error.value() == ENOTSUP);
     CHECK(strcmp(error.domain(), "posix") == 0);
     CHECK(available == 7 && total == 9);
   }
-#if X_LINUX || X_MACOS || X_WINDOWS
+#if X_LINUX || X_IOS || X_MACOS || X_WINDOWS
   CHECK(x_succ(x_meminfo("cpu", &available, &total)));
   CHECK(total > 0 && available <= total);
   CHECK(x_succ(x_meminfo("cpu", nullptr, &total)) && total > 0);

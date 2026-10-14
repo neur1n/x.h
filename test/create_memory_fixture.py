@@ -2,6 +2,7 @@
 
 import argparse
 from pathlib import Path
+from fixture_source import extract_function
 
 
 def main():
@@ -32,15 +33,14 @@ def main():
                                encoding="utf-8")
         return
     # Error callbacks belong to Core and depend on the Core text helpers.
-    section = source.index("// x_error_message{{{")
-    start = source.index("X_INL char* _x_error_copy(", section)
-    end = source.index("X_INL char* _x_error_message_generic(", start)
-    chunks.append(source[start:end] + "\n")
-    for backend in ("cuda_driver", "cuda_runtime", "cublas"):
-        section = "x_error_" + backend
-        start = source.index("// " + section + "{{{")
-        end = source.index("// " + section + "}}}", start)
-        chunks.append(source[start:end] + "\n")
+    for name in (
+        "_x_error_copy", "_x_error_number",
+        "_x_error_failed_cuda_driver", "_x_error_message_cuda_driver",
+        "_x_error_capture_cuda_runtime", "_x_error_failed_cuda_runtime",
+        "_x_error_message_cuda_runtime",
+        "_x_error_failed_cublas", "_x_error_message_cublas",
+    ):
+        chunks.append(extract_function(source, name) + "\n")
     args.output.write_text("".join(chunks), encoding="utf-8")
 
 

@@ -13,6 +13,7 @@ struct test_backend
   int memory_queries{0};
   int pointer_queries{0}, device_queries{0}, message_calls{0};
   int last_error{0};
+  int pending_error{0}, capture_calls{0};
   const char* message{nullptr};
   float milliseconds{2.0f};
   bool null_message{false};

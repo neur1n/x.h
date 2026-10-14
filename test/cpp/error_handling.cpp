@@ -120,6 +120,27 @@ int main(int argc, char** argv)
       domains[i] = {nullptr, nullptr, nullptr, names[i]};
       CHECK(x_error::register_domain(&domains[i]) == (i == remaining ? ENOSPC : 0));
     }
+  } else if (strcmp(scenario, "platform") == 0) {
+#if X_WINDOWS
+    CHECK(x_succ(x_error("wincom", S_OK)));
+    CHECK(x_succ(x_error("wincom", S_FALSE)));
+    CHECK(x_fail(x_error("wincom", E_FAIL)));
+    CHECK(x_succ(x_error("winnt", 0x40000000)));
+    CHECK(x_fail(x_error("winnt", static_cast<int32_t>(0x80000005u))));
+    CHECK(x_fail(x_error("winnt", static_cast<int32_t>(0xC0000001u))));
+    const x_error error{"wincom", E_ACCESSDENIED};
+    CHECK(!std::string(error.message()).empty());
+    CHECK(_x_error_domain_lookup("wincom")->capture == nullptr);
+    CHECK(_x_error_domain_lookup("winnt")->capture == nullptr);
+#endif
+#if X_IOS || X_MACOS
+    CHECK(x_succ(x_error("mach", KERN_SUCCESS)));
+    const x_error error{"mach", KERN_INVALID_ARGUMENT};
+    CHECK(x_fail(error) && strcmp(error.domain(), "mach") == 0);
+    CHECK(strcmp(error.message(), mach_error_string(KERN_INVALID_ARGUMENT)) == 0);
+    CHECK(_x_error_domain_lookup("mach")->capture == nullptr);
+    CHECK(x_error::register_domain(&error_domain_mach) == EEXIST);
+#endif
   } else if (strcmp(scenario, "logging") == 0) {
     FILE* stream = tmpfile();
     CHECK(stream != nullptr);

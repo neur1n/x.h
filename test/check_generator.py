@@ -13,6 +13,7 @@ import unittest
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 from tool.generate import render
+from fixture_source import extract_function
 
 SOURCE = (ROOT / "c/x.h").read_text(encoding="utf-8")
 CPP_SOURCE = (ROOT / "cpp/x.h").read_text(encoding="utf-8")
@@ -38,9 +39,9 @@ class GeneratorTests(unittest.TestCase):
                     for source in (SOURCE, CPP_SOURCE):
                         header = render(source, list(selected))
                         labels = [label for name, _, label, _ in MODULES if name in selected]
-                        expected = "0.9.1+core" + "".join("." + label for label in labels)
+                        expected = "0.9.2+core" + "".join("." + label for label in labels)
                         self.assertIn(f'#define X_H_VERBOSE "{expected}"', header)
-                        self.assertIn("#define X_H x_version(0, 9, 1)", header)
+                        self.assertIn("#define X_H x_version(0, 9, 2)", header)
                         self.assertIn("X_INL x_error _x_check_impl(", header)
                         self.assertIn("X_INL const char* _x_timestamp(", header)
                         if "logging" not in selected:
@@ -71,22 +72,23 @@ class GeneratorTests(unittest.TestCase):
                                 source.index(f"{kind}_Logging{{{{{{"))
 
     def test_core_retains_gpu_error_domains(self):
-        header = render(SOURCE, ["minimal"])
-        error_section = header[header.index("// ***************************************************** IMPL_Error_Handling{{{"):
-                               header.index("// IMPL_Error_Handling}}}")]
         callbacks = ["_x_error_message_cuda_driver", "_x_error_message_cuda_runtime",
                      "_x_error_message_cublas"]
-        positions = [error_section.index(f"X_INL char* {name}(") for name in callbacks]
-        self.assertEqual(positions, sorted(positions))
-        for callback in callbacks:
-            # A prototype alone would hide the original broken module boundary.
-            self.assertEqual(error_section.count(f"X_INL char* {callback}("), 2)
-        self.assertNotIn("x_memtype", header)
-        self.assertNotIn("x_event_init", header)
-        self.assertNotIn("x_meminfo", header)
+        for source in (SOURCE, CPP_SOURCE):
+            header = render(source, ["minimal"])
+            error_section = header[header.index("// ***************************************************** IMPL_Error_Handling{{{"):
+                                   header.index("// IMPL_Error_Handling}}}")]
+            positions = [error_section.index(f"X_INL char* {name}(") for name in callbacks]
+            self.assertEqual(positions, sorted(positions))
+            for callback in callbacks:
+                # Check the complete body, independently of forward declarations.
+                self.assertIn(extract_function(source, callback), error_section)
+            self.assertNotIn("x_memtype", header)
+            self.assertNotIn("x_event_init", header)
+            self.assertNotIn("x_meminfo", header)
 
     def test_version_comes_from_numeric_macro(self):
-        changed = SOURCE.replace("#define X_H x_version(0, 9, 1)",
+        changed = SOURCE.replace("#define X_H x_version(0, 9, 2)",
                                  "#define X_H x_version(1, 2, 3)")
         self.assertIn('#define X_H_VERBOSE "1.2.3+core"', render(changed, ["core"]))
 
@@ -98,7 +100,7 @@ class GeneratorTests(unittest.TestCase):
             SOURCE.replace(" * DECL_String\n", ""),
             SOURCE.replace(" * DECL_String\n", " * DECL_String\n * DECL_String\n"),
             SOURCE + SOURCE,
-            SOURCE.replace("#define X_H x_version(0, 9, 1)", "#define X_H x_version(100, 9, 0)"),
+            SOURCE.replace("#define X_H x_version(0, 9, 2)", "#define X_H x_version(100, 9, 0)"),
             SOURCE.replace("#define X_H_VERBOSE", "#define OTHER_VERBOSE"),
         )
         for source in damaged:
